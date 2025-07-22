@@ -11,7 +11,8 @@ import {
   Gift, 
   Settings,
   Sparkles,
-  LogOut
+  LogOut,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const navigation = [
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
 
   return (
     <nav className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 z-40">
@@ -71,13 +73,22 @@ export default function Sidebar() {
       </div>
       
       <div className="absolute bottom-4 left-4 right-4">
-        <div className="bg-gradient-to-br from-primary to-secondary rounded-lg p-4 text-white mb-4">
-          <h3 className="font-semibold mb-1">Upgrade Pro</h3>
-          <p className="text-sm text-white/80 mb-3">Desbloqueie recursos avançados</p>
-          <Button className="bg-white text-primary hover:bg-white/90 px-4 py-2 rounded-lg text-sm font-medium w-full">
-            Saiba Mais
-          </Button>
-        </div>
+        {showUpgradeBanner && (
+          <div className="bg-gradient-to-br from-primary to-secondary rounded-lg p-4 text-white mb-4 relative">
+            <button
+              onClick={() => setShowUpgradeBanner(false)}
+              className="absolute top-2 right-2 text-white/70 hover:text-white transition-colors"
+              aria-label="Fechar banner"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h3 className="font-semibold mb-1">Upgrade Pro</h3>
+            <p className="text-sm text-white/80 mb-3">Desbloqueie recursos avançados</p>
+            <Button className="bg-white text-primary hover:bg-white/90 px-4 py-2 rounded-lg text-sm font-medium w-full">
+              Saiba Mais
+            </Button>
+          </div>
+        )}
         
         <Button 
           variant="ghost" 
