@@ -1,0 +1,131 @@
+# Estética Pro - Sistema de Gestão para Esteticistas
+
+## Overview
+
+This is a modern full-stack web application designed specifically for beauty professionals (aestheticians) to manage their business operations. The system provides comprehensive tools for appointment scheduling, client management, clinical records, financial tracking, inventory management, customer communication, and loyalty programs.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite for fast development and optimized builds
+- **Styling**: TailwindCSS with shadcn/ui component library
+- **Routing**: Wouter for lightweight client-side routing
+- **State Management**: TanStack Query (React Query) for server state management
+- **Form Handling**: React Hook Form with Zod validation
+- **UI Components**: Radix UI primitives with custom styling
+
+### Backend Architecture
+- **Runtime**: Node.js with Express.js framework
+- **Language**: TypeScript for type safety
+- **Database**: PostgreSQL with Drizzle ORM
+- **Authentication**: Replit Auth (OIDC-based authentication)
+- **Session Management**: Express sessions stored in PostgreSQL
+
+### Key Technology Choices
+- **Database Provider**: Neon serverless PostgreSQL for scalability
+- **Type Safety**: Full-stack TypeScript with shared schema definitions
+- **Validation**: Zod schemas for both client and server validation
+- **Component Design**: Atomic design principles with reusable UI components
+
+## Key Components
+
+### Authentication System
+- Uses Replit's OIDC authentication system
+- Session-based authentication with PostgreSQL session storage
+- User profile management with professional credentials
+- Automatic redirect handling for unauthorized access
+
+### Database Schema
+The application uses a comprehensive database schema with the following main entities:
+- **Users**: Professional profile with clinic information
+- **Clients**: Customer records with contact and health information
+- **Services**: Treatment offerings with pricing
+- **Appointments**: Scheduling system with status tracking
+- **Clinical Records**: Treatment history and outcomes
+- **Transactions**: Financial records for income/expenses
+- **Messages**: Communication tracking
+- **Feedback**: Customer satisfaction data
+- **Inventory**: Materials and equipment management
+- **Loyalty Programs**: Customer retention features
+
+### Core Features
+1. **Dashboard**: Real-time business metrics and daily overview
+2. **Appointment Management**: Calendar-based scheduling system
+3. **Client Management**: Comprehensive customer database
+4. **Clinical Records**: Digital treatment documentation
+5. **Financial Tracking**: Income/expense management with reporting
+6. **Communication Hub**: Multi-channel customer communication
+7. **Inventory Management**: Materials and equipment tracking
+8. **Loyalty Programs**: Customer retention and rewards system
+
+## Data Flow
+
+### Client-Server Communication
+- RESTful API design with consistent error handling
+- TanStack Query for optimistic updates and caching
+- Form submissions use React Hook Form with Zod validation
+- Real-time data updates through query invalidation
+
+### Authentication Flow
+1. User accesses protected route
+2. System checks for valid session
+3. Redirects to Replit OAuth if unauthenticated
+4. Creates/updates user profile on successful authentication
+5. Establishes server session with PostgreSQL storage
+
+### Data Validation
+- Shared Zod schemas between client and server
+- Client-side validation for immediate feedback
+- Server-side validation for security
+- Type-safe database operations with Drizzle
+
+## External Dependencies
+
+### Core Dependencies
+- **@neondatabase/serverless**: Serverless PostgreSQL connection
+- **drizzle-orm**: Type-safe database operations
+- **@tanstack/react-query**: Server state management
+- **@radix-ui/***: Accessible UI primitives
+- **tailwindcss**: Utility-first CSS framework
+- **wouter**: Lightweight React router
+
+### Authentication
+- **openid-client**: OIDC authentication client
+- **passport**: Authentication middleware
+- **express-session**: Session management
+- **connect-pg-simple**: PostgreSQL session store
+
+### Development Tools
+- **vite**: Fast build tool and dev server
+- **typescript**: Static type checking
+- **tsx**: TypeScript execution for Node.js
+- **esbuild**: Fast JavaScript bundler
+
+## Deployment Strategy
+
+### Build Process
+- Frontend built with Vite to `dist/public`
+- Backend bundled with esbuild to `dist/index.js`
+- Single deployment artifact containing both frontend and backend
+
+### Environment Configuration
+- Database connection via `DATABASE_URL` environment variable
+- Session security via `SESSION_SECRET`
+- Replit-specific configuration for OIDC authentication
+- Development vs production environment detection
+
+### Database Management
+- Drizzle migrations for schema versioning
+- Connection pooling for scalability
+- Serverless-compatible database operations
+
+### Production Considerations
+- Static file serving for frontend assets
+- Express error handling middleware
+- Request logging and monitoring
+- Session persistence across deployments

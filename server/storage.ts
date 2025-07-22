@@ -1,0 +1,506 @@
+import {
+  users,
+  clients,
+  services,
+  appointments,
+  clinicalRecords,
+  transactions,
+  messages,
+  feedback,
+  inventory,
+  loyaltyPackages,
+  clientPackages,
+  type User,
+  type UpsertUser,
+  type Client,
+  type InsertClient,
+  type Service,
+  type InsertService,
+  type Appointment,
+  type InsertAppointment,
+  type ClinicalRecord,
+  type InsertClinicalRecord,
+  type Transaction,
+  type InsertTransaction,
+  type Message,
+  type InsertMessage,
+  type Feedback,
+  type InsertFeedback,
+  type Inventory,
+  type InsertInventory,
+  type LoyaltyPackage,
+  type InsertLoyaltyPackage,
+  type ClientPackage,
+  type InsertClientPackage,
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc, asc, gte, lte, sql } from "drizzle-orm";
+
+// Interface for storage operations
+export interface IStorage {
+  // User operations (mandatory for Replit Auth)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Client operations
+  getClients(userId: string): Promise<Client[]>;
+  getClient(id: number, userId: string): Promise<Client | undefined>;
+  createClient(client: InsertClient): Promise<Client>;
+  updateClient(id: number, client: Partial<InsertClient>): Promise<Client>;
+  
+  // Service operations
+  getServices(userId: string): Promise<Service[]>;
+  createService(service: InsertService): Promise<Service>;
+  
+  // Appointment operations
+  getAppointments(userId: string, date?: Date): Promise<(Appointment & { client: Client; service: Service })[]>;
+  createAppointment(appointment: InsertAppointment): Promise<Appointment>;
+  updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment>;
+  
+  // Clinical records operations
+  getClinicalRecords(userId: string, clientId?: number): Promise<(ClinicalRecord & { client: Client })[]>;
+  createClinicalRecord(record: InsertClinicalRecord): Promise<ClinicalRecord>;
+  
+  // Transaction operations
+  getTransactions(userId: string, startDate?: Date, endDate?: Date): Promise<(Transaction & { client?: Client })[]>;
+  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  getDashboardStats(userId: string): Promise<{
+    todayAppointments: number;
+    dailyRevenue: string;
+    activeClients: number;
+    satisfaction: string;
+    monthlyRevenue: string;
+    monthlyExpenses: string;
+    netProfit: string;
+  }>;
+  
+  // Message operations
+  getMessages(userId: string): Promise<(Message & { client?: Client })[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  
+  // Feedback operations
+  getFeedback(userId: string): Promise<(Feedback & { client: Client })[]>;
+  createFeedback(feedback: InsertFeedback): Promise<Feedback>;
+  
+  // Inventory operations
+  getInventory(userId: string): Promise<Inventory[]>;
+  createInventoryItem(item: InsertInventory): Promise<Inventory>;
+  updateInventoryItem(id: number, item: Partial<InsertInventory>): Promise<Inventory>;
+  
+  // Loyalty operations
+  getLoyaltyPackages(userId: string): Promise<LoyaltyPackage[]>;
+  createLoyaltyPackage(package: InsertLoyaltyPackage): Promise<LoyaltyPackage>;
+  getClientPackages(userId: string): Promise<(ClientPackage & { client: Client; package: LoyaltyPackage })[]>;
+}
+
+export class DatabaseStorage implements IStorage {
+  // User operations (mandatory for Replit Auth)
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
+  // Client operations
+  async getClients(userId: string): Promise<Client[]> {
+    return await db
+      .select()
+      .from(clients)
+      .where(eq(clients.userId, userId))
+      .orderBy(desc(clients.createdAt));
+  }
+
+  async getClient(id: number, userId: string): Promise<Client | undefined> {
+    const [client] = await db
+      .select()
+      .from(clients)
+      .where(and(eq(clients.id, id), eq(clients.userId, userId)));
+    return client;
+  }
+
+  async createClient(client: InsertClient): Promise<Client> {
+    const [newClient] = await db.insert(clients).values(client).returning();
+    return newClient;
+  }
+
+  async updateClient(id: number, client: Partial<InsertClient>): Promise<Client> {
+    const [updatedClient] = await db
+      .update(clients)
+      .set({ ...client, updatedAt: new Date() })
+      .where(eq(clients.id, id))
+      .returning();
+    return updatedClient;
+  }
+
+  // Service operations
+  async getServices(userId: string): Promise<Service[]> {
+    return await db
+      .select()
+      .from(services)
+      .where(and(eq(services.userId, userId), eq(services.isActive, true)))
+      .orderBy(asc(services.name));
+  }
+
+  async createService(service: InsertService): Promise<Service> {
+    const [newService] = await db.insert(services).values(service).returning();
+    return newService;
+  }
+
+  // Appointment operations
+  async getAppointments(userId: string, date?: Date): Promise<(Appointment & { client: Client; service: Service })[]> {
+    let query = db
+      .select({
+        id: appointments.id,
+        userId: appointments.userId,
+        clientId: appointments.clientId,
+        serviceId: appointments.serviceId,
+        appointmentDate: appointments.appointmentDate,
+        status: appointments.status,
+        notes: appointments.notes,
+        createdAt: appointments.createdAt,
+        client: clients,
+        service: services,
+      })
+      .from(appointments)
+      .innerJoin(clients, eq(appointments.clientId, clients.id))
+      .innerJoin(services, eq(appointments.serviceId, services.id))
+      .where(eq(appointments.userId, userId));
+
+    if (date) {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      query = query.where(
+        and(
+          eq(appointments.userId, userId),
+          gte(appointments.appointmentDate, startOfDay),
+          lte(appointments.appointmentDate, endOfDay)
+        )
+      );
+    }
+
+    return await query.orderBy(asc(appointments.appointmentDate));
+  }
+
+  async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
+    const [newAppointment] = await db.insert(appointments).values(appointment).returning();
+    return newAppointment;
+  }
+
+  async updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment> {
+    const [updatedAppointment] = await db
+      .update(appointments)
+      .set(appointment)
+      .where(eq(appointments.id, id))
+      .returning();
+    return updatedAppointment;
+  }
+
+  // Clinical records operations
+  async getClinicalRecords(userId: string, clientId?: number): Promise<(ClinicalRecord & { client: Client })[]> {
+    let query = db
+      .select({
+        id: clinicalRecords.id,
+        userId: clinicalRecords.userId,
+        clientId: clinicalRecords.clientId,
+        appointmentId: clinicalRecords.appointmentId,
+        procedureDate: clinicalRecords.procedureDate,
+        procedure: clinicalRecords.procedure,
+        observations: clinicalRecords.observations,
+        resultRating: clinicalRecords.resultRating,
+        beforeImages: clinicalRecords.beforeImages,
+        afterImages: clinicalRecords.afterImages,
+        nextAppointment: clinicalRecords.nextAppointment,
+        createdAt: clinicalRecords.createdAt,
+        client: clients,
+      })
+      .from(clinicalRecords)
+      .innerJoin(clients, eq(clinicalRecords.clientId, clients.id))
+      .where(eq(clinicalRecords.userId, userId));
+
+    if (clientId) {
+      query = query.where(
+        and(
+          eq(clinicalRecords.userId, userId),
+          eq(clinicalRecords.clientId, clientId)
+        )
+      );
+    }
+
+    return await query.orderBy(desc(clinicalRecords.procedureDate));
+  }
+
+  async createClinicalRecord(record: InsertClinicalRecord): Promise<ClinicalRecord> {
+    const [newRecord] = await db.insert(clinicalRecords).values(record).returning();
+    return newRecord;
+  }
+
+  // Transaction operations
+  async getTransactions(userId: string, startDate?: Date, endDate?: Date): Promise<(Transaction & { client?: Client })[]> {
+    let query = db
+      .select({
+        id: transactions.id,
+        userId: transactions.userId,
+        clientId: transactions.clientId,
+        appointmentId: transactions.appointmentId,
+        type: transactions.type,
+        description: transactions.description,
+        amount: transactions.amount,
+        transactionDate: transactions.transactionDate,
+        category: transactions.category,
+        isPaid: transactions.isPaid,
+        dueDate: transactions.dueDate,
+        createdAt: transactions.createdAt,
+        client: clients,
+      })
+      .from(transactions)
+      .leftJoin(clients, eq(transactions.clientId, clients.id))
+      .where(eq(transactions.userId, userId));
+
+    if (startDate && endDate) {
+      query = query.where(
+        and(
+          eq(transactions.userId, userId),
+          gte(transactions.transactionDate, startDate),
+          lte(transactions.transactionDate, endDate)
+        )
+      );
+    }
+
+    return await query.orderBy(desc(transactions.transactionDate));
+  }
+
+  async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
+    const [newTransaction] = await db.insert(transactions).values(transaction).returning();
+    return newTransaction;
+  }
+
+  async getDashboardStats(userId: string): Promise<{
+    todayAppointments: number;
+    dailyRevenue: string;
+    activeClients: number;
+    satisfaction: string;
+    monthlyRevenue: string;
+    monthlyExpenses: string;
+    netProfit: string;
+  }> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    // Today's appointments
+    const [todayAppointmentsResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.userId, userId),
+          gte(appointments.appointmentDate, today),
+          lte(appointments.appointmentDate, tomorrow)
+        )
+      );
+
+    // Daily revenue
+    const [dailyRevenueResult] = await db
+      .select({ total: sql<string>`coalesce(sum(amount), 0)` })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          eq(transactions.type, "income"),
+          eq(transactions.transactionDate, today)
+        )
+      );
+
+    // Active clients
+    const [activeClientsResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(clients)
+      .where(
+        and(
+          eq(clients.userId, userId),
+          eq(clients.isActive, true)
+        )
+      );
+
+    // Average satisfaction
+    const [satisfactionResult] = await db
+      .select({ avg: sql<string>`coalesce(avg(rating::numeric), 0)` })
+      .from(feedback)
+      .where(eq(feedback.userId, userId));
+
+    // Monthly revenue
+    const [monthlyRevenueResult] = await db
+      .select({ total: sql<string>`coalesce(sum(amount), 0)` })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          eq(transactions.type, "income"),
+          gte(transactions.transactionDate, startOfMonth),
+          lte(transactions.transactionDate, endOfMonth)
+        )
+      );
+
+    // Monthly expenses
+    const [monthlyExpensesResult] = await db
+      .select({ total: sql<string>`coalesce(sum(amount), 0)` })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          eq(transactions.type, "expense"),
+          gte(transactions.transactionDate, startOfMonth),
+          lte(transactions.transactionDate, endOfMonth)
+        )
+      );
+
+    const monthlyRevenue = parseFloat(monthlyRevenueResult.total) || 0;
+    const monthlyExpenses = parseFloat(monthlyExpensesResult.total) || 0;
+    const netProfit = monthlyRevenue - monthlyExpenses;
+
+    return {
+      todayAppointments: todayAppointmentsResult.count || 0,
+      dailyRevenue: dailyRevenueResult.total || "0",
+      activeClients: activeClientsResult.count || 0,
+      satisfaction: parseFloat(satisfactionResult.avg || "0").toFixed(1),
+      monthlyRevenue: monthlyRevenueResult.total || "0",
+      monthlyExpenses: monthlyExpensesResult.total || "0",
+      netProfit: netProfit.toString(),
+    };
+  }
+
+  // Message operations
+  async getMessages(userId: string): Promise<(Message & { client?: Client })[]> {
+    return await db
+      .select({
+        id: messages.id,
+        userId: messages.userId,
+        clientId: messages.clientId,
+        type: messages.type,
+        channel: messages.channel,
+        content: messages.content,
+        isScheduled: messages.isScheduled,
+        scheduledFor: messages.scheduledFor,
+        sentAt: messages.sentAt,
+        status: messages.status,
+        createdAt: messages.createdAt,
+        client: clients,
+      })
+      .from(messages)
+      .leftJoin(clients, eq(messages.clientId, clients.id))
+      .where(eq(messages.userId, userId))
+      .orderBy(desc(messages.createdAt));
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const [newMessage] = await db.insert(messages).values(message).returning();
+    return newMessage;
+  }
+
+  // Feedback operations
+  async getFeedback(userId: string): Promise<(Feedback & { client: Client })[]> {
+    return await db
+      .select({
+        id: feedback.id,
+        userId: feedback.userId,
+        clientId: feedback.clientId,
+        appointmentId: feedback.appointmentId,
+        rating: feedback.rating,
+        comment: feedback.comment,
+        createdAt: feedback.createdAt,
+        client: clients,
+      })
+      .from(feedback)
+      .innerJoin(clients, eq(feedback.clientId, clients.id))
+      .where(eq(feedback.userId, userId))
+      .orderBy(desc(feedback.createdAt));
+  }
+
+  async createFeedback(feedbackData: InsertFeedback): Promise<Feedback> {
+    const [newFeedback] = await db.insert(feedback).values(feedbackData).returning();
+    return newFeedback;
+  }
+
+  // Inventory operations
+  async getInventory(userId: string): Promise<Inventory[]> {
+    return await db
+      .select()
+      .from(inventory)
+      .where(eq(inventory.userId, userId))
+      .orderBy(asc(inventory.itemName));
+  }
+
+  async createInventoryItem(item: InsertInventory): Promise<Inventory> {
+    const [newItem] = await db.insert(inventory).values(item).returning();
+    return newItem;
+  }
+
+  async updateInventoryItem(id: number, item: Partial<InsertInventory>): Promise<Inventory> {
+    const [updatedItem] = await db
+      .update(inventory)
+      .set(item)
+      .where(eq(inventory.id, id))
+      .returning();
+    return updatedItem;
+  }
+
+  // Loyalty operations
+  async getLoyaltyPackages(userId: string): Promise<LoyaltyPackage[]> {
+    return await db
+      .select()
+      .from(loyaltyPackages)
+      .where(and(eq(loyaltyPackages.userId, userId), eq(loyaltyPackages.isActive, true)))
+      .orderBy(asc(loyaltyPackages.name));
+  }
+
+  async createLoyaltyPackage(packageData: InsertLoyaltyPackage): Promise<LoyaltyPackage> {
+    const [newPackage] = await db.insert(loyaltyPackages).values(packageData).returning();
+    return newPackage;
+  }
+
+  async getClientPackages(userId: string): Promise<(ClientPackage & { client: Client; package: LoyaltyPackage })[]> {
+    return await db
+      .select({
+        id: clientPackages.id,
+        userId: clientPackages.userId,
+        clientId: clientPackages.clientId,
+        packageId: clientPackages.packageId,
+        purchaseDate: clientPackages.purchaseDate,
+        expiryDate: clientPackages.expiryDate,
+        sessionsUsed: clientPackages.sessionsUsed,
+        totalSessions: clientPackages.totalSessions,
+        status: clientPackages.status,
+        createdAt: clientPackages.createdAt,
+        client: clients,
+        package: loyaltyPackages,
+      })
+      .from(clientPackages)
+      .innerJoin(clients, eq(clientPackages.clientId, clients.id))
+      .innerJoin(loyaltyPackages, eq(clientPackages.packageId, loyaltyPackages.id))
+      .where(eq(clientPackages.userId, userId))
+      .orderBy(desc(clientPackages.createdAt));
+  }
+}
+
+export const storage = new DatabaseStorage();
