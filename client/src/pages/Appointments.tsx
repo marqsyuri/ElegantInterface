@@ -18,8 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
 const appointmentFormSchema = insertAppointmentSchema.extend({
-  appointmentDate: z.string().min(1, "Data é obrigatória"),
-  appointmentTime: z.string().min(1, "Horário é obrigatório"),
+  appointmentDate: z.string().min(1, "Date is required"),
+  appointmentTime: z.string().min(1, "Time is required"),
 }).omit({ userId: true });
 
 type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
@@ -67,14 +67,14 @@ export default function Appointments() {
       setIsDialogOpen(false);
       form.reset();
       toast({
-        title: "Sucesso",
-        description: "Agendamento criado com sucesso!",
+        title: "Success",
+        description: "Appointment created successfully!",
       });
     },
     onError: (error) => {
       toast({
-        title: "Erro",
-        description: "Falha ao criar agendamento. Tente novamente.",
+        title: "Error",
+        description: "Failed to create appointment. Please try again.",
         variant: "destructive",
       });
     },
@@ -94,22 +94,22 @@ export default function Appointments() {
       <Sidebar />
       
       <main className="ml-64">
-        <TopHeader title="Agendamentos" subtitle="Gerencie sua agenda e horários" />
+        <TopHeader title="Appointments" subtitle="Manage your schedule and appointments" />
         
         <div className="p-6 space-y-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-slate-900">Agendamento Online</CardTitle>
+              <CardTitle className="text-xl font-semibold text-slate-900">Online Booking</CardTitle>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-primary/90">
                     <Plus className="w-4 h-4 mr-2" />
-                    Novo Agendamento
+                    New Appointment
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
-                    <DialogTitle>Novo Agendamento</DialogTitle>
+                    <DialogTitle>New Appointment</DialogTitle>
                   </DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -118,11 +118,11 @@ export default function Appointments() {
                         name="clientId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Cliente</FormLabel>
+                            <FormLabel>Client</FormLabel>
                             <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Selecione uma cliente" />
+                                  <SelectValue placeholder="Select a client" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -143,11 +143,11 @@ export default function Appointments() {
                         name="serviceId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Procedimento</FormLabel>
+                            <FormLabel>Treatment</FormLabel>
                             <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Selecione um procedimento" />
+                                  <SelectValue placeholder="Select a treatment" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>

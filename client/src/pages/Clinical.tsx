@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
 const clinicalFormSchema = insertClinicalRecordSchema.extend({
-  procedureDate: z.string().min(1, "Data é obrigatória"),
+  procedureDate: z.string().min(1, "Date is required"),
 }).omit({ userId: true });
 
 type ClinicalFormData = z.infer<typeof clinicalFormSchema>;

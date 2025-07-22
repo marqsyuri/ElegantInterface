@@ -64,14 +64,14 @@ export default function Communication() {
       setIsDialogOpen(false);
       form.reset();
       toast({
-        title: "Sucesso",
-        description: "Mensagem enviada com sucesso!",
+        title: "Success",
+        description: "Message sent successfully!",
       });
     },
     onError: (error) => {
       toast({
-        title: "Erro",
-        description: "Falha ao enviar mensagem. Tente novamente.",
+        title: "Error",
+        description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
     },
@@ -93,17 +93,17 @@ export default function Communication() {
       <Sidebar />
       
       <main className="ml-64">
-        <TopHeader title="Comunicação" subtitle="Gerencie mensagens automáticas e feedback das clientes" />
+        <TopHeader title="Communication" subtitle="Manage automatic messages and client feedback" />
         
         <div className="p-6 space-y-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-slate-900">Comunicação com Clientes</CardTitle>
+              <CardTitle className="text-xl font-semibold text-slate-900">Client Communication</CardTitle>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-primary/90">
                     <Send className="w-4 h-4 mr-2" />
-                    Nova Mensagem
+                    New Message
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">

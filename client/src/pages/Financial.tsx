@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
 const transactionFormSchema = insertTransactionSchema.extend({
-  transactionDate: z.string().min(1, "Data é obrigatória"),
+  transactionDate: z.string().min(1, "Date is required"),
 }).omit({ userId: true });
 
 type TransactionFormData = z.infer<typeof transactionFormSchema>;
@@ -61,14 +61,14 @@ export default function Financial() {
       setIsDialogOpen(false);
       form.reset();
       toast({
-        title: "Sucesso",
-        description: "Transação adicionada com sucesso!",
+        title: "Success",
+        description: "Transaction added successfully!",
       });
     },
     onError: (error) => {
       toast({
-        title: "Erro",
-        description: "Falha ao adicionar transação. Tente novamente.",
+        title: "Error",
+        description: "Failed to add transaction. Please try again.",
         variant: "destructive",
       });
     },
@@ -86,12 +86,12 @@ export default function Financial() {
       <Sidebar />
       
       <main className="ml-64">
-        <TopHeader title="Gestão Financeira" subtitle="Controle suas receitas, despesas e relatórios" />
+        <TopHeader title="Financial Management" subtitle="Control your income, expenses and reports" />
         
         <div className="p-6 space-y-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-slate-900">Controle Financeiro</CardTitle>
+              <CardTitle className="text-xl font-semibold text-slate-900">Financial Control</CardTitle>
               <div className="flex space-x-3">
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
@@ -100,7 +100,7 @@ export default function Financial() {
                       onClick={() => setTransactionType("income")}
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Receita
+                      Income
                     </Button>
                   </DialogTrigger>
                 </Dialog>
@@ -111,7 +111,7 @@ export default function Financial() {
                       onClick={() => setTransactionType("expense")}
                     >
                       <Minus className="w-4 h-4 mr-2" />
-                      Despesa
+                      Expense
                     </Button>
                   </DialogTrigger>
                 </Dialog>

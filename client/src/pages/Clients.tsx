@@ -73,7 +73,7 @@ export default function Clients() {
     createClientMutation.mutate(data);
   };
 
-  const filteredClients = clients?.filter((client: any) =>
+  const filteredClients = (clients as any[])?.filter((client: any) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     client.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     client.email?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -108,12 +108,12 @@ export default function Clients() {
                   <DialogTrigger asChild>
                     <Button className="bg-primary hover:bg-primary/90">
                       <UserPlus className="w-4 h-4 mr-2" />
-                      Nova Cliente
+                      New Client
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
-                      <DialogTitle>Nova Cliente</DialogTitle>
+                      <DialogTitle>New Client</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -123,9 +123,9 @@ export default function Clients() {
                             name="name"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Nome Completo</FormLabel>
+                                <FormLabel>Full Name</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="Nome da cliente" {...field} />
+                                  <Input placeholder="Client's name" {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -137,9 +137,9 @@ export default function Clients() {
                             name="cpf"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>CPF</FormLabel>
+                                <FormLabel>ID Number</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="000.000.000-00" {...field} value={field.value || ""} />
+                                  <Input placeholder="Client ID number" {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -153,9 +153,9 @@ export default function Clients() {
                             name="phone"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Telefone</FormLabel>
+                                <FormLabel>Phone</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="(11) 99999-9999" {...field} value={field.value || ""} />
+                                  <Input placeholder="021 123 4567" {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -167,7 +167,7 @@ export default function Clients() {
                             name="birthDate"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Data de Nascimento</FormLabel>
+                                <FormLabel>Date of Birth</FormLabel>
                                 <FormControl>
                                   <Input type="date" {...field} />
                                 </FormControl>
@@ -182,9 +182,9 @@ export default function Clients() {
                           name="email"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>E-mail</FormLabel>
+                              <FormLabel>Email</FormLabel>
                               <FormControl>
-                                <Input type="email" placeholder="cliente@email.com" {...field} value={field.value || ""} />
+                                <Input type="email" placeholder="client@email.com" {...field} value={field.value || ""} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -196,10 +196,10 @@ export default function Clients() {
                           name="healthHistory"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Histórico de Saúde</FormLabel>
+                              <FormLabel>Health History</FormLabel>
                               <FormControl>
                                 <Textarea 
-                                  placeholder="Alergias, medicamentos, condições relevantes..." 
+                                  placeholder="Allergies, medications, relevant conditions..." 
                                   className="h-20"
                                   {...field} 
                                   value={field.value || ""}
@@ -212,10 +212,10 @@ export default function Clients() {
 
                         <div className="flex space-x-3">
                           <Button type="submit" disabled={createClientMutation.isPending}>
-                            {createClientMutation.isPending ? "Salvando..." : "Salvar Cliente"}
+                            {createClientMutation.isPending ? "Saving..." : "Save Client"}
                           </Button>
                           <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                            Cancelar
+                            Cancel
                           </Button>
                         </div>
                       </form>
@@ -246,20 +246,20 @@ export default function Clients() {
                   filteredClients.map((client: any) => (
                     <div key={client.id} className="flex items-center p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
                       <Avatar className="w-12 h-12">
-                        <AvatarImage src="" alt="Foto do cliente" />
-                        <AvatarFallback>{getInitials(client.name)}</AvatarFallback>
+                        <AvatarImage src={`https://images.unsplash.com/photo-${1500000000000 + (client.id * 12345)}?w=80&h=80&fit=crop&crop=face`} alt="Client photo" />
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getInitials(client.name)}</AvatarFallback>
                       </Avatar>
                       <div className="ml-4 flex-1">
                         <p className="font-medium text-slate-900">{client.name}</p>
                         <p className="text-sm text-slate-600">{client.phone}</p>
                         <p className="text-xs text-slate-500">
                           {client.email && `${client.email} • `}
-                          {client.loyaltyPoints} pontos
+                          {client.loyaltyPoints} points
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant={client.isActive ? "default" : "secondary"}>
-                          {client.isActive ? "Ativa" : "Inativa"}
+                          {client.isActive ? "Active" : "Inactive"}
                         </Badge>
                         <Button variant="ghost" size="icon">
                           <MoreHorizontal className="w-4 h-4" />
@@ -271,7 +271,7 @@ export default function Clients() {
                   <div className="text-center py-8">
                     <UserPlus className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                     <p className="text-slate-500">
-                      {searchQuery ? "Nenhuma cliente encontrada" : "Nenhuma cliente cadastrada"}
+                      {searchQuery ? "No clients found" : "No clients registered"}
                     </p>
                     {!searchQuery && (
                       <Button 
@@ -279,7 +279,7 @@ export default function Clients() {
                         className="mt-4"
                         onClick={() => setIsDialogOpen(true)}
                       >
-                        Cadastrar primeira cliente
+                        Register first client
                       </Button>
                     )}
                   </div>
