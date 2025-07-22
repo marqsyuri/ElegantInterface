@@ -36,22 +36,22 @@ export default function Loyalty() {
     },
   });
 
-  const { data: packages, isLoading: packagesLoading } = useQuery({
+  const { data: packages = [], isLoading: packagesLoading } = useQuery({
     queryKey: ["/api/loyalty-packages"],
     retry: false,
   });
 
-  const { data: clientPackages, isLoading: clientPackagesLoading } = useQuery({
+  const { data: clientPackages = [], isLoading: clientPackagesLoading } = useQuery({
     queryKey: ["/api/client-packages"],
     retry: false,
   });
 
-  const { data: services } = useQuery({
+  const { data: services = [] } = useQuery({
     queryKey: ["/api/services"],
     retry: false,
   });
 
-  const { data: clients } = useQuery({
+  const { data: clients = [] } = useQuery({
     queryKey: ["/api/clients"],
     retry: false,
   });

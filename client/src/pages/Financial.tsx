@@ -36,12 +36,12 @@ export default function Financial() {
     },
   });
 
-  const { data: transactions, isLoading: transactionsLoading } = useQuery({
+  const { data: transactions = [], isLoading: transactionsLoading } = useQuery({
     queryKey: ["/api/transactions"],
     retry: false,
   });
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats = {}, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
     retry: false,
   });

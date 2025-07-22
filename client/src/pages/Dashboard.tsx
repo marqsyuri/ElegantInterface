@@ -69,7 +69,7 @@ export default function Dashboard() {
                   <div className="ml-4">
                     <p className="text-sm text-slate-600">Hoje</p>
                     <p className="text-2xl font-bold text-slate-900">
-                      {statsLoading ? "..." : stats?.todayAppointments || 0}
+                      {statsLoading ? "..." : (stats as any)?.todayAppointments || 0}
                     </p>
                     <p className="text-xs text-emerald-600">Agendamentos</p>
                   </div>
@@ -86,7 +86,7 @@ export default function Dashboard() {
                   <div className="ml-4">
                     <p className="text-sm text-slate-600">Receita do Dia</p>
                     <p className="text-2xl font-bold text-slate-900">
-                      R$ {statsLoading ? "..." : parseFloat(stats?.dailyRevenue || "0").toFixed(2)}
+                      R$ {statsLoading ? "..." : parseFloat((stats as any)?.dailyRevenue || "0").toFixed(2)}
                     </p>
                     <p className="text-xs text-emerald-600">vs ontem</p>
                   </div>
@@ -103,7 +103,7 @@ export default function Dashboard() {
                   <div className="ml-4">
                     <p className="text-sm text-slate-600">Clientes Ativas</p>
                     <p className="text-2xl font-bold text-slate-900">
-                      {statsLoading ? "..." : stats?.activeClients || 0}
+                      {statsLoading ? "..." : (stats as any)?.activeClients || 0}
                     </p>
                     <p className="text-xs text-emerald-600">total cadastradas</p>
                   </div>
@@ -120,7 +120,7 @@ export default function Dashboard() {
                   <div className="ml-4">
                     <p className="text-sm text-slate-600">Satisfação</p>
                     <p className="text-2xl font-bold text-slate-900">
-                      {statsLoading ? "..." : stats?.satisfaction || "0.0"}
+                      {statsLoading ? "..." : (stats as any)?.satisfaction || "0.0"}
                     </p>
                     <p className="text-xs text-emerald-600">média geral</p>
                   </div>
@@ -155,8 +155,8 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {todayAppointments?.length > 0 ? (
-                      todayAppointments.slice(0, 3).map((appointment: any) => (
+                    {(todayAppointments as any)?.length > 0 ? (
+                      (todayAppointments as any).slice(0, 3).map((appointment: any) => (
                         <div key={appointment.id} className="flex items-center p-4 bg-slate-50 rounded-lg">
                           <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
                             <span className="text-primary font-semibold text-sm">
@@ -215,7 +215,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <span className="font-bold text-emerald-600">
-                      R$ {statsLoading ? "..." : parseFloat(stats?.monthlyRevenue || "0").toFixed(2)}
+                      R$ {statsLoading ? "..." : parseFloat((stats as any)?.monthlyRevenue || "0").toFixed(2)}
                     </span>
                   </div>
 
@@ -230,7 +230,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <span className="font-bold text-red-600">
-                      R$ {statsLoading ? "..." : parseFloat(stats?.monthlyExpenses || "0").toFixed(2)}
+                      R$ {statsLoading ? "..." : parseFloat((stats as any)?.monthlyExpenses || "0").toFixed(2)}
                     </span>
                   </div>
 
@@ -238,7 +238,7 @@ export default function Dashboard() {
                     <div className="flex justify-between items-center">
                       <span className="font-semibold text-slate-900">Lucro Líquido</span>
                       <span className="font-bold text-xl text-emerald-600">
-                        R$ {statsLoading ? "..." : parseFloat(stats?.netProfit || "0").toFixed(2)}
+                        R$ {statsLoading ? "..." : parseFloat((stats as any)?.netProfit || "0").toFixed(2)}
                       </span>
                     </div>
                     <p className="text-sm text-slate-500 mt-1">Este mês</p>

@@ -36,7 +36,7 @@ export default function Materials() {
     },
   });
 
-  const { data: inventory, isLoading: inventoryLoading } = useQuery({
+  const { data: inventory = [], isLoading: inventoryLoading } = useQuery({
     queryKey: ["/api/inventory"],
     retry: false,
   });

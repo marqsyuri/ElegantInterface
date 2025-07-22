@@ -139,7 +139,7 @@ export default function Clients() {
                               <FormItem>
                                 <FormLabel>CPF</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="000.000.000-00" {...field} />
+                                  <Input placeholder="000.000.000-00" {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -155,7 +155,7 @@ export default function Clients() {
                               <FormItem>
                                 <FormLabel>Telefone</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="(11) 99999-9999" {...field} />
+                                  <Input placeholder="(11) 99999-9999" {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -184,7 +184,7 @@ export default function Clients() {
                             <FormItem>
                               <FormLabel>E-mail</FormLabel>
                               <FormControl>
-                                <Input type="email" placeholder="cliente@email.com" {...field} />
+                                <Input type="email" placeholder="cliente@email.com" {...field} value={field.value || ""} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -202,6 +202,7 @@ export default function Clients() {
                                   placeholder="Alergias, medicamentos, condições relevantes..." 
                                   className="h-20"
                                   {...field} 
+                                  value={field.value || ""}
                                 />
                               </FormControl>
                               <FormMessage />

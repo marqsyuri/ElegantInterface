@@ -37,17 +37,17 @@ export default function Appointments() {
     },
   });
 
-  const { data: appointments, isLoading: appointmentsLoading } = useQuery({
+  const { data: appointments = [], isLoading: appointmentsLoading } = useQuery({
     queryKey: ["/api/appointments", { date: selectedDate?.toISOString().split('T')[0] }],
     retry: false,
   });
 
-  const { data: clients, isLoading: clientsLoading } = useQuery({
+  const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ["/api/clients"],
     retry: false,
   });
 
-  const { data: services, isLoading: servicesLoading } = useQuery({
+  const { data: services = [], isLoading: servicesLoading } = useQuery({
     queryKey: ["/api/services"],
     retry: false,
   });

@@ -40,7 +40,7 @@ import { eq, and, desc, asc, gte, lte, sql } from "drizzle-orm";
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  upsertUser(user: UpsertUser & { id: string }): Promise<User>;
   
   // Client operations
   getClients(userId: string): Promise<Client[]>;
@@ -89,7 +89,7 @@ export interface IStorage {
   
   // Loyalty operations
   getLoyaltyPackages(userId: string): Promise<LoyaltyPackage[]>;
-  createLoyaltyPackage(package: InsertLoyaltyPackage): Promise<LoyaltyPackage>;
+  createLoyaltyPackage(packageData: InsertLoyaltyPackage): Promise<LoyaltyPackage>;
   getClientPackages(userId: string): Promise<(ClientPackage & { client: Client; package: LoyaltyPackage })[]>;
 }
 
@@ -100,7 +100,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
+  async upsertUser(userData: UpsertUser & { id: string }): Promise<User> {
     const [user] = await db
       .insert(users)
       .values(userData)
@@ -277,8 +277,8 @@ export class DatabaseStorage implements IStorage {
       query = query.where(
         and(
           eq(transactions.userId, userId),
-          gte(transactions.transactionDate, startDate),
-          lte(transactions.transactionDate, endDate)
+          gte(transactions.transactionDate, startDate.toISOString().split('T')[0]),
+          lte(transactions.transactionDate, endDate.toISOString().split('T')[0])
         )
       );
     }
@@ -328,7 +328,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(transactions.userId, userId),
           eq(transactions.type, "income"),
-          eq(transactions.transactionDate, today)
+          eq(transactions.transactionDate, today.toISOString().split('T')[0])
         )
       );
 
@@ -357,8 +357,8 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(transactions.userId, userId),
           eq(transactions.type, "income"),
-          gte(transactions.transactionDate, startOfMonth),
-          lte(transactions.transactionDate, endOfMonth)
+          gte(transactions.transactionDate, startOfMonth.toISOString().split('T')[0]),
+          lte(transactions.transactionDate, endOfMonth.toISOString().split('T')[0])
         )
       );
 
@@ -370,8 +370,8 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(transactions.userId, userId),
           eq(transactions.type, "expense"),
-          gte(transactions.transactionDate, startOfMonth),
-          lte(transactions.transactionDate, endOfMonth)
+          gte(transactions.transactionDate, startOfMonth.toISOString().split('T')[0]),
+          lte(transactions.transactionDate, endOfMonth.toISOString().split('T')[0])
         )
       );
 

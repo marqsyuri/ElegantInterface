@@ -40,17 +40,17 @@ export default function Communication() {
     },
   });
 
-  const { data: messages, isLoading: messagesLoading } = useQuery({
+  const { data: messages = [], isLoading: messagesLoading } = useQuery({
     queryKey: ["/api/messages"],
     retry: false,
   });
 
-  const { data: feedback, isLoading: feedbackLoading } = useQuery({
+  const { data: feedback = [], isLoading: feedbackLoading } = useQuery({
     queryKey: ["/api/feedback"],
     retry: false,
   });
 
-  const { data: clients } = useQuery({
+  const { data: clients = [] } = useQuery({
     queryKey: ["/api/clients"],
     retry: false,
   });

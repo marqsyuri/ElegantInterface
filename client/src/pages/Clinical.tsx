@@ -34,12 +34,12 @@ export default function Clinical() {
     resolver: zodResolver(clinicalFormSchema),
   });
 
-  const { data: clinicalRecords, isLoading: recordsLoading } = useQuery({
+  const { data: clinicalRecords = [], isLoading: recordsLoading } = useQuery({
     queryKey: ["/api/clinical-records"],
     retry: false,
   });
 
-  const { data: clients, isLoading: clientsLoading } = useQuery({
+  const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ["/api/clients"],
     retry: false,
   });
