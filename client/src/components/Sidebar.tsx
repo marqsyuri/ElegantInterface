@@ -19,14 +19,14 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
-  { name: "Agendamentos", href: "/appointments", icon: Calendar },
-  { name: "Clientes", href: "/clients", icon: Users },
-  { name: "Fichas Clínicas", href: "/clinical", icon: ClipboardList },
-  { name: "Financeiro", href: "/financial", icon: CreditCard },
-  { name: "Comunicação", href: "/communication", icon: MessageCircle },
-  { name: "EPIs & Materiais", href: "/materials", icon: ShieldCheck },
-  { name: "Fidelização", href: "/loyalty", icon: Gift },
-  { name: "Configurações", href: "/settings", icon: Settings },
+  { name: "Appointments", href: "/appointments", icon: Calendar },
+  { name: "Clients", href: "/clients", icon: Users },
+  { name: "Clinical Records", href: "/clinical", icon: ClipboardList },
+  { name: "Financial", href: "/financial", icon: CreditCard },
+  { name: "Communication", href: "/communication", icon: MessageCircle },
+  { name: "PPE & Materials", href: "/materials", icon: ShieldCheck },
+  { name: "Loyalty", href: "/loyalty", icon: Gift },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -41,8 +41,8 @@ export default function Sidebar() {
             <Sparkles className="w-6 h-6 text-white" />
           </div>
           <div className="ml-3">
-            <h1 className="text-xl font-bold text-slate-900">Estética Pro</h1>
-            <p className="text-sm text-slate-500">Gestão Profissional</p>
+            <h1 className="text-xl font-bold text-slate-900">Aesthetic Pro</h1>
+            <p className="text-sm text-slate-500">Professional Management</p>
           </div>
         </div>
       </div>
@@ -78,14 +78,14 @@ export default function Sidebar() {
             <button
               onClick={() => setShowUpgradeBanner(false)}
               className="absolute top-2 right-2 text-white/70 hover:text-white transition-colors"
-              aria-label="Fechar banner"
+              aria-label="Close banner"
             >
               <X className="w-4 h-4" />
             </button>
             <h3 className="font-semibold mb-1">Upgrade Pro</h3>
-            <p className="text-sm text-white/80 mb-3">Desbloqueie recursos avançados</p>
+            <p className="text-sm text-white/80 mb-3">Unlock advanced features</p>
             <Button className="bg-white text-primary hover:bg-white/90 px-4 py-2 rounded-lg text-sm font-medium w-full">
-              Saiba Mais
+              Learn More
             </Button>
           </div>
         )}
@@ -96,7 +96,7 @@ export default function Sidebar() {
           onClick={() => window.location.href = "/api/logout"}
         >
           <LogOut className="w-5 h-5 mr-3" />
-          Sair da Conta
+          Log Out
         </Button>
       </div>
     </nav>

@@ -56,14 +56,14 @@ export default function Clients() {
       setIsDialogOpen(false);
       form.reset();
       toast({
-        title: "Sucesso",
-        description: "Cliente cadastrada com sucesso!",
+        title: "Success",
+        description: "Client registered successfully!",
       });
     },
     onError: (error) => {
       toast({
-        title: "Erro",
-        description: "Falha ao cadastrar cliente. Tente novamente.",
+        title: "Error",
+        description: "Failed to register client. Please try again.",
         variant: "destructive",
       });
     },
@@ -88,16 +88,16 @@ export default function Clients() {
       <Sidebar />
       
       <main className="ml-64">
-        <TopHeader title="Clientes" subtitle="Gerencie o cadastro e prontuários das suas clientes" />
+        <TopHeader title="Clients" subtitle="Manage your client registrations and records" />
         
         <div className="p-6 space-y-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-slate-900">Cadastro de Clientes</CardTitle>
+              <CardTitle className="text-xl font-semibold text-slate-900">Client Registration</CardTitle>
               <div className="flex space-x-3">
                 <div className="relative">
                   <Input 
-                    placeholder="Buscar clientes..." 
+                    placeholder="Search clients..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 pr-4 py-2"

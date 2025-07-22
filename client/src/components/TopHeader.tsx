@@ -18,7 +18,7 @@ export default function TopHeader({ title, subtitle }: TopHeaderProps) {
     if (user?.firstName) {
       return user.firstName;
     }
-    return "Usuário";
+    return "User";
   };
 
   const getInitials = () => {
@@ -42,12 +42,12 @@ export default function TopHeader({ title, subtitle }: TopHeaderProps) {
           </Button>
           <div className="flex items-center">
             <Avatar className="w-10 h-10">
-              <AvatarImage src={user?.profileImageUrl || undefined} alt="Foto do perfil" />
+              <AvatarImage src={user?.profileImageUrl || undefined} alt="Profile photo" />
               <AvatarFallback>{getInitials()}</AvatarFallback>
             </Avatar>
             <div className="ml-3">
               <p className="text-sm font-medium text-slate-900">{getUserName()}</p>
-              <p className="text-xs text-slate-500">Esteticista</p>
+              <p className="text-xs text-slate-500">Aesthetician</p>
             </div>
           </div>
         </div>

@@ -17,8 +17,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
-        title: "Não autorizado",
-        description: "Você precisa fazer login para acessar esta página.",
+        title: "Unauthorised",
+        description: "You need to log in to access this page.",
         variant: "destructive",
       });
       setTimeout(() => {
@@ -54,7 +54,7 @@ export default function Dashboard() {
       <main className="ml-64">
         <TopHeader 
           title="Dashboard" 
-          subtitle="Bem-vinda de volta! Aqui está um resumo do seu dia."
+          subtitle="Welcome back! Here's a summary of your day."
         />
         
         <div className="p-6 space-y-8">
@@ -67,11 +67,11 @@ export default function Dashboard() {
                     <Calendar className="w-6 h-6 text-primary" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm text-slate-600">Hoje</p>
+                    <p className="text-sm text-slate-600">Today</p>
                     <p className="text-2xl font-bold text-slate-900">
                       {statsLoading ? "..." : (stats as any)?.todayAppointments || 0}
                     </p>
-                    <p className="text-xs text-emerald-600">Agendamentos</p>
+                    <p className="text-xs text-emerald-600">Appointments</p>
                   </div>
                 </div>
               </CardContent>
@@ -84,11 +84,11 @@ export default function Dashboard() {
                     <DollarSign className="w-6 h-6 text-emerald-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm text-slate-600">Receita do Dia</p>
+                    <p className="text-sm text-slate-600">Daily Revenue</p>
                     <p className="text-2xl font-bold text-slate-900">
-                      R$ {statsLoading ? "..." : parseFloat((stats as any)?.dailyRevenue || "0").toFixed(2)}
+                      ${statsLoading ? "..." : parseFloat((stats as any)?.dailyRevenue || "0").toFixed(2)}
                     </p>
-                    <p className="text-xs text-emerald-600">vs ontem</p>
+                    <p className="text-xs text-emerald-600">vs yesterday</p>
                   </div>
                 </div>
               </CardContent>
@@ -101,11 +101,11 @@ export default function Dashboard() {
                     <Users className="w-6 h-6 text-secondary" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm text-slate-600">Clientes Ativas</p>
+                    <p className="text-sm text-slate-600">Active Clients</p>
                     <p className="text-2xl font-bold text-slate-900">
                       {statsLoading ? "..." : (stats as any)?.activeClients || 0}
                     </p>
-                    <p className="text-xs text-emerald-600">total cadastradas</p>
+                    <p className="text-xs text-emerald-600">total registered</p>
                   </div>
                 </div>
               </CardContent>
@@ -118,11 +118,11 @@ export default function Dashboard() {
                     <Star className="w-6 h-6 text-pink-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm text-slate-600">Satisfação</p>
+                    <p className="text-sm text-slate-600">Satisfaction</p>
                     <p className="text-2xl font-bold text-slate-900">
                       {statsLoading ? "..." : (stats as any)?.satisfaction || "0.0"}
                     </p>
-                    <p className="text-xs text-emerald-600">média geral</p>
+                    <p className="text-xs text-emerald-600">average rating</p>
                   </div>
                 </div>
               </CardContent>
@@ -133,9 +133,9 @@ export default function Dashboard() {
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-semibold text-slate-900">Agenda de Hoje</CardTitle>
+                <CardTitle className="text-lg font-semibold text-slate-900">Today's Schedule</CardTitle>
                 <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">
-                  Ver todos
+                  View all
                 </Button>
               </CardHeader>
               <CardContent>
@@ -170,7 +170,7 @@ export default function Dashboard() {
                             <p className="font-medium text-slate-900">{appointment.client.name}</p>
                             <p className="text-sm text-slate-600">{appointment.service.name}</p>
                             <p className="text-xs text-slate-500">
-                              Duração: {appointment.service.duration} min
+                              Duration: {appointment.service.duration} min
                             </p>
                           </div>
                           <div className="flex space-x-2">
@@ -186,7 +186,7 @@ export default function Dashboard() {
                     ) : (
                       <div className="text-center py-8">
                         <Clock className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                        <p className="text-slate-500">Nenhum agendamento para hoje</p>
+                        <p className="text-slate-500">No appointments for today</p>
                       </div>
                     )}
                   </div>
@@ -196,10 +196,10 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-semibold text-slate-900">Resumo Financeiro</CardTitle>
+                <CardTitle className="text-lg font-semibold text-slate-900">Financial Summary</CardTitle>
                 <select className="text-sm border border-slate-200 rounded-lg px-3 py-1">
-                  <option>Este mês</option>
-                  <option>Últimos 7 dias</option>
+                  <option>This month</option>
+                  <option>Last 7 days</option>
                 </select>
               </CardHeader>
               <CardContent>
@@ -210,12 +210,12 @@ export default function Dashboard() {
                         <ArrowUp className="w-4 h-4 text-emerald-600" />
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm font-medium text-slate-900">Receitas</p>
-                        <p className="text-xs text-slate-500">Procedimentos realizados</p>
+                        <p className="text-sm font-medium text-slate-900">Revenue</p>
+                        <p className="text-xs text-slate-500">Completed procedures</p>
                       </div>
                     </div>
                     <span className="font-bold text-emerald-600">
-                      R$ {statsLoading ? "..." : parseFloat((stats as any)?.monthlyRevenue || "0").toFixed(2)}
+                      ${statsLoading ? "..." : parseFloat((stats as any)?.monthlyRevenue || "0").toFixed(2)}
                     </span>
                   </div>
 
@@ -225,12 +225,12 @@ export default function Dashboard() {
                         <ArrowDown className="w-4 h-4 text-red-600" />
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm font-medium text-slate-900">Despesas</p>
-                        <p className="text-xs text-slate-500">Materiais e custos</p>
+                        <p className="text-sm font-medium text-slate-900">Expenses</p>
+                        <p className="text-xs text-slate-500">Materials and costs</p>
                       </div>
                     </div>
                     <span className="font-bold text-red-600">
-                      R$ {statsLoading ? "..." : parseFloat((stats as any)?.monthlyExpenses || "0").toFixed(2)}
+                      ${statsLoading ? "..." : parseFloat((stats as any)?.monthlyExpenses || "0").toFixed(2)}
                     </span>
                   </div>
 
