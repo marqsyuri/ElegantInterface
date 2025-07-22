@@ -60,14 +60,14 @@ export default function Clinical() {
       form.reset();
       setSelectedRating(0);
       toast({
-        title: "Sucesso",
-        description: "Ficha clínica criada com sucesso!",
+        title: "Success",
+        description: "Clinical record created successfully!",
       });
     },
     onError: (error) => {
       toast({
-        title: "Erro",
-        description: "Falha ao criar ficha clínica. Tente novamente.",
+        title: "Error",
+        description: "Failed to create clinical record. Please try again.",
         variant: "destructive",
       });
     },
@@ -78,13 +78,13 @@ export default function Clinical() {
   };
 
   const procedures = [
-    "Limpeza Facial Profunda",
-    "Peeling Químico",
-    "Radiofrequência",
-    "Microagulhamento",
-    "Hidratação Facial",
-    "Drenagem Linfática",
-    "Lifting Facial",
+    "Deep Facial Cleansing",
+    "Chemical Peel",
+    "Radiofrequency",
+    "Microneedling",
+    "Facial Hydration",
+    "Lymphatic Drainage",
+    "Facial Lifting",
   ];
 
   return (
@@ -92,22 +92,22 @@ export default function Clinical() {
       <Sidebar />
       
       <main className="ml-64">
-        <TopHeader title="Fichas Clínicas" subtitle="Registre e acompanhe os procedimentos realizados" />
+        <TopHeader title="Clinical Records" subtitle="Record and track treatments performed" />
         
         <div className="p-6 space-y-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-slate-900">Ficha Clínica Eletrônica</CardTitle>
+              <CardTitle className="text-xl font-semibold text-slate-900">Electronic Clinical Record</CardTitle>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-primary/90">
                     <FilePlus className="w-4 h-4 mr-2" />
-                    Nova Ficha
+                    New Record
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Nova Ficha Clínica</DialogTitle>
+                    <DialogTitle>New Clinical Record</DialogTitle>
                   </DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

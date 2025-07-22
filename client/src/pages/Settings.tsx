@@ -54,14 +54,14 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
-        title: "Sucesso",
-        description: "Perfil atualizado com sucesso!",
+        title: "Success",
+        description: "Profile updated successfully!",
       });
     },
     onError: (error) => {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar perfil. Tente novamente.",
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
         variant: "destructive",
       });
     },
@@ -84,7 +84,7 @@ export default function Settings() {
     if (user?.firstName) {
       return user.firstName;
     }
-    return "Usuário";
+    return "User";
   };
 
   return (
@@ -92,20 +92,20 @@ export default function Settings() {
       <Sidebar />
       
       <main className="ml-64">
-        <TopHeader title="Configurações" subtitle="Gerencie seu perfil e preferências do sistema" />
+        <TopHeader title="Settings" subtitle="Manage your profile and system preferences" />
         
         <div className="p-6 space-y-8">
           <Card>
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-slate-900">
-                Configurações e Perfil
+                Settings and Profile
               </CardTitle>
             </CardHeader>
 
             <CardContent>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-4">Perfil Profissional</h4>
+                  <h4 className="font-medium text-slate-900 mb-4">Professional Profile</h4>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                       <div className="flex items-center space-x-4 mb-6">

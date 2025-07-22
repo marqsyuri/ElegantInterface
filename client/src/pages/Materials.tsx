@@ -53,14 +53,14 @@ export default function Materials() {
       setIsDialogOpen(false);
       form.reset();
       toast({
-        title: "Sucesso",
-        description: "Item adicionado ao estoque com sucesso!",
+        title: "Success",
+        description: "Item added to stock successfully!",
       });
     },
     onError: (error) => {
       toast({
-        title: "Erro",
-        description: "Falha ao adicionar item. Tente novamente.",
+        title: "Error",
+        description: "Failed to add item. Please try again.",
         variant: "destructive",
       });
     },
@@ -71,17 +71,17 @@ export default function Materials() {
   };
 
   const getStockStatus = (currentStock: number, minStock: number) => {
-    if (currentStock === 0) return { status: "out", color: "red", text: "Falta" };
-    if (currentStock <= minStock) return { status: "low", color: "amber", text: "Estoque Baixo" };
-    return { status: "ok", color: "emerald", text: "Estoque OK" };
+    if (currentStock === 0) return { status: "out", color: "red", text: "Out of Stock" };
+    if (currentStock <= minStock) return { status: "low", color: "amber", text: "Low Stock" };
+    return { status: "ok", color: "emerald", text: "Stock OK" };
   };
 
   const epiItems = [
-    "Luvas descartáveis",
-    "Máscara cirúrgica", 
-    "Avental descartável",
-    "Óculos de proteção",
-    "Álcool 70%"
+    "Disposable gloves",
+    "Surgical mask", 
+    "Disposable gown",
+    "Safety glasses",
+    "70% Alcohol"
   ];
 
   const handleChecklistChange = (item: string, checked: boolean) => {
@@ -90,8 +90,8 @@ export default function Materials() {
 
   const confirmChecklist = () => {
     toast({
-      title: "Checklist Confirmado",
-      description: "EPIs verificados para o próximo atendimento.",
+      title: "Checklist Confirmed",
+      description: "PPE checked for next appointment.",
     });
     setCheckedItems({});
   };
@@ -101,13 +101,13 @@ export default function Materials() {
       <Sidebar />
       
       <main className="ml-64">
-        <TopHeader title="EPIs & Materiais" subtitle="Controle de estoque e checklist de segurança" />
+        <TopHeader title="PPE & Materials" subtitle="Stock control and safety checklist" />
         
         <div className="p-6 space-y-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-xl font-semibold text-slate-900">
-                Materiais de Proteção e Segurança
+                Personal Protection Equipment
               </CardTitle>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>

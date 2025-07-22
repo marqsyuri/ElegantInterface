@@ -70,14 +70,14 @@ export default function Loyalty() {
       form.reset();
       setSelectedServices([]);
       toast({
-        title: "Sucesso",
-        description: "Pacote de fidelização criado com sucesso!",
+        title: "Success",
+        description: "Loyalty package created successfully!",
       });
     },
     onError: (error) => {
       toast({
-        title: "Erro",
-        description: "Falha ao criar pacote. Tente novamente.",
+        title: "Error",
+        description: "Failed to create package. Please try again.",
         variant: "destructive",
       });
     },
@@ -86,8 +86,8 @@ export default function Loyalty() {
   const onSubmit = (data: PackageFormData) => {
     if (selectedServices.length === 0) {
       toast({
-        title: "Erro",
-        description: "Selecione pelo menos um serviço para o pacote.",
+        title: "Error",
+        description: "Select at least one service for the package.",
         variant: "destructive",
       });
       return;

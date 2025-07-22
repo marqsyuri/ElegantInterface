@@ -121,7 +121,7 @@ export default function Financial() {
             <CardContent>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-4">Transações Recentes</h4>
+                  <h4 className="font-medium text-slate-900 mb-4">Recent Transactions</h4>
                   <div className="space-y-3">
                     {transactionsLoading ? (
                       <div className="space-y-3">
@@ -158,7 +158,7 @@ export default function Financial() {
                             <div className="ml-4">
                               <p className="font-medium text-slate-900">{transaction.description}</p>
                               <p className="text-sm text-slate-500">
-                                {new Date(transaction.transactionDate).toLocaleDateString('pt-BR')}
+                                {new Date(transaction.transactionDate).toLocaleDateString('en-NZ')}
                               </p>
                             </div>
                           </div>
@@ -167,7 +167,7 @@ export default function Financial() {
                               ? 'text-emerald-600' 
                               : 'text-red-600'
                           }`}>
-                            {transaction.type === 'income' ? '+' : '-'} R$ {parseFloat(transaction.amount).toFixed(2)}
+                            {transaction.type === 'income' ? '+' : '-'} ${parseFloat(transaction.amount).toFixed(2)}
                           </span>
                         </div>
                       ))

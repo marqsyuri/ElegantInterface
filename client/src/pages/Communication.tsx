@@ -108,7 +108,7 @@ export default function Communication() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
-                    <DialogTitle>Enviar Mensagem Manual</DialogTitle>
+                    <DialogTitle>Send Manual Message</DialogTitle>
                   </DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -117,18 +117,18 @@ export default function Communication() {
                         name="clientId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Destinatário</FormLabel>
+                            <FormLabel>Recipient</FormLabel>
                             <Select 
                               onValueChange={(value) => field.onChange(value === "all" ? null : parseInt(value))} 
                               value={field.value ? field.value.toString() : "all"}
                             >
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Selecione o destinatário" />
+                                  <SelectValue placeholder="Select recipient" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="all">Todas as clientes</SelectItem>
+                                <SelectItem value="all">All clients</SelectItem>
                                 {clients?.map((client: any) => (
                                   <SelectItem key={client.id} value={client.id.toString()}>
                                     {client.name}
@@ -146,7 +146,7 @@ export default function Communication() {
                         name="channel"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Canal</FormLabel>
+                            <FormLabel>Channel</FormLabel>
                             <div className="flex space-x-4">
                               <div className="flex items-center space-x-2">
                                 <input 
@@ -192,10 +192,10 @@ export default function Communication() {
                         name="content"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Mensagem</FormLabel>
+                            <FormLabel>Message</FormLabel>
                             <FormControl>
                               <Textarea 
-                                placeholder="Digite sua mensagem..."
+                                placeholder="Type your message..."
                                 className="h-24"
                                 {...field} 
                               />
@@ -207,10 +207,10 @@ export default function Communication() {
 
                       <div className="flex space-x-3">
                         <Button type="submit" disabled={createMessageMutation.isPending}>
-                          {createMessageMutation.isPending ? "Enviando..." : "Enviar Mensagem"}
+                          {createMessageMutation.isPending ? "Sending..." : "Send Message"}
                         </Button>
                         <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                          Cancelar
+                          Cancel
                         </Button>
                       </div>
                     </form>

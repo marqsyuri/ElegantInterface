@@ -169,7 +169,7 @@ export default function Appointments() {
                           name="appointmentDate"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Data</FormLabel>
+                              <FormLabel>Date</FormLabel>
                               <FormControl>
                                 <Input type="date" {...field} />
                               </FormControl>
@@ -183,11 +183,11 @@ export default function Appointments() {
                           name="appointmentTime"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Horário</FormLabel>
+                              <FormLabel>Time</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Selecione um horário" />
+                                    <SelectValue placeholder="Select a time" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -209,9 +209,9 @@ export default function Appointments() {
                         name="notes"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Observações</FormLabel>
+                            <FormLabel>Notes</FormLabel>
                             <FormControl>
-                              <Input placeholder="Observações adicionais..." {...field} />
+                              <Input placeholder="Additional notes..." {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -220,10 +220,10 @@ export default function Appointments() {
 
                       <div className="flex space-x-3">
                         <Button type="submit" disabled={createAppointmentMutation.isPending}>
-                          {createAppointmentMutation.isPending ? "Salvando..." : "Confirmar Agendamento"}
+                          {createAppointmentMutation.isPending ? "Saving..." : "Confirm Appointment"}
                         </Button>
                         <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                          Cancelar
+                          Cancel
                         </Button>
                       </div>
                     </form>
