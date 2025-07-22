@@ -1,0 +1,76 @@
+Claro! Vou criar um prompt **tela a tela**, orientando a descrição funcional de cada recurso de gestão e atendimento ao cliente para um sistema/app voltado a esteticistas. Isso pode ser usado para guiar desenvolvedores ou para apresentar o fluxo em um protótipo.
+
+# Prompt Tela a Tela: Sistema de Gestão e Atendimento para **Esteticistas**
+
+## Tela 1 – **Login / Cadastro**
+
+- Campos para usuário (e-mail ou CPF) e senha.
+- Opção para “Esqueci a senha” e botão de cadastro para novos usuários.
+- Mensagem de boas-vindas explicando o objetivo do sistema (ex: “Organize seus agendamentos, clientes e controle financeiro com facilidade”).
+
+## Tela 2 – **Dashboard Inicial**
+
+- Visão geral do dia com agendamentos pendentes/confirmados.
+- Resumo financeiro (recebimentos do dia, pendências).
+- Avisos importantes (ex: clientes com tratamentos em andamento, novidades ou mensagens).
+- Botões rápidos para: Agendar atendimento, Perfil do cliente, Receita financeira.
+
+## Tela 3 – **Agendamento Online**
+
+- Calendário interativo para escolher data e horário disponíveis.
+- Pesquisa e seleção do cliente (possibilidade de cadastro rápido se for novo).
+- Escolha do tipo de procedimento (com descrição e duração).
+- Confirmação do agendamento via notificação e e-mail automático para o cliente.
+- Opção para remarcar ou cancelar.
+
+## Tela 4 – **Cadastro e Prontuário do Cliente**
+
+- Campos para dados pessoais: nome, telefone, e-mail, data de nascimento, histórico de saúde relevante.
+- Áreas para o registro das avaliações e diagnósticos.
+- Fotos antes/depois anexadas.
+- Histórico dos atendimentos anteriores com anotações detalhadas.
+- Campo para inserir recomendações ou prescrições de produtos.
+
+## Tela 5 – **Ficha Clínica Eletrônica**
+
+- Registro do procedimento realizado, data e observações.
+- Avaliação dos resultados em escala ou comentários.
+- Histórico de reações alérgicas ou efeitos colaterais.
+- Planos futuros de tratamento e lembretes programados.
+- Opção para upload de documentos ou laudos.
+
+## Tela 6 – **Gestão Financeira**
+
+- Registro de entradas (pagamentos) e saídas (custos e despesas).
+- Relatórios simples para acompanhar faturamento diário, semanal e mensal.
+- Alertas para contas a pagar e receber.
+- Histórico de pagamentos feitos pelos clientes.
+- Integração opcional com gateways de pagamento para emissão de boletos ou cobranças.
+
+## Tela 7 – **Comunicação com Cliente**
+
+- Chats integrados (WhatsApp Business, SMS) para envio automático e manual de mensagens de lembrete de consultas, promoções e dicas.
+- Área para feedback do cliente pós-atendimento (escala de satisfação + campo de comentários).
+- Lista de contatos organizada com filtros (frequência de visita, histórico, preferências).
+
+## Tela 8 – **Materiais de Proteção e Segurança**
+
+- Checklist interativo para a equipe confirmar o uso correto de EPIs em cada atendimento.
+- Alertas de estoque mínimo para itens descartáveis como luvas, máscaras, aventais.
+- Área de orientações sobre cuidados de higiene e segurança para o profissional.
+
+## Tela 9 – **Planos de Recorrência e Fidelização**
+
+- Criação e gerenciamento de pacotes de serviços (ex: 5 sessões de limpeza facial com desconto).
+- Controle das renovações e vencimentos dos planos.
+- Visualização de clientes fidelizados e seus benefícios.
+- Configuração de programa de pontos para recompensas (descontos, brindes).
+
+## Tela 10 – **Configurações e Perfil**
+
+- Opções para personalizar notificações e preferências.
+- Cadastro dos dados da clínica/consultório.
+- Permissões e acessos para múltiplos usuários (se houver equipe).
+- Suporte técnico e acesso ao manual/tutorial do sistema.
+
+Se desejar, posso ajudar a detalhar alguma tela específica ou criar fluxos interativos para essas descrições. Quer que eu faça?
