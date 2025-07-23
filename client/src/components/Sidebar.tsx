@@ -104,22 +104,6 @@ export default function Sidebar() {
         </div>
         
         <div className={cn("absolute bottom-4", isCollapsed ? "left-2 right-2" : "left-4 right-4")}>
-          {showUpgradeBanner && !isCollapsed && (
-            <div className="bg-gradient-to-br from-primary to-secondary rounded-lg p-4 text-white mb-4 relative">
-              <button
-                onClick={() => setShowUpgradeBanner(false)}
-                className="absolute top-2 right-2 text-white/70 hover:text-white transition-colors"
-                aria-label="Close banner"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <h3 className="font-semibold mb-1">Upgrade Pro</h3>
-              <p className="text-sm text-white/80 mb-3">Unlock advanced features</p>
-              <Button className="bg-white text-primary hover:bg-white/90 px-4 py-2 rounded-lg text-sm font-medium w-full">
-                Learn More
-              </Button>
-            </div>
-          )}
         </div>
       </nav>
       
@@ -135,6 +119,26 @@ export default function Sidebar() {
           >
             <ChevronRight className="w-4 h-4 text-slate-600" />
           </Button>
+        </div>
+      )}
+      
+      {/* Upgrade Pro banner - bottom right corner */}
+      {showUpgradeBanner && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="bg-gradient-to-br from-primary to-secondary rounded-lg p-4 text-white shadow-lg relative max-w-sm">
+            <button
+              onClick={() => setShowUpgradeBanner(false)}
+              className="absolute top-2 right-2 text-white/70 hover:text-white transition-colors"
+              aria-label="Close banner"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h3 className="font-semibold mb-1">Upgrade Pro</h3>
+            <p className="text-sm text-white/80 mb-3">Unlock advanced features and premium tools</p>
+            <Button className="bg-white text-primary hover:bg-white/90 px-4 py-2 rounded-lg text-sm font-medium w-full">
+              Learn More
+            </Button>
+          </div>
         </div>
       )}
     </>

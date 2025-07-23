@@ -124,18 +124,18 @@ export default function Loyalty() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-xl font-semibold text-slate-900">
-                Planos de Recorrência e Fidelização
+                Recurring Plans & Loyalty Programmes
               </CardTitle>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-primary/90">
                     <Gift className="w-4 h-4 mr-2" />
-                    Novo Plano
+                    New Plan
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Criar Novo Pacote</DialogTitle>
+                    <DialogTitle>Create New Package</DialogTitle>
                   </DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -144,9 +144,9 @@ export default function Loyalty() {
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Nome do Pacote</FormLabel>
+                            <FormLabel>Package Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Ex: Pacote Renovação" {...field} />
+                              <Input placeholder="e.g. Renewal Package" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -158,10 +158,10 @@ export default function Loyalty() {
                         name="description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Descrição</FormLabel>
+                            <FormLabel>Description</FormLabel>
                             <FormControl>
                               <Textarea 
-                                placeholder="Descrição detalhada do pacote..."
+                                placeholder="Detailed package description..."
                                 className="h-20"
                                 {...field} 
                               />
@@ -173,7 +173,7 @@ export default function Loyalty() {
 
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Procedimentos Inclusos
+                          Included Services
                         </label>
                         <div className="space-y-2 max-h-40 overflow-y-auto">
                           {services?.map((service: any) => (
@@ -183,7 +183,7 @@ export default function Loyalty() {
                                 onCheckedChange={() => handleServiceToggle(service.id)}
                               />
                               <span className="text-slate-700">
-                                {service.name} (R$ {parseFloat(service.price).toFixed(2)})
+                                {service.name} (${parseFloat(service.price).toFixed(2)})
                               </span>
                             </div>
                           ))}
@@ -196,7 +196,7 @@ export default function Loyalty() {
                           name="originalPrice"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Preço Original</FormLabel>
+                              <FormLabel>Original Price</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
@@ -215,7 +215,7 @@ export default function Loyalty() {
                           name="discountedPrice"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Preço com Desconto</FormLabel>
+                              <FormLabel>Discounted Price</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
@@ -236,7 +236,7 @@ export default function Loyalty() {
                           name="discountPercentage"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Desconto (%)</FormLabel>
+                              <FormLabel>Discount (%)</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
@@ -255,7 +255,7 @@ export default function Loyalty() {
                           name="validityDays"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Validade (dias)</FormLabel>
+                              <FormLabel>Validity (days)</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
@@ -272,10 +272,10 @@ export default function Loyalty() {
 
                       <div className="flex space-x-3">
                         <Button type="submit" disabled={createPackageMutation.isPending}>
-                          {createPackageMutation.isPending ? "Criando..." : "Criar Pacote"}
+                          {createPackageMutation.isPending ? "Creating..." : "Create Package"}
                         </Button>
                         <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                          Cancelar
+                          Cancel
                         </Button>
                       </div>
                     </form>
@@ -287,7 +287,7 @@ export default function Loyalty() {
             <CardContent>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-4">Pacotes Disponíveis</h4>
+                  <h4 className="font-medium text-slate-900 mb-4">Available Packages</h4>
                   <div className="space-y-4">
                     {packagesLoading ? (
                       <div className="space-y-4">
@@ -318,16 +318,16 @@ export default function Loyalty() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm text-slate-500">
-                                Preço normal: <span className="line-through">
-                                  R$ {parseFloat(pkg.originalPrice).toFixed(2)}
+                                Normal price: <span className="line-through">
+                                  ${parseFloat(pkg.originalPrice).toFixed(2)}
                                 </span>
                               </p>
                               <p className="text-xl font-bold text-primary">
-                                R$ {parseFloat(pkg.discountedPrice).toFixed(2)}
+                                ${parseFloat(pkg.discountedPrice).toFixed(2)}
                               </p>
                             </div>
                             <Button variant="outline" size="sm">
-                              Detalhes
+                              Details
                             </Button>
                           </div>
                         </div>
@@ -335,13 +335,13 @@ export default function Loyalty() {
                     ) : (
                       <div className="text-center py-8">
                         <Gift className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                        <p className="text-slate-500">Nenhum pacote criado</p>
+                        <p className="text-slate-500">No packages created</p>
                         <Button 
                           variant="outline" 
                           className="mt-4"
                           onClick={() => setIsDialogOpen(true)}
                         >
-                          Criar primeiro pacote
+                          Create first package
                         </Button>
                       </div>
                     )}
@@ -349,7 +349,7 @@ export default function Loyalty() {
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-4">Clientes Fidelizadas</h4>
+                  <h4 className="font-medium text-slate-900 mb-4">Loyalty Clients</h4>
                   <div className="space-y-4 mb-6">
                     {clients?.slice(0, 5).map((client: any) => {
                       const tier = getLoyaltyTier(client.loyaltyPoints || 0);
@@ -358,13 +358,13 @@ export default function Loyalty() {
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center">
                               <Avatar className="w-12 h-12">
-                                <AvatarImage src="" alt="Cliente fidelizada" />
+                                <AvatarImage src="" alt="Loyalty client" />
                                 <AvatarFallback>{getInitials(client.name)}</AvatarFallback>
                               </Avatar>
                               <div className="ml-3">
                                 <p className="font-medium text-slate-900">{client.name}</p>
                                 <p className="text-sm text-slate-600">
-                                  Cliente desde {new Date(client.createdAt).toLocaleDateString('pt-BR')}
+                                  Client since {new Date(client.createdAt).toLocaleDateString('en-NZ')}
                                 </p>
                               </div>
                             </div>
@@ -372,7 +372,7 @@ export default function Loyalty() {
                               <p className="text-lg font-bold text-primary">
                                 {client.loyaltyPoints || 0} pts
                               </p>
-                              <p className="text-xs text-slate-500">Pontos acumulados</p>
+                              <p className="text-xs text-slate-500">Accumulated points</p>
                             </div>
                           </div>
                           <div className="flex items-center justify-between">
@@ -380,7 +380,7 @@ export default function Loyalty() {
                               VIP {tier.name}
                             </Badge>
                             <p className="text-sm text-slate-600">
-                              Próximo desconto: R$ {Math.floor((client.loyaltyPoints || 0) / 100) * 10}.00
+                              Next discount: ${Math.floor((client.loyaltyPoints || 0) / 100) * 10}.00
                             </p>
                           </div>
                         </div>
@@ -390,12 +390,12 @@ export default function Loyalty() {
 
                   <div className="space-y-4">
                     <div className="p-4 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg">
-                      <h5 className="font-semibold text-slate-900 mb-3">Como Funciona</h5>
+                      <h5 className="font-semibold text-slate-900 mb-3">How It Works</h5>
                       <div className="space-y-2 text-sm text-slate-700">
-                        <p>• 1 ponto = R$ 1,00 gasto</p>
-                        <p>• 100 pontos = R$ 10,00 desconto</p>
-                        <p>• Bônus aniversário: +50 pontos</p>
-                        <p>• Indicação de amiga: +30 pontos</p>
+                        <p>• 1 point = $1.00 spent</p>
+                        <p>• 100 points = $10.00 discount</p>
+                        <p>• Birthday bonus: +50 points</p>
+                        <p>• Friend referral: +30 points</p>
                       </div>
                     </div>
 
