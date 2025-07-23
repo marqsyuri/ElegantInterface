@@ -93,7 +93,7 @@ export default function Communication() {
       <Sidebar />
       
       <main className="ml-16 lg:ml-64 transition-all duration-300">
-        <TopHeader title="Communication" subtitle="Manage automatic messages and client feedback" />
+        <TopHeader title="Communication" subtitle="Manage messages, feedback and client interactions" />
         
         <div className="p-6 space-y-8">
           <Card>
@@ -222,11 +222,11 @@ export default function Communication() {
             <CardContent>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-4">Mensagens Automáticas</h4>
+                  <h4 className="font-medium text-slate-900 mb-4">Automatic Messages</h4>
                   <div className="space-y-4">
                     <div className="p-4 bg-slate-50 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-slate-900">Lembrete de Consulta</h5>
+                        <h5 className="font-medium text-slate-900">Appointment Reminder</h5>
                         <Switch 
                           checked={autoSettings.appointmentReminder}
                           onCheckedChange={(checked) => 
@@ -234,15 +234,15 @@ export default function Communication() {
                           }
                         />
                       </div>
-                      <p className="text-sm text-slate-600 mb-2">Enviado 24h antes do agendamento</p>
+                      <p className="text-sm text-slate-600 mb-2">Sent 24h before appointment</p>
                       <p className="text-sm text-slate-700 italic">
-                        "Olá [nome], lembramos que você tem um agendamento amanhã às [horario]. Nos vemos em breve!"
+                        "Hi [name], we'd like to remind you that you have an appointment tomorrow at [time]. See you soon!"
                       </p>
                     </div>
 
                     <div className="p-4 bg-slate-50 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-slate-900">Feedback Pós-Atendimento</h5>
+                        <h5 className="font-medium text-slate-900">Post-Treatment Feedback</h5>
                         <Switch 
                           checked={autoSettings.postTreatmentFeedback}
                           onCheckedChange={(checked) => 
@@ -250,15 +250,15 @@ export default function Communication() {
                           }
                         />
                       </div>
-                      <p className="text-sm text-slate-600 mb-2">Enviado 2h após o procedimento</p>
+                      <p className="text-sm text-slate-600 mb-2">Sent 2h after treatment</p>
                       <p className="text-sm text-slate-700 italic">
-                        "Como você está se sentindo após o procedimento? Sua opinião é muito importante para nós!"
+                        "How are you feeling after your treatment? Your feedback is very important to us!"
                       </p>
                     </div>
 
                     <div className="p-4 bg-slate-50 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-slate-900">Promoções Mensais</h5>
+                        <h5 className="font-medium text-slate-900">Monthly Promotions</h5>
                         <Switch 
                           checked={autoSettings.monthlyPromotions}
                           onCheckedChange={(checked) => 
@@ -266,16 +266,16 @@ export default function Communication() {
                           }
                         />
                       </div>
-                      <p className="text-sm text-slate-600 mb-2">Enviado no início de cada mês</p>
+                      <p className="text-sm text-slate-600 mb-2">Sent at the beginning of each month</p>
                       <p className="text-sm text-slate-700 italic">
-                        "Confira nossas promoções especiais deste mês! Cuide da sua pele com desconto especial."
+                        "Check out our special promotions this month! Take care of your skin with special discounts."
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-4">Feedback dos Clientes</h4>
+                  <h4 className="font-medium text-slate-900 mb-4">Client Feedback</h4>
                   <div className="space-y-4 mb-6">
                     {feedbackLoading ? (
                       <div className="space-y-4">
@@ -299,7 +299,7 @@ export default function Communication() {
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center">
                               <Avatar className="w-8 h-8">
-                                <AvatarImage src="" alt="Cliente" />
+                                <AvatarImage src="" alt="Client" />
                                 <AvatarFallback className="text-xs">
                                   {getInitials(item.client.name)}
                                 </AvatarFallback>
@@ -323,14 +323,14 @@ export default function Communication() {
                             <p className="text-sm text-slate-600">{item.comment}</p>
                           )}
                           <p className="text-xs text-slate-400 mt-2">
-                            {new Date(item.createdAt).toLocaleDateString('pt-BR')}
+                            {new Date(item.createdAt).toLocaleDateString('en-NZ')}
                           </p>
                         </div>
                       ))
                     ) : (
                       <div className="text-center py-8">
                         <MessageCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                        <p className="text-slate-500">Nenhum feedback recebido</p>
+                        <p className="text-slate-500">No feedback received</p>
                       </div>
                     )}
                   </div>

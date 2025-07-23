@@ -86,7 +86,7 @@ export default function Financial() {
       <Sidebar />
       
       <main className="ml-16 lg:ml-64 transition-all duration-300">
-        <TopHeader title="Financial Management" subtitle="Control your income, expenses and reports" />
+        <TopHeader title="Financial Management" subtitle="Control income, expenses and cash flow" />
         
         <div className="p-6 space-y-8">
           <Card>
@@ -173,46 +173,46 @@ export default function Financial() {
                       ))
                     ) : (
                       <div className="text-center py-8">
-                        <p className="text-slate-500">Nenhuma transação registrada</p>
+                        <p className="text-slate-500">No transactions recorded</p>
                       </div>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-4">Resumo Financeiro</h4>
+                  <h4 className="font-medium text-slate-900 mb-4">Financial Summary</h4>
                   <div className="space-y-6">
                     <div className="p-4 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg">
-                      <h5 className="font-medium text-slate-900 mb-3">Resumo do Mês</h5>
+                      <h5 className="font-medium text-slate-900 mb-3">Monthly Summary</h5>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-slate-600">Total Receitas</p>
+                          <p className="text-sm text-slate-600">Total Income</p>
                           <p className="text-xl font-bold text-emerald-600">
-                            R$ {statsLoading ? "..." : parseFloat(stats?.monthlyRevenue || "0").toFixed(2)}
+                            ${statsLoading ? "..." : parseFloat(stats?.monthlyRevenue || "0").toFixed(2)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-slate-600">Total Despesas</p>
+                          <p className="text-sm text-slate-600">Total Expenses</p>
                           <p className="text-xl font-bold text-red-600">
-                            R$ {statsLoading ? "..." : parseFloat(stats?.monthlyExpenses || "0").toFixed(2)}
+                            ${statsLoading ? "..." : parseFloat(stats?.monthlyExpenses || "0").toFixed(2)}
                           </p>
                         </div>
                       </div>
                       <div className="mt-4 pt-4 border-t border-white/50">
-                        <p className="text-sm text-slate-600">Lucro Líquido</p>
+                        <p className="text-sm text-slate-600">Net Profit</p>
                         <p className="text-2xl font-bold text-slate-900">
-                          R$ {statsLoading ? "..." : parseFloat(stats?.netProfit || "0").toFixed(2)}
+                          ${statsLoading ? "..." : parseFloat(stats?.netProfit || "0").toFixed(2)}
                         </p>
                       </div>
                     </div>
 
                     <div>
-                      <h5 className="font-medium text-slate-900 mb-3">Adicionar Transação</h5>
+                      <h5 className="font-medium text-slate-900 mb-3">Add Transaction</h5>
                       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                         <DialogContent className="sm:max-w-[500px]">
                           <DialogHeader>
                             <DialogTitle>
-                              Nova {transactionType === 'income' ? 'Receita' : 'Despesa'}
+                              New {transactionType === 'income' ? 'Income' : 'Expense'}
                             </DialogTitle>
                           </DialogHeader>
                           <Form {...form}>
@@ -222,9 +222,9 @@ export default function Financial() {
                                 name="description"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Descrição</FormLabel>
+                                    <FormLabel>Description</FormLabel>
                                     <FormControl>
-                                      <Input placeholder="Ex: Limpeza facial - Cliente" {...field} />
+                                      <Input placeholder="e.g. Facial cleansing - Client" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                   </FormItem>
@@ -237,7 +237,7 @@ export default function Financial() {
                                   name="amount"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>Valor</FormLabel>
+                                      <FormLabel>Amount</FormLabel>
                                       <FormControl>
                                         <Input 
                                           type="number" 
@@ -256,7 +256,7 @@ export default function Financial() {
                                   name="transactionDate"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>Data</FormLabel>
+                                      <FormLabel>Date</FormLabel>
                                       <FormControl>
                                         <Input type="date" {...field} />
                                       </FormControl>
@@ -271,28 +271,28 @@ export default function Financial() {
                                 name="category"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Categoria</FormLabel>
+                                    <FormLabel>Category</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || ""}>
                                       <FormControl>
                                         <SelectTrigger>
-                                          <SelectValue placeholder="Selecione uma categoria" />
+                                          <SelectValue placeholder="Select a category" />
                                         </SelectTrigger>
                                       </FormControl>
                                       <SelectContent>
                                         {transactionType === 'income' ? (
                                           <>
-                                            <SelectItem value="procedimento">Procedimento</SelectItem>
-                                            <SelectItem value="consulta">Consulta</SelectItem>
-                                            <SelectItem value="produto">Venda de Produto</SelectItem>
-                                            <SelectItem value="outros">Outros</SelectItem>
+                                            <SelectItem value="treatment">Treatment</SelectItem>
+                                            <SelectItem value="consultation">Consultation</SelectItem>
+                                            <SelectItem value="product">Product Sale</SelectItem>
+                                            <SelectItem value="other">Other</SelectItem>
                                           </>
                                         ) : (
                                           <>
-                                            <SelectItem value="material">Material</SelectItem>
-                                            <SelectItem value="equipamento">Equipamento</SelectItem>
+                                            <SelectItem value="materials">Materials</SelectItem>
+                                            <SelectItem value="equipment">Equipment</SelectItem>
                                             <SelectItem value="marketing">Marketing</SelectItem>
-                                            <SelectItem value="aluguel">Aluguel</SelectItem>
-                                            <SelectItem value="outros">Outros</SelectItem>
+                                            <SelectItem value="rent">Rent</SelectItem>
+                                            <SelectItem value="other">Other</SelectItem>
                                           </>
                                         )}
                                       </SelectContent>
@@ -304,10 +304,10 @@ export default function Financial() {
 
                               <div className="flex space-x-3">
                                 <Button type="submit" disabled={createTransactionMutation.isPending}>
-                                  {createTransactionMutation.isPending ? "Salvando..." : "Adicionar Transação"}
+                                  {createTransactionMutation.isPending ? "Saving..." : "Add Transaction"}
                                 </Button>
                                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                                  Cancelar
+                                  Cancel
                                 </Button>
                               </div>
                             </form>
@@ -319,7 +319,7 @@ export default function Financial() {
                         variant="outline"
                         onClick={() => setIsDialogOpen(true)}
                       >
-                        Adicionar Nova Transação
+                        Add New Transaction
                       </Button>
                     </div>
                   </div>

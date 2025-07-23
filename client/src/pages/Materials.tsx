@@ -101,7 +101,7 @@ export default function Materials() {
       <Sidebar />
       
       <main className="ml-16 lg:ml-64 transition-all duration-300">
-        <TopHeader title="PPE & Materials" subtitle="Stock control and safety checklist" />
+        <TopHeader title="Inventory Control" subtitle="Manage clinic materials and PPE" />
         
         <div className="p-6 space-y-8">
           <Card>
@@ -113,12 +113,12 @@ export default function Materials() {
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-primary/90">
                     <Package className="w-4 h-4 mr-2" />
-                    Adicionar Item
+                    Add Item
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
-                    <DialogTitle>Adicionar Item ao Estoque</DialogTitle>
+                    <DialogTitle>Add Item to Inventory</DialogTitle>
                   </DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -127,9 +127,9 @@ export default function Materials() {
                         name="itemName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Nome do Item</FormLabel>
+                            <FormLabel>Item Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Ex: Luvas descartáveis" {...field} />
+                              <Input placeholder="e.g. Disposable gloves" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -141,17 +141,17 @@ export default function Materials() {
                         name="category"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Categoria</FormLabel>
+                            <FormLabel>Category</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Selecione uma categoria" />
+                                  <SelectValue placeholder="Select a category" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="epi">EPI</SelectItem>
-                                <SelectItem value="material">Material</SelectItem>
-                                <SelectItem value="product">Produto</SelectItem>
+                                <SelectItem value="ppe">PPE</SelectItem>
+                                <SelectItem value="materials">Materials</SelectItem>
+                                <SelectItem value="products">Products</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -165,7 +165,7 @@ export default function Materials() {
                           name="currentStock"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Quantidade Atual</FormLabel>
+                              <FormLabel>Current Stock</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
@@ -184,7 +184,7 @@ export default function Materials() {
                           name="minStock"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Estoque Mínimo</FormLabel>
+                              <FormLabel>Minimum Stock</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
@@ -204,19 +204,19 @@ export default function Materials() {
                         name="unit"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Unidade</FormLabel>
+                            <FormLabel>Unit</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Selecione a unidade" />
+                                  <SelectValue placeholder="Select unit" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="unidades">Unidades</SelectItem>
-                                <SelectItem value="caixas">Caixas</SelectItem>
-                                <SelectItem value="pacotes">Pacotes</SelectItem>
-                                <SelectItem value="frascos">Frascos</SelectItem>
-                                <SelectItem value="litros">Litros</SelectItem>
+                                <SelectItem value="units">Units</SelectItem>
+                                <SelectItem value="boxes">Boxes</SelectItem>
+                                <SelectItem value="packets">Packets</SelectItem>
+                                <SelectItem value="bottles">Bottles</SelectItem>
+                                <SelectItem value="litres">Litres</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -229,7 +229,7 @@ export default function Materials() {
                         name="lastRestocked"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Última Reposição</FormLabel>
+                            <FormLabel>Last Restocked</FormLabel>
                             <FormControl>
                               <Input type="date" {...field} />
                             </FormControl>
@@ -240,10 +240,10 @@ export default function Materials() {
 
                       <div className="flex space-x-3">
                         <Button type="submit" disabled={createInventoryMutation.isPending}>
-                          {createInventoryMutation.isPending ? "Salvando..." : "Adicionar ao Estoque"}
+                          {createInventoryMutation.isPending ? "Saving..." : "Add to Inventory"}
                         </Button>
                         <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                          Cancelar
+                          Cancel
                         </Button>
                       </div>
                     </form>
@@ -255,10 +255,10 @@ export default function Materials() {
             <CardContent>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-4">Checklist de EPIs</h4>
+                  <h4 className="font-medium text-slate-900 mb-4">PPE Checklist</h4>
                   <div className="space-y-4">
                     <div className="p-4 bg-slate-50 rounded-lg">
-                      <h5 className="font-medium text-slate-900 mb-3">Próximo Atendimento</h5>
+                      <h5 className="font-medium text-slate-900 mb-3">Next Appointment</h5>
                       <div className="space-y-3">
                         {epiItems.map((item) => (
                           <div key={item} className="flex items-center justify-between">
@@ -271,7 +271,7 @@ export default function Materials() {
                               />
                               <span className="text-slate-700">{item}</span>
                             </div>
-                            <span className="text-sm text-emerald-600">✓ Disponível</span>
+                            <span className="text-sm text-emerald-600">✓ Available</span>
                           </div>
                         ))}
                       </div>
@@ -279,24 +279,24 @@ export default function Materials() {
                         className="mt-4 w-full bg-emerald-600 hover:bg-emerald-700"
                         onClick={confirmChecklist}
                       >
-                        Confirmar Checklist
+                        Confirm Checklist
                       </Button>
                     </div>
 
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h5 className="font-medium text-blue-900 mb-2">Orientações de Segurança</h5>
+                      <h5 className="font-medium text-blue-900 mb-2">Safety Guidelines</h5>
                       <ul className="text-sm text-blue-800 space-y-1">
-                        <li>• Sempre higienizar as mãos antes e após cada atendimento</li>
-                        <li>• Utilizar EPIs novos para cada cliente</li>
-                        <li>• Descartar materiais no lixo apropriado</li>
-                        <li>• Manter o ambiente de trabalho sempre limpo</li>
+                        <li>• Always sanitise hands before and after each treatment</li>
+                        <li>• Use fresh PPE for each client</li>
+                        <li>• Dispose of materials in appropriate waste</li>
+                        <li>• Keep work environment clean at all times</li>
                       </ul>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-4">Controle de Estoque</h4>
+                  <h4 className="font-medium text-slate-900 mb-4">Stock Control</h4>
                   <div className="space-y-4">
                     {inventoryLoading ? (
                       <div className="space-y-4">
@@ -372,7 +372,7 @@ export default function Materials() {
                     ) : (
                       <div className="text-center py-8">
                         <Package className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                        <p className="text-slate-500">Nenhum item no estoque</p>
+                        <p className="text-slate-500">No items in stock</p>
                         <Button 
                           variant="outline" 
                           className="mt-4"
