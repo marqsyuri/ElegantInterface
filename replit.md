@@ -129,3 +129,11 @@ The application uses a comprehensive database schema with the following main ent
 - Express error handling middleware
 - Request logging and monitoring
 - Session persistence across deployments
+
+## Recent Changes
+- Completed comprehensive New Zealand English translation of all system modules (January 2025)
+- Fully translated Settings page with NZ-specific business terminology (Business Number, postcode format)
+- Updated all phone number placeholders to New Zealand format
+- Converted all currency references from Brazilian Real (R$) to New Zealand Dollar ($)
+- Localised all professional registration references for NZ beauty therapy industry
+- Maintained consistent New Zealand English spelling conventions throughout

@@ -110,14 +110,14 @@ export default function Settings() {
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                       <div className="flex items-center space-x-4 mb-6">
                         <Avatar className="w-20 h-20">
-                          <AvatarImage src={user?.profileImageUrl || ""} alt="Foto do perfil" />
+                          <AvatarImage src={user?.profileImageUrl || ""} alt="Profile photo" />
                           <AvatarFallback>{getInitials()}</AvatarFallback>
                         </Avatar>
                         <div>
                           <Button type="button" variant="outline">
-                            Alterar Foto
+                            Change Photo
                           </Button>
-                          <p className="text-sm text-slate-500 mt-1">JPG, PNG ou GIF (máx. 5MB)</p>
+                          <p className="text-sm text-slate-500 mt-1">JPG, PNG or GIF (max. 5MB)</p>
                         </div>
                       </div>
 
@@ -127,7 +127,7 @@ export default function Settings() {
                           name="firstName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Nome</FormLabel>
+                              <FormLabel>First Name</FormLabel>
                               <FormControl>
                                 <Input {...field} />
                               </FormControl>
@@ -141,7 +141,7 @@ export default function Settings() {
                           name="lastName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Sobrenome</FormLabel>
+                              <FormLabel>Last Name</FormLabel>
                               <FormControl>
                                 <Input {...field} />
                               </FormControl>
@@ -171,9 +171,9 @@ export default function Settings() {
                           name="professionalRegistration"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Registro Profissional</FormLabel>
+                              <FormLabel>Professional Registration</FormLabel>
                               <FormControl>
-                                <Input placeholder="CREF 123456-SP" {...field} />
+                                <Input placeholder="e.g. Beauty Therapist Licence" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -186,10 +186,10 @@ export default function Settings() {
                         name="specialties"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Especialidades</FormLabel>
+                            <FormLabel>Specialties</FormLabel>
                             <FormControl>
                               <Textarea 
-                                placeholder="Descreva suas especialidades..."
+                                placeholder="Describe your specialties..."
                                 className="h-20"
                                 {...field} 
                               />
@@ -200,16 +200,16 @@ export default function Settings() {
                       />
 
                       <div className="pt-4">
-                        <h5 className="font-medium text-slate-900 mb-4">Dados da Clínica</h5>
+                        <h5 className="font-medium text-slate-900 mb-4">Clinic Details</h5>
                         
                         <FormField
                           control={form.control}
                           name="clinicName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Nome da Clínica</FormLabel>
+                              <FormLabel>Clinic Name</FormLabel>
                               <FormControl>
-                                <Input placeholder="Nome da clínica" {...field} />
+                                <Input placeholder="Clinic name" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -222,9 +222,9 @@ export default function Settings() {
                             name="clinicCnpj"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>CNPJ</FormLabel>
+                                <FormLabel>Business Number</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="12.345.678/0001-90" {...field} />
+                                  <Input placeholder="e.g. NZBN 9429000000000" {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -236,9 +236,9 @@ export default function Settings() {
                             name="clinicPhone"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Telefone Comercial</FormLabel>
+                                <FormLabel>Business Phone</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="(11) 3333-3333" {...field} />
+                                  <Input placeholder="09 123 4567" {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -251,10 +251,10 @@ export default function Settings() {
                           name="clinicAddress"
                           render={({ field }) => (
                             <FormItem className="mt-4">
-                              <FormLabel>Endereço Completo</FormLabel>
+                              <FormLabel>Complete Address</FormLabel>
                               <FormControl>
                                 <Textarea 
-                                  placeholder="Rua, número, bairro, cidade, CEP"
+                                  placeholder="Street, number, suburb, city, postcode"
                                   className="h-20"
                                   {...field} 
                                 />
@@ -271,7 +271,7 @@ export default function Settings() {
                             <FormItem className="mt-4">
                               <FormLabel>WhatsApp Business</FormLabel>
                               <FormControl>
-                                <Input placeholder="(11) 99999-9999" {...field} />
+                                <Input placeholder="021 123 4567" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -281,7 +281,7 @@ export default function Settings() {
 
                       <div className="pt-4">
                         <Button type="submit" disabled={updateProfileMutation.isPending}>
-                          {updateProfileMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                          {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
                         </Button>
                       </div>
                     </form>
@@ -290,12 +290,12 @@ export default function Settings() {
 
                 <div className="space-y-6">
                   <div>
-                    <h4 className="font-medium text-slate-900 mb-4">Notificações</h4>
+                    <h4 className="font-medium text-slate-900 mb-4">Notifications</h4>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-medium text-slate-900">E-mail</p>
-                          <p className="text-sm text-slate-600">Receber notificações por e-mail</p>
+                          <p className="text-sm text-slate-600">Receive email notifications</p>
                         </div>
                         <Switch 
                           checked={notificationSettings.email}
@@ -308,7 +308,7 @@ export default function Settings() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-medium text-slate-900">SMS</p>
-                          <p className="text-sm text-slate-600">Receber notificações via SMS</p>
+                          <p className="text-sm text-slate-600">Receive SMS notifications</p>
                         </div>
                         <Switch 
                           checked={notificationSettings.sms}
@@ -321,7 +321,7 @@ export default function Settings() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-medium text-slate-900">Push Notifications</p>
-                          <p className="text-sm text-slate-600">Notificações no navegador</p>
+                          <p className="text-sm text-slate-600">Browser notifications</p>
                         </div>
                         <Switch 
                           checked={notificationSettings.push}
@@ -334,31 +334,31 @@ export default function Settings() {
                   </div>
 
                   <div>
-                    <h4 className="font-medium text-slate-900 mb-4">Suporte</h4>
+                    <h4 className="font-medium text-slate-900 mb-4">Support</h4>
                     <div className="space-y-3">
                       <Button variant="outline" className="w-full justify-start">
                         <HelpCircle className="w-5 h-5 mr-3" />
                         <div className="text-left">
-                          <p className="font-medium text-slate-900">Central de Ajuda</p>
-                          <p className="text-sm text-slate-600">Tutoriais e perguntas frequentes</p>
+                          <p className="font-medium text-slate-900">Help Centre</p>
+                          <p className="text-sm text-slate-600">Tutorials and frequently asked questions</p>
                         </div>
                       </Button>
                       
                       <Button variant="outline" className="w-full justify-start">
                         <MessageCircle className="w-5 h-5 mr-3" />
                         <div className="text-left">
-                          <p className="font-medium text-slate-900">Contato Suporte</p>
-                          <p className="text-sm text-slate-600">Entre em contato conosco</p>
+                          <p className="font-medium text-slate-900">Contact Support</p>
+                          <p className="text-sm text-slate-600">Get in touch with us</p>
                         </div>
                       </Button>
                     </div>
                   </div>
 
                   <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg p-4">
-                    <h5 className="font-semibold text-slate-900 mb-2">Plano Atual</h5>
-                    <p className="text-sm text-slate-600 mb-3">Estética Pro - Gratuito</p>
+                    <h5 className="font-semibold text-slate-900 mb-2">Current Plan</h5>
+                    <p className="text-sm text-slate-600 mb-3">Aesthetic Pro - Free</p>
                     <Button className="w-full bg-gradient-to-r from-primary to-secondary">
-                      Upgrade para Pro
+                      Upgrade to Pro
                     </Button>
                   </div>
 
@@ -369,7 +369,7 @@ export default function Settings() {
                       onClick={() => window.location.href = "/api/logout"}
                     >
                       <LogOut className="w-5 h-5 mr-3" />
-                      Sair da Conta
+                      Log Out
                     </Button>
                   </div>
                 </div>
