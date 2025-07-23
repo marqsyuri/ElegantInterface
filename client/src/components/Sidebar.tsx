@@ -11,7 +11,6 @@ import {
   Gift, 
   Settings,
   Sparkles,
-  LogOut,
   X,
   Menu,
   ChevronLeft
@@ -120,18 +119,7 @@ export default function Sidebar() {
           </div>
         )}
         
-        <Button 
-          variant="ghost" 
-          className={cn(
-            "w-full text-slate-700 hover:bg-slate-100",
-            isCollapsed ? "justify-center px-2" : "justify-start"
-          )}
-          onClick={() => window.location.href = "/api/logout"}
-          title={isCollapsed ? "Log Out" : undefined}
-        >
-          <LogOut className={cn("w-5 h-5", isCollapsed ? "" : "mr-3")} />
-          {!isCollapsed && "Log Out"}
-        </Button>
+
       </div>
     </nav>
   );

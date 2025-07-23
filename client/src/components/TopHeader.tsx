@@ -1,4 +1,4 @@
-import { Bell } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,15 +40,28 @@ export default function TopHeader({ title, subtitle }: TopHeaderProps) {
             <Bell className="w-5 h-5" />
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
           </Button>
-          <div className="flex items-center">
-            <Avatar className="w-10 h-10">
-              <AvatarImage src={user?.profileImageUrl || undefined} alt="Profile photo" />
-              <AvatarFallback>{getInitials()}</AvatarFallback>
-            </Avatar>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-slate-900">{getUserName()}</p>
-              <p className="text-xs text-slate-500">Aesthetician</p>
+          
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center">
+              <Avatar className="w-10 h-10">
+                <AvatarImage src={user?.profileImageUrl || undefined} alt="Profile photo" />
+                <AvatarFallback>{getInitials()}</AvatarFallback>
+              </Avatar>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-slate-900">{getUserName()}</p>
+                <p className="text-xs text-slate-500">Aesthetician</p>
+              </div>
             </div>
+            
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              onClick={() => window.location.href = "/api/logout"}
+              title="Log Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>
