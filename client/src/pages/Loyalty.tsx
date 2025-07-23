@@ -117,8 +117,8 @@ export default function Loyalty() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="ml-64">
-        <TopHeader title="Fidelização" subtitle="Gerencie pacotes de serviços e programa de pontos" />
+      <main className="ml-16 lg:ml-64 transition-all duration-300">
+        <TopHeader title="Loyalty Programs" subtitle="Manage service packages and loyalty points" />
         
         <div className="p-6 space-y-8">
           <Card>

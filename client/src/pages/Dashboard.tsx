@@ -51,7 +51,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="ml-64">
+      <main className="ml-16 lg:ml-64 transition-all duration-300">
         <TopHeader 
           title="Dashboard" 
           subtitle="Welcome back! Here's a summary of your day."

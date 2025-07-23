@@ -12,7 +12,9 @@ import {
   Settings,
   Sparkles,
   LogOut,
-  X
+  X,
+  Menu,
+  ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,18 +34,38 @@ const navigation = [
 export default function Sidebar() {
   const [location] = useLocation();
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <nav className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 z-40">
+    <nav className={cn(
+      "fixed left-0 top-0 h-full bg-white border-r border-slate-200 z-40 transition-all duration-300 overflow-y-auto",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
       <div className="p-6 border-b border-slate-200">
-        <div className="flex items-center">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <Sparkles className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            {!isCollapsed && (
+              <div className="ml-3">
+                <h1 className="text-xl font-bold text-slate-900">Aesthetic Pro</h1>
+                <p className="text-sm text-slate-500">Professional Management</p>
+              </div>
+            )}
           </div>
-          <div className="ml-3">
-            <h1 className="text-xl font-bold text-slate-900">Aesthetic Pro</h1>
-            <p className="text-sm text-slate-500">Professional Management</p>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-2 h-8 w-8"
+          >
+            {isCollapsed ? (
+              <Menu className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </Button>
         </div>
       </div>
       
@@ -56,14 +78,22 @@ export default function Sidebar() {
             return (
               <li key={item.name}>
                 <Link href={item.href}>
-                  <div className={cn(
-                    "flex items-center px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer",
-                    isActive 
-                      ? "text-primary bg-primary/10" 
-                      : "text-slate-700 hover:bg-slate-100"
-                  )}>
-                    <Icon className="w-5 h-5 mr-3" />
-                    {item.name}
+                  <div 
+                    className={cn(
+                      "flex items-center px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer group relative",
+                      isActive 
+                        ? "text-primary bg-primary/10" 
+                        : "text-slate-700 hover:bg-slate-100"
+                    )}
+                    title={isCollapsed ? item.name : undefined}
+                  >
+                    <Icon className={cn("w-5 h-5", isCollapsed ? "mx-auto" : "mr-3")} />
+                    {!isCollapsed && item.name}
+                    {isCollapsed && (
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                        {item.name}
+                      </div>
+                    )}
                   </div>
                 </Link>
               </li>
@@ -72,8 +102,8 @@ export default function Sidebar() {
         </ul>
       </div>
       
-      <div className="absolute bottom-4 left-4 right-4">
-        {showUpgradeBanner && (
+      <div className={cn("absolute bottom-4", isCollapsed ? "left-2 right-2" : "left-4 right-4")}>
+        {showUpgradeBanner && !isCollapsed && (
           <div className="bg-gradient-to-br from-primary to-secondary rounded-lg p-4 text-white mb-4 relative">
             <button
               onClick={() => setShowUpgradeBanner(false)}
@@ -92,11 +122,15 @@ export default function Sidebar() {
         
         <Button 
           variant="ghost" 
-          className="w-full justify-start text-slate-700 hover:bg-slate-100"
+          className={cn(
+            "w-full text-slate-700 hover:bg-slate-100",
+            isCollapsed ? "justify-center px-2" : "justify-start"
+          )}
           onClick={() => window.location.href = "/api/logout"}
+          title={isCollapsed ? "Log Out" : undefined}
         >
-          <LogOut className="w-5 h-5 mr-3" />
-          Log Out
+          <LogOut className={cn("w-5 h-5", isCollapsed ? "" : "mr-3")} />
+          {!isCollapsed && "Log Out"}
         </Button>
       </div>
     </nav>
