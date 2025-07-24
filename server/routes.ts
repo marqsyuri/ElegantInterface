@@ -12,6 +12,13 @@ import {
   insertFeedbackSchema,
   insertInventorySchema,
   insertLoyaltyPackageSchema,
+  insertStaffSchema,
+  insertStaffScheduleSchema,
+  insertNotificationSchema,
+  insertMarketingCampaignSchema,
+  insertSustainabilityLogSchema,
+  insertPaymentSchema,
+  insertSocialMediaPostSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -306,6 +313,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching client packages:", error);
       res.status(500).json({ message: "Failed to fetch client packages" });
+    }
+  });
+
+  // Staff routes
+  app.get('/api/staff', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const staff = await storage.getStaff(userId);
+      res.json(staff);
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+      res.status(500).json({ message: "Failed to fetch staff" });
+    }
+  });
+
+  app.post('/api/staff', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const staffData = insertStaffSchema.parse({ ...req.body, userId });
+      const staff = await storage.createStaff(staffData);
+      res.json(staff);
+    } catch (error) {
+      console.error("Error creating staff:", error);
+      res.status(500).json({ message: "Failed to create staff" });
+    }
+  });
+
+  // Staff schedules routes
+  app.get('/api/staff-schedules', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const schedules = await storage.getStaffSchedules(userId);
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching staff schedules:", error);
+      res.status(500).json({ message: "Failed to fetch staff schedules" });
+    }
+  });
+
+  app.post('/api/staff-schedules', isAuthenticated, async (req: any, res) => {
+    try {
+      const scheduleData = insertStaffScheduleSchema.parse(req.body);
+      const schedule = await storage.createStaffSchedule(scheduleData);
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error creating staff schedule:", error);
+      res.status(500).json({ message: "Failed to create staff schedule" });
+    }
+  });
+
+  // Marketing campaigns routes
+  app.get('/api/marketing-campaigns', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const campaigns = await storage.getMarketingCampaigns(userId);
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Error fetching marketing campaigns:", error);
+      res.status(500).json({ message: "Failed to fetch marketing campaigns" });
+    }
+  });
+
+  app.post('/api/marketing-campaigns', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const campaignData = insertMarketingCampaignSchema.parse({ ...req.body, userId });
+      const campaign = await storage.createMarketingCampaign(campaignData);
+      res.json(campaign);
+    } catch (error) {
+      console.error("Error creating marketing campaign:", error);
+      res.status(500).json({ message: "Failed to create marketing campaign" });
+    }
+  });
+
+  // Sustainability logs routes
+  app.get('/api/sustainability-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const logs = await storage.getSustainabilityLogs(userId);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching sustainability logs:", error);
+      res.status(500).json({ message: "Failed to fetch sustainability logs" });
+    }
+  });
+
+  app.post('/api/sustainability-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const logData = insertSustainabilityLogSchema.parse({ ...req.body, userId });
+      const log = await storage.createSustainabilityLog(logData);
+      res.json(log);
+    } catch (error) {
+      console.error("Error creating sustainability log:", error);
+      res.status(500).json({ message: "Failed to create sustainability log" });
+    }
+  });
+
+  // Analytics routes
+  app.get('/api/analytics', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const dateRange = req.query.dateRange as string;
+      const analytics = await storage.getAnalytics(userId, dateRange);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
     }
   });
 

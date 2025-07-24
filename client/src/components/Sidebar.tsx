@@ -13,7 +13,11 @@ import {
   Sparkles,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  UserCheck,
+  Mail,
+  BarChart3,
+  Leaf
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,6 +31,10 @@ const navigation = [
   { name: "Communication", href: "/communication", icon: MessageCircle },
   { name: "PPE & Materials", href: "/materials", icon: ShieldCheck },
   { name: "Loyalty", href: "/loyalty", icon: Gift },
+  { name: "Staff", href: "/staff", icon: UserCheck },
+  { name: "Marketing", href: "/marketing", icon: Mail },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Sustainability", href: "/sustainability", icon: Leaf },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

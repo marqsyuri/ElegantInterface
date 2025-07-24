@@ -10,6 +10,13 @@ import {
   inventory,
   loyaltyPackages,
   clientPackages,
+  staff,
+  staffSchedules,
+  notifications,
+  marketingCampaigns,
+  sustainabilityLogs,
+  payments,
+  socialMediaPosts,
   type User,
   type UpsertUser,
   type Client,
@@ -32,6 +39,20 @@ import {
   type InsertLoyaltyPackage,
   type ClientPackage,
   type InsertClientPackage,
+  type Staff,
+  type InsertStaff,
+  type StaffSchedule,
+  type InsertStaffSchedule,
+  type Notification,
+  type InsertNotification,
+  type MarketingCampaign,
+  type InsertMarketingCampaign,
+  type SustainabilityLog,
+  type InsertSustainabilityLog,
+  type Payment,
+  type InsertPayment,
+  type SocialMediaPost,
+  type InsertSocialMediaPost,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, gte, lte, sql } from "drizzle-orm";
@@ -91,6 +112,23 @@ export interface IStorage {
   getLoyaltyPackages(userId: string): Promise<LoyaltyPackage[]>;
   createLoyaltyPackage(packageData: InsertLoyaltyPackage): Promise<LoyaltyPackage>;
   getClientPackages(userId: string): Promise<(ClientPackage & { client: Client; package: LoyaltyPackage })[]>;
+  
+  // Staff operations
+  getStaff(userId: string): Promise<Staff[]>;
+  createStaff(staff: InsertStaff): Promise<Staff>;
+  getStaffSchedules(userId: string): Promise<StaffSchedule[]>;
+  createStaffSchedule(schedule: InsertStaffSchedule): Promise<StaffSchedule>;
+  
+  // Marketing operations
+  getMarketingCampaigns(userId: string): Promise<MarketingCampaign[]>;
+  createMarketingCampaign(campaign: InsertMarketingCampaign): Promise<MarketingCampaign>;
+  
+  // Sustainability operations
+  getSustainabilityLogs(userId: string): Promise<SustainabilityLog[]>;
+  createSustainabilityLog(log: InsertSustainabilityLog): Promise<SustainabilityLog>;
+  
+  // Analytics operations
+  getAnalytics(userId: string, dateRange?: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -500,6 +538,95 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(loyaltyPackages, eq(clientPackages.packageId, loyaltyPackages.id))
       .where(eq(clientPackages.userId, userId))
       .orderBy(desc(clientPackages.createdAt));
+  }
+
+  // Staff operations
+  async getStaff(userId: string): Promise<Staff[]> {
+    return await db
+      .select()
+      .from(staff)
+      .where(eq(staff.userId, userId))
+      .orderBy(asc(staff.name));
+  }
+
+  async createStaff(staffData: InsertStaff): Promise<Staff> {
+    const [newStaff] = await db.insert(staff).values(staffData).returning();
+    return newStaff;
+  }
+
+  async getStaffSchedules(userId: string): Promise<StaffSchedule[]> {
+    const results = await db
+      .select({
+        id: staffSchedules.id,
+        staffId: staffSchedules.staffId,
+        dayOfWeek: staffSchedules.dayOfWeek,
+        startTime: staffSchedules.startTime,
+        endTime: staffSchedules.endTime,
+        isAvailable: staffSchedules.isAvailable,
+        createdAt: staffSchedules.createdAt,
+      })
+      .from(staffSchedules)
+      .innerJoin(staff, eq(staffSchedules.staffId, staff.id))
+      .where(eq(staff.userId, userId))
+      .orderBy(asc(staffSchedules.dayOfWeek));
+    
+    return results;
+  }
+
+  async createStaffSchedule(scheduleData: InsertStaffSchedule): Promise<StaffSchedule> {
+    const [newSchedule] = await db.insert(staffSchedules).values(scheduleData).returning();
+    return newSchedule;
+  }
+
+  // Marketing operations
+  async getMarketingCampaigns(userId: string): Promise<MarketingCampaign[]> {
+    return await db
+      .select()
+      .from(marketingCampaigns)
+      .where(eq(marketingCampaigns.userId, userId))
+      .orderBy(desc(marketingCampaigns.createdAt));
+  }
+
+  async createMarketingCampaign(campaignData: InsertMarketingCampaign): Promise<MarketingCampaign> {
+    const [newCampaign] = await db.insert(marketingCampaigns).values(campaignData).returning();
+    return newCampaign;
+  }
+
+  // Sustainability operations
+  async getSustainabilityLogs(userId: string): Promise<SustainabilityLog[]> {
+    return await db
+      .select()
+      .from(sustainabilityLogs)
+      .where(eq(sustainabilityLogs.userId, userId))
+      .orderBy(desc(sustainabilityLogs.date));
+  }
+
+  async createSustainabilityLog(logData: InsertSustainabilityLog): Promise<SustainabilityLog> {
+    const [newLog] = await db.insert(sustainabilityLogs).values(logData).returning();
+    return newLog;
+  }
+
+  // Analytics operations
+  async getAnalytics(userId: string, dateRange?: string): Promise<any> {
+    // For now, return empty analytics data
+    // In a real implementation, this would calculate various metrics
+    return {
+      revenue: {
+        total: 0,
+        trend: "up",
+        percentage: 0
+      },
+      clients: {
+        total: 0,
+        active: 0,
+        new: 0
+      },
+      appointments: {
+        total: 0,
+        completed: 0,
+        cancelled: 0
+      }
+    };
   }
 }
 

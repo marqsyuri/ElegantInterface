@@ -186,6 +186,109 @@ export const clientPackages = pgTable("client_packages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Staff management table
+export const staff = pgTable("staff", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: varchar("name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  role: varchar("role").notNull(), // 'therapist', 'receptionist', 'manager'
+  specialties: jsonb("specialties").$type<string[]>().default([]),
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).default("0"), // percentage
+  isActive: boolean("is_active").default(true),
+  startDate: date("start_date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Staff schedules table
+export const staffSchedules = pgTable("staff_schedules", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id").notNull().references(() => staff.id),
+  dayOfWeek: varchar("day_of_week").notNull(), // 'monday', 'tuesday', etc.
+  startTime: varchar("start_time").notNull(),
+  endTime: varchar("end_time").notNull(),
+  isAvailable: boolean("is_available").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  clientId: integer("client_id").references(() => clients.id),
+  appointmentId: integer("appointment_id").references(() => appointments.id),
+  type: varchar("type").notNull(), // 'reminder', 'confirmation', 'marketing', 'low_stock'
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  channel: varchar("channel").notNull(), // 'email', 'sms', 'push', 'in_app'
+  status: varchar("status").default("pending"), // 'pending', 'sent', 'failed'
+  scheduledFor: timestamp("scheduled_for"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Marketing campaigns table
+export const marketingCampaigns = pgTable("marketing_campaigns", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: varchar("name").notNull(),
+  type: varchar("type").notNull(), // 'email', 'sms', 'promotion'
+  subject: varchar("subject"),
+  content: text("content").notNull(),
+  targetAudience: varchar("target_audience").notNull(), // 'all', 'vip', 'inactive', 'birthday'
+  status: varchar("status").default("draft"), // 'draft', 'scheduled', 'sent', 'paused'
+  scheduledFor: timestamp("scheduled_for"),
+  sentAt: timestamp("sent_at"),
+  openRate: decimal("open_rate", { precision: 5, scale: 2 }).default("0"),
+  clickRate: decimal("click_rate", { precision: 5, scale: 2 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Sustainability tracking table
+export const sustainabilityLogs = pgTable("sustainability_logs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  itemId: integer("item_id").references(() => inventory.id),
+  action: varchar("action").notNull(), // 'used', 'disposed', 'recycled', 'refilled'
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  wastePrevented: decimal("waste_prevented", { precision: 10, scale: 2 }).default("0"), // in grams
+  notes: text("notes"),
+  date: timestamp("date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Payment transactions table
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  appointmentId: integer("appointment_id").references(() => appointments.id),
+  clientId: integer("client_id").notNull().references(() => clients.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency").default("NZD"),
+  method: varchar("method").notNull(), // 'cash', 'eftpos', 'credit_card', 'paywave', 'app_payment'
+  status: varchar("status").default("pending"), // 'pending', 'completed', 'failed', 'refunded'
+  transactionId: varchar("transaction_id"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Social media integration table
+export const socialMediaPosts = pgTable("social_media_posts", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  platform: varchar("platform").notNull(), // 'facebook', 'instagram', 'google_business'
+  content: text("content").notNull(),
+  imageUrl: varchar("image_url"),
+  postType: varchar("post_type").notNull(), // 'promotion', 'before_after', 'testimonial', 'tip'
+  status: varchar("status").default("draft"), // 'draft', 'scheduled', 'published', 'failed'
+  scheduledFor: timestamp("scheduled_for"),
+  publishedAt: timestamp("published_at"),
+  engagement: jsonb("engagement").$type<{likes?: number, comments?: number, shares?: number}>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   clients: many(clients),
@@ -198,6 +301,12 @@ export const usersRelations = relations(users, ({ many }) => ({
   inventory: many(inventory),
   loyaltyPackages: many(loyaltyPackages),
   clientPackages: many(clientPackages),
+  staff: many(staff),
+  notifications: many(notifications),
+  marketingCampaigns: many(marketingCampaigns),
+  sustainabilityLogs: many(sustainabilityLogs),
+  payments: many(payments),
+  socialMediaPosts: many(socialMediaPosts),
 }));
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({
@@ -259,6 +368,40 @@ export const clientPackagesRelations = relations(clientPackages, ({ one }) => ({
   package: one(loyaltyPackages, { fields: [clientPackages.packageId], references: [loyaltyPackages.id] }),
 }));
 
+export const staffRelations = relations(staff, ({ one, many }) => ({
+  user: one(users, { fields: [staff.userId], references: [users.id] }),
+  schedules: many(staffSchedules),
+}));
+
+export const staffSchedulesRelations = relations(staffSchedules, ({ one }) => ({
+  staff: one(staff, { fields: [staffSchedules.staffId], references: [staff.id] }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.userId], references: [users.id] }),
+  client: one(clients, { fields: [notifications.clientId], references: [clients.id] }),
+  appointment: one(appointments, { fields: [notifications.appointmentId], references: [appointments.id] }),
+}));
+
+export const marketingCampaignsRelations = relations(marketingCampaigns, ({ one }) => ({
+  user: one(users, { fields: [marketingCampaigns.userId], references: [users.id] }),
+}));
+
+export const sustainabilityLogsRelations = relations(sustainabilityLogs, ({ one }) => ({
+  user: one(users, { fields: [sustainabilityLogs.userId], references: [users.id] }),
+  item: one(inventory, { fields: [sustainabilityLogs.itemId], references: [inventory.id] }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  user: one(users, { fields: [payments.userId], references: [users.id] }),
+  client: one(clients, { fields: [payments.clientId], references: [clients.id] }),
+  appointment: one(appointments, { fields: [payments.appointmentId], references: [appointments.id] }),
+}));
+
+export const socialMediaPostsRelations = relations(socialMediaPosts, ({ one }) => ({
+  user: one(users, { fields: [socialMediaPosts.userId], references: [users.id] }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -317,6 +460,42 @@ export const insertClientPackageSchema = createInsertSchema(clientPackages).omit
   createdAt: true,
 });
 
+export const insertStaffSchema = createInsertSchema(staff).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStaffScheduleSchema = createInsertSchema(staffSchedules).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMarketingCampaignSchema = createInsertSchema(marketingCampaigns).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSustainabilityLogSchema = createInsertSchema(sustainabilityLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSocialMediaPostSchema = createInsertSchema(socialMediaPosts).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -340,3 +519,17 @@ export type LoyaltyPackage = typeof loyaltyPackages.$inferSelect;
 export type InsertLoyaltyPackage = z.infer<typeof insertLoyaltyPackageSchema>;
 export type ClientPackage = typeof clientPackages.$inferSelect;
 export type InsertClientPackage = z.infer<typeof insertClientPackageSchema>;
+export type Staff = typeof staff.$inferSelect;
+export type InsertStaff = z.infer<typeof insertStaffSchema>;
+export type StaffSchedule = typeof staffSchedules.$inferSelect;
+export type InsertStaffSchedule = z.infer<typeof insertStaffScheduleSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type MarketingCampaign = typeof marketingCampaigns.$inferSelect;
+export type InsertMarketingCampaign = z.infer<typeof insertMarketingCampaignSchema>;
+export type SustainabilityLog = typeof sustainabilityLogs.$inferSelect;
+export type InsertSustainabilityLog = z.infer<typeof insertSustainabilityLogSchema>;
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type SocialMediaPost = typeof socialMediaPosts.$inferSelect;
+export type InsertSocialMediaPost = z.infer<typeof insertSocialMediaPostSchema>;

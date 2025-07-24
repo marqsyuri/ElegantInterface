@@ -16,6 +16,10 @@ import Communication from "@/pages/Communication";
 import Materials from "@/pages/Materials";
 import Loyalty from "@/pages/Loyalty";
 import Settings from "@/pages/Settings";
+import Staff from "@/pages/Staff";
+import Marketing from "@/pages/Marketing";
+import Analytics from "@/pages/Analytics";
+import Sustainability from "@/pages/Sustainability";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -35,6 +39,10 @@ function Router() {
           <Route path="/communication" component={Communication} />
           <Route path="/materials" component={Materials} />
           <Route path="/loyalty" component={Loyalty} />
+          <Route path="/staff" component={Staff} />
+          <Route path="/marketing" component={Marketing} />
+          <Route path="/analytics" component={Analytics} />
+          <Route path="/sustainability" component={Sustainability} />
           <Route path="/settings" component={Settings} />
         </>
       )}

@@ -1,0 +1,32 @@
+Here is a prompt in English based on New Zealand market ideas for your beauty salon software:
+
+**Prompt:**
+
+Imagine you are designing a next-generation software solution for managing a beauty salon in New Zealand. The salon offers services such as haircuts, hair coloring and tinting, hair treatments, hair extensions, blowouts, and nail care. Your goal is to create a system that not only simplifies daily management but also enhances the customer experience and helps the salon grow in 2025.
+
+What additional features and innovations would you include in this software to differentiate it in the New Zealand market? Consider functionalities such as:  
+- Smart online appointment scheduling with automatic reminders  
+- Detailed client profiles with service history and personalized recommendations  
+- Integrated electronic payments and point-of-sale (POS) systems  
+- Automated marketing tools including email/SMS campaigns and loyalty programs  
+- Real-time inventory and stock management with low-stock alerts  
+- Staff management including scheduling, commission tracking, and performance reports  
+- Comprehensive dashboards with analytics on sales, popular services, and customer trends  
+- Mobile app access for clients to book, manage appointments, and receive promotions  
+- Sustainability tools for monitoring product usage and reducing waste  
+- Integration with social media platforms and Google booking features  
+
+Describe these features, how they would benefit both salon management and clients, and highlight key trends in beauty salon software for 2025 specific to New Zealand’s market.
+
+This prompt can help inspire or guide detailed feature development aligned with modern trends and client expectations in New Zealand’s beauty industry.
+
+[1] https://www.softwaresuggest.com/salon-software/nz
+[2] https://www.capterra.co.nz/directory/30028/salon/software
+[3] https://www.getapp.co.nz/directory/212/salon/software
+[4] https://www.softwareadvice.co.nz/directory/4710/salon/software
+[5] https://vocal.media/01/the-ultimate-buyer-s-guide-to-salon-management-software-in-2025
+[6] https://www.getapp.com/retail-consumer-services-software/salon/f/business-intelligence/
+[7] https://www.getapp.com/retail-consumer-services-software/salon/f/practice-management/
+[8] https://www.getapp.com/retail-consumer-services-software/salon/f/staff-management/
+[9] https://belliata.co.nz/beauty-salon-software-new-zealand
+[10] https://slashdot.org/software/salon/in-new-zealand/?page=7
