@@ -261,7 +261,7 @@ export default function Appointments() {
                 <div className="space-y-6">
                   <div>
                     <h4 className="font-medium text-slate-900 mb-3">
-                      Agendamentos - {selectedDate?.toLocaleDateString('pt-BR')}
+                      Appointments - {selectedDate?.toLocaleDateString('en-NZ')}
                     </h4>
                     <div className="space-y-3">
                       {appointmentsLoading ? (
@@ -290,18 +290,18 @@ export default function Appointments() {
                                   ? 'bg-blue-100 text-blue-700'
                                   : 'bg-amber-100 text-amber-700'
                               }`}>
-                                {appointment.status === 'confirmed' ? 'Confirmado' :
-                                 appointment.status === 'scheduled' ? 'Agendado' : 'Pendente'}
+                                {appointment.status === 'confirmed' ? 'Confirmed' :
+                                 appointment.status === 'scheduled' ? 'Scheduled' : 'Pending'}
                               </span>
                             </div>
                             <p className="text-sm text-slate-900 font-medium">{appointment.client.name}</p>
                             <p className="text-sm text-slate-600">{appointment.service.name}</p>
-                            <p className="text-xs text-slate-500">Duração: {appointment.service.duration} min</p>
+                            <p className="text-xs text-slate-500">Duration: {appointment.service.duration} min</p>
                           </div>
                         ))
                       ) : (
                         <div className="text-center py-8">
-                          <p className="text-slate-500">Nenhum agendamento para esta data</p>
+                          <p className="text-slate-500">No appointments for this date</p>
                         </div>
                       )}
                     </div>

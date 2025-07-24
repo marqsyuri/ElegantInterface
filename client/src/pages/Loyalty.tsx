@@ -400,7 +400,7 @@ export default function Loyalty() {
                     </div>
 
                     <div>
-                      <h4 className="font-medium text-slate-900 mb-3">Níveis VIP</h4>
+                      <h4 className="font-medium text-slate-900 mb-3">VIP Levels</h4>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between p-3 bg-slate-100 rounded-lg">
                           <span className="font-medium text-slate-700">Bronze</span>

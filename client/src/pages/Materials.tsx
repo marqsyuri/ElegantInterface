@@ -378,7 +378,7 @@ export default function Materials() {
                           className="mt-4"
                           onClick={() => setIsDialogOpen(true)}
                         >
-                          Adicionar primeiro item
+                          Add first item
                         </Button>
                       </div>
                     )}

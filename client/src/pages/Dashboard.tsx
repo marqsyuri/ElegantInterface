@@ -236,12 +236,12 @@ export default function Dashboard() {
 
                   <div className="border-t pt-4">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold text-slate-900">Lucro Líquido</span>
+                      <span className="font-semibold text-slate-900">Net Profit</span>
                       <span className="font-bold text-xl text-emerald-600">
-                        R$ {statsLoading ? "..." : parseFloat((stats as any)?.netProfit || "0").toFixed(2)}
+                        ${statsLoading ? "..." : parseFloat((stats as any)?.netProfit || "0").toFixed(2)}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-500 mt-1">Este mês</p>
+                    <p className="text-sm text-slate-500 mt-1">This month</p>
                   </div>
                 </div>
               </CardContent>

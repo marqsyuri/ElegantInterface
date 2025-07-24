@@ -118,11 +118,11 @@ export default function Clinical() {
                             name="clientId"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Cliente</FormLabel>
+                                <FormLabel>Client</FormLabel>
                                 <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                                   <FormControl>
                                     <SelectTrigger>
-                                      <SelectValue placeholder="Selecione uma cliente" />
+                                      <SelectValue placeholder="Select a client" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -143,11 +143,11 @@ export default function Clinical() {
                             name="procedure"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Procedimento Realizado</FormLabel>
+                                <FormLabel>Procedure Performed</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger>
-                                      <SelectValue placeholder="Selecione um procedimento" />
+                                      <SelectValue placeholder="Select a procedure" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -182,10 +182,10 @@ export default function Clinical() {
                             name="observations"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Observações do Procedimento</FormLabel>
+                                <FormLabel>Procedure Notes</FormLabel>
                                 <FormControl>
                                   <Textarea 
-                                    placeholder="Detalhes do procedimento realizado, reações, resultados observados..." 
+                                    placeholder="Procedure details, reactions, observed results..." 
                                     className="h-24"
                                     {...field} 
                                   />
@@ -197,10 +197,10 @@ export default function Clinical() {
 
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
-                              Avaliação dos Resultados
+                              Result Assessment
                             </label>
                             <div className="flex items-center space-x-2">
-                              <span className="text-sm text-slate-600">Ruim</span>
+                              <span className="text-sm text-slate-600">Poor</span>
                               <div className="flex space-x-1">
                                 {[1, 2, 3, 4, 5].map((rating) => (
                                   <Button
@@ -215,7 +215,7 @@ export default function Clinical() {
                                   </Button>
                                 ))}
                               </div>
-                              <span className="text-sm text-slate-600">Excelente</span>
+                              <span className="text-sm text-slate-600">Excellent</span>
                             </div>
                           </div>
 
@@ -224,7 +224,7 @@ export default function Clinical() {
                             name="nextAppointment"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Próximo Atendimento</FormLabel>
+                                <FormLabel>Next Appointment</FormLabel>
                                 <FormControl>
                                   <Input type="date" {...field} />
                                 </FormControl>
@@ -237,21 +237,21 @@ export default function Clinical() {
                         <div className="space-y-4">
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
-                              Fotos Antes/Depois
+                              Before/After Photos
                             </label>
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Antes</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Before</label>
                                 <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-primary/40 transition-colors cursor-pointer">
                                   <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                                  <p className="text-sm text-slate-500">Clique para adicionar</p>
+                                  <p className="text-sm text-slate-500">Click to add</p>
                                 </div>
                               </div>
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Depois</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">After</label>
                                 <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-primary/40 transition-colors cursor-pointer">
                                   <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                                  <p className="text-sm text-slate-500">Clique para adicionar</p>
+                                  <p className="text-sm text-slate-500">Click to add</p>
                                 </div>
                               </div>
                             </div>
@@ -261,10 +261,10 @@ export default function Clinical() {
 
                       <div className="flex space-x-3">
                         <Button type="submit" disabled={createClinicalRecordMutation.isPending}>
-                          {createClinicalRecordMutation.isPending ? "Salvando..." : "Salvar Ficha Clínica"}
+                          {createClinicalRecordMutation.isPending ? "Saving..." : "Save Clinical Record"}
                         </Button>
                         <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                          Cancelar
+                          Cancel
                         </Button>
                       </div>
                     </form>
@@ -275,7 +275,7 @@ export default function Clinical() {
 
             <CardContent>
               <div className="space-y-4">
-                <h4 className="font-medium text-slate-900 mb-4">Registros Clínicos</h4>
+                <h4 className="font-medium text-slate-900 mb-4">Clinical Records</h4>
                 {recordsLoading ? (
                   <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
@@ -295,7 +295,7 @@ export default function Clinical() {
                       <div className="flex justify-between items-start mb-2">
                         <h5 className="font-medium text-slate-900">{record.procedure}</h5>
                         <span className="text-sm text-slate-500">
-                          {new Date(record.procedureDate).toLocaleDateString('pt-BR')}
+                          {new Date(record.procedureDate).toLocaleDateString('en-NZ')}
                         </span>
                       </div>
                       <p className="text-sm text-slate-900 font-medium mb-1">{record.client.name}</p>
@@ -305,7 +305,7 @@ export default function Clinical() {
                       <div className="flex items-center justify-between">
                         {record.resultRating && (
                           <div className="flex items-center">
-                            <span className="text-xs text-slate-500 mr-2">Resultado:</span>
+                            <span className="text-xs text-slate-500 mr-2">Result:</span>
                             <div className="flex">
                               {[...Array(5)].map((_, i) => (
                                 <Star 
@@ -322,7 +322,7 @@ export default function Clinical() {
                         )}
                         {record.nextAppointment && (
                           <Badge variant="outline" className="text-xs">
-                            Próxima: {new Date(record.nextAppointment).toLocaleDateString('pt-BR')}
+                            Next: {new Date(record.nextAppointment).toLocaleDateString('en-NZ')}
                           </Badge>
                         )}
                       </div>
@@ -331,13 +331,13 @@ export default function Clinical() {
                 ) : (
                   <div className="text-center py-8">
                     <FilePlus className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500">Nenhuma ficha clínica registrada</p>
+                    <p className="text-slate-500">No clinical records registered</p>
                     <Button 
                       variant="outline" 
                       className="mt-4"
                       onClick={() => setIsDialogOpen(true)}
                     >
-                      Criar primeira ficha clínica
+                      Create first clinical record
                     </Button>
                   </div>
                 )}
