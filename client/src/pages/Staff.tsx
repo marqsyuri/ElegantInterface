@@ -124,23 +124,19 @@ export default function Staff() {
   ];
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="flex-1 overflow-auto">
+      <main className="ml-16 lg:ml-64 transition-all duration-300">
         <TopHeader title="Staff Management" subtitle="Manage your team members and schedules" />
         
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Staff Management</h1>
-              <p className="text-slate-600 mt-1">Manage your team members and schedules</p>
-            </div>
+        <div className="p-6 space-y-8">
+          <section className="flex justify-end items-center">
             <Button onClick={() => setIsStaffDialogOpen(true)} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Add Staff Member
             </Button>
-          </div>
+          </section>
 
           <Tabs defaultValue="overview" className="space-y-6">
             <TabsList>

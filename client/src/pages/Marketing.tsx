@@ -95,23 +95,19 @@ export default function Marketing() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="flex-1 overflow-auto">
+      <main className="ml-16 lg:ml-64 transition-all duration-300">
         <TopHeader title="Marketing Campaigns" subtitle="Create and manage your marketing campaigns" />
         
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Marketing Campaigns</h1>
-              <p className="text-slate-600 mt-1">Create and manage your marketing campaigns</p>
-            </div>
+        <div className="p-6 space-y-8">
+          <section className="flex justify-end items-center">
             <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
               <Send className="w-4 h-4" />
               Create Campaign
             </Button>
-          </div>
+          </section>
 
           <Tabs defaultValue="overview" className="space-y-6">
             <TabsList>

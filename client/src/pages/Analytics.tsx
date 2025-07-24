@@ -72,18 +72,14 @@ export default function Analytics() {
   ];
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="flex-1 overflow-auto">
+      <main className="ml-16 lg:ml-64 transition-all duration-300">
         <TopHeader title="Business Analytics" subtitle="Comprehensive insights into your business performance" />
         
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Business Analytics</h1>
-              <p className="text-slate-600 mt-1">Comprehensive insights into your business performance</p>
-            </div>
+        <div className="p-6 space-y-8">
+          <section className="flex justify-end items-center">
             <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="w-48">
                 <SelectValue />
@@ -96,7 +92,7 @@ export default function Analytics() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </section>
 
           <Tabs defaultValue="overview" className="space-y-6">
             <TabsList>
