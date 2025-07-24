@@ -128,7 +128,7 @@ export default function Appointments() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {clients?.map((client: any) => (
+                                {(clients as any[])?.map((client: any) => (
                                   <SelectItem key={client.id} value={client.id.toString()}>
                                     {client.name}
                                   </SelectItem>
@@ -153,7 +153,7 @@ export default function Appointments() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {services?.map((service: any) => (
+                                {(services as any[])?.map((service: any) => (
                                   <SelectItem key={service.id} value={service.id.toString()}>
                                     {service.name} ({service.duration} min)
                                   </SelectItem>
@@ -213,7 +213,7 @@ export default function Appointments() {
                           <FormItem>
                             <FormLabel>Notes</FormLabel>
                             <FormControl>
-                              <Input placeholder="Additional notes..." {...field} />
+                              <Input placeholder="Additional notes..." {...field} value={field.value || ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -275,8 +275,8 @@ export default function Appointments() {
                             </div>
                           ))}
                         </div>
-                      ) : appointments?.length > 0 ? (
-                        appointments.map((appointment: any) => (
+                      ) : (appointments as any[])?.length > 0 ? (
+                        (appointments as any[]).map((appointment: any) => (
                           <div key={appointment.id} className="p-3 border border-slate-200 rounded-lg bg-white">
                             <div className="flex items-center justify-between mb-2">
                               <span className="font-medium text-slate-900">
