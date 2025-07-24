@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { 
   Home, 
@@ -21,6 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -40,8 +40,7 @@ const navigation = [
 
 export default function Sidebar() {
   const [location] = useLocation();
-  const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isCollapsed, toggleSidebar } = useSidebar();
 
   return (
     <>
@@ -65,7 +64,7 @@ export default function Sidebar() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsCollapsed(!isCollapsed)}
+              onClick={toggleSidebar}
               className="p-2 h-8 w-8"
               title={isCollapsed ? "Expand Menu" : "Collapse Menu"}
             >
@@ -121,7 +120,7 @@ export default function Sidebar() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsCollapsed(false)}
+            onClick={toggleSidebar}
             className="h-12 w-6 bg-white/90 hover:bg-white border border-slate-200 rounded-r-lg shadow-md p-0"
             title="Expand Menu"
           >
@@ -130,25 +129,7 @@ export default function Sidebar() {
         </div>
       )}
       
-      {/* Upgrade Pro banner - bottom right corner */}
-      {showUpgradeBanner && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <div className="bg-gradient-to-br from-primary to-secondary rounded-lg p-4 text-white shadow-lg relative max-w-sm">
-            <button
-              onClick={() => setShowUpgradeBanner(false)}
-              className="absolute top-2 right-2 text-white/70 hover:text-white transition-colors"
-              aria-label="Close banner"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <h3 className="font-semibold mb-1">Upgrade Pro</h3>
-            <p className="text-sm text-white/80 mb-3">Unlock advanced features and premium tools</p>
-            <Button className="bg-white text-primary hover:bg-white/90 px-4 py-2 rounded-lg text-sm font-medium w-full">
-              Learn More
-            </Button>
-          </div>
-        </div>
-      )}
+
     </>
   );
 }

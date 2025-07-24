@@ -8,10 +8,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const { isCollapsed } = useSidebar();
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="ml-16 lg:ml-64 transition-all duration-300">
+      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <TopHeader 
           title="Dashboard" 
           subtitle="Welcome back! Here's a summary of your day."

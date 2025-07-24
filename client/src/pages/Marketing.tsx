@@ -17,6 +17,7 @@ import TopHeader from "@/components/TopHeader";
 import { insertMarketingCampaignSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useSidebar } from "@/contexts/SidebarContext";
 import { z } from "zod";
 
 const campaignFormSchema = insertMarketingCampaignSchema.omit({ userId: true });
@@ -25,6 +26,7 @@ type CampaignFormData = z.infer<typeof campaignFormSchema>;
 export default function Marketing() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
 
   const form = useForm<CampaignFormData>({
@@ -98,7 +100,7 @@ export default function Marketing() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="ml-16 lg:ml-64 transition-all duration-300">
+      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <TopHeader title="Marketing Campaigns" subtitle="Create and manage your marketing campaigns" />
         
         <div className="p-6 space-y-8">

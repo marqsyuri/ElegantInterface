@@ -18,6 +18,7 @@ import TopHeader from "@/components/TopHeader";
 import { insertStaffSchema, insertStaffScheduleSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useSidebar } from "@/contexts/SidebarContext";
 import { z } from "zod";
 
 const staffFormSchema = insertStaffSchema.omit({ userId: true });
@@ -31,6 +32,7 @@ export default function Staff() {
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
   const { toast } = useToast();
+  const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
 
   const staffForm = useForm<StaffFormData>({
@@ -127,7 +129,7 @@ export default function Staff() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="ml-16 lg:ml-64 transition-all duration-300">
+      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <TopHeader title="Staff Management" subtitle="Manage your team members and schedules" />
         
         <div className="p-6 space-y-8">

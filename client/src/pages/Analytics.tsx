@@ -7,9 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Sidebar from "@/components/Sidebar";
 import TopHeader from "@/components/TopHeader";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 export default function Analytics() {
   const [dateRange, setDateRange] = useState("30days");
+  const { isCollapsed } = useSidebar();
 
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
     queryKey: ["/api/analytics", dateRange],
@@ -75,7 +77,7 @@ export default function Analytics() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="ml-16 lg:ml-64 transition-all duration-300">
+      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <TopHeader title="Business Analytics" subtitle="Comprehensive insights into your business performance" />
         
         <div className="p-6 space-y-8">

@@ -17,6 +17,7 @@ import TopHeader from "@/components/TopHeader";
 import { insertSustainabilityLogSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useSidebar } from "@/contexts/SidebarContext";
 import { z } from "zod";
 
 const logFormSchema = insertSustainabilityLogSchema.omit({ userId: true });
@@ -25,6 +26,7 @@ type LogFormData = z.infer<typeof logFormSchema>;
 export default function Sustainability() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
 
   const form = useForm<LogFormData>({
@@ -101,7 +103,7 @@ export default function Sustainability() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="ml-16 lg:ml-64 transition-all duration-300">
+      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <TopHeader title="Sustainability Tracking" subtitle="Monitor and reduce your environmental impact" />
         
         <div className="p-6 space-y-8">
