@@ -89,7 +89,7 @@ export default function Clients() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="lg:ml-72">
+      <main className="lg:ml-72 pt-16 lg:pt-0">
         <TopHeader title="Clients" subtitle="Manage your client registrations and records" />
         
         <div className="p-6 space-y-8">

@@ -61,9 +61,10 @@ export default function Sidebar() {
       {/* Sidebar */}
       <nav className={cn(
         "fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-50 flex flex-col transition-transform duration-300",
-        "w-72 lg:w-72", // Full width on all screens
-        "lg:translate-x-0", // Always visible on desktop
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0" // Hide on mobile unless open
+        "w-72", // Fixed width
+        // Desktop: always visible, Mobile: slide in/out
+        "lg:translate-x-0",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Mobile Close Button */}
         <div className="lg:hidden flex justify-end p-4">

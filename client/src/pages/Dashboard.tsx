@@ -42,12 +42,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen overflow-hidden salon-gradient">
+    <div className="min-h-screen salon-gradient">
       <Sidebar />
       
-      <main className="h-screen overflow-y-auto lg:ml-72">
+      {/* Mobile top padding to account for mobile menu button */}
+      <main className="lg:ml-72 pt-16 lg:pt-0 min-h-screen">
         {/* Beautiful Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-primary via-primary/90 to-secondary p-4 md:p-8 mb-6 md:mb-8 mx-4 lg:mx-0 mt-4 lg:mt-0 rounded-xl lg:rounded-none">
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary via-primary/90 to-secondary p-4 md:p-6 lg:p-8 mb-4 md:mb-6 lg:mb-8 mx-2 sm:mx-4 lg:mx-0 rounded-xl lg:rounded-none">
           <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
           <div className="relative z-10">
             <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Estética Pro</h1>
@@ -57,36 +58,36 @@ export default function Dashboard() {
           <div className="absolute bottom-0 left-0 w-16 md:w-24 h-16 md:h-24 bg-white/10 rounded-full translate-y-2 md:translate-y-4 -translate-x-2 md:-translate-x-4"></div>
         </div>
         
-        <div className="px-4 md:px-8 pb-8 space-y-6 md:space-y-8">
+        <div className="px-2 sm:px-4 md:px-6 lg:px-8 pb-8 space-y-4 md:space-y-6 lg:space-y-8">
           {/* Elegant Stats Cards */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             <div className="beauty-card animate-fade-in">
-              <div className="p-6">
+              <div className="p-4 sm:p-5 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Today's Appointments</p>
-                    <p className="text-3xl font-bold text-foreground">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Today's Appointments</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                       {statsLoading ? "..." : (stats as any)?.todayAppointments || 0}
                     </p>
                   </div>
                   <div className="p-3 md:p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl">
-                    <Calendar className="w-8 h-8 text-primary" />
+                    <Calendar className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-primary" />
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="beauty-card animate-fade-in">
-              <div className="p-6">
+              <div className="p-4 sm:p-5 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Daily Revenue</p>
-                    <p className="text-3xl font-bold text-foreground">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Daily Revenue</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                       NZ${statsLoading ? "..." : (stats as any)?.dailyRevenue || 0}
                     </p>
                   </div>
-                  <div className="p-4 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl">
-                    <DollarSign className="w-8 h-8 text-secondary" />
+                  <div className="p-3 md:p-4 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl">
+                    <DollarSign className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-secondary" />
                   </div>
                 </div>
               </div>

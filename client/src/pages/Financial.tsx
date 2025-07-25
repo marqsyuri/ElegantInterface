@@ -87,7 +87,7 @@ export default function Financial() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="lg:ml-72">
+      <main className="lg:ml-72 pt-16 lg:pt-0">
         <TopHeader title="Financial Management" subtitle="Control income, expenses and cash flow" />
         
         <div className="p-6 space-y-8">
