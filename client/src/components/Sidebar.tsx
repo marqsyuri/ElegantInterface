@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useState } from "react";
 import { 
   Home, 
   Calendar, 
@@ -13,7 +14,9 @@ import {
   UserCheck,
   Mail,
   BarChart3,
-  Leaf
+  Leaf,
+  Menu,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,10 +38,43 @@ const navigation = [
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <>
-      <nav className="fixed left-0 top-0 h-screen w-72 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-40 flex flex-col">
+      {/* Mobile Menu Button */}
+      <button
+        className="fixed top-4 left-4 z-50 lg:hidden bg-gradient-to-br from-primary to-secondary p-3 rounded-xl shadow-lg"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      >
+        <Menu className="w-6 h-6 text-white" />
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <nav className={cn(
+        "fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-50 flex flex-col transition-transform duration-300",
+        "w-72 lg:w-72", // Full width on all screens
+        "lg:translate-x-0", // Always visible on desktop
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0" // Hide on mobile unless open
+      )}>
+        {/* Mobile Close Button */}
+        <div className="lg:hidden flex justify-end p-4">
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-2 text-slate-400 hover:text-white transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
         {/* Modern Header with Logo */}
         <div className="p-6 border-b border-slate-700/50">
           <div className="flex items-center">
@@ -63,12 +99,13 @@ export default function Sidebar() {
                   <Link href={item.href}>
                     <div 
                       className={cn(
-                        "flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 cursor-pointer group relative overflow-hidden",
+                        "flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 cursor-pointer group relative overflow-hidden touch-target",
                         isActive 
                           ? "text-white bg-gradient-to-r from-primary to-secondary shadow-lg shadow-primary/25 border-l-4 border-secondary" 
                           : "text-slate-300 hover:text-white hover:bg-slate-700/50 hover:translate-x-1"
                       )}
                       title={item.name}
+                      onClick={() => setIsMobileMenuOpen(false)} // Close mobile menu on navigation
                     >
                       {isActive && (
                         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 backdrop-blur-sm" />
