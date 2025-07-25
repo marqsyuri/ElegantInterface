@@ -45,19 +45,20 @@ export default function Sidebar() {
   return (
     <>
       <nav className={cn(
-        "fixed left-0 top-0 h-full bg-white border-r border-slate-200 z-40 transition-all duration-300 overflow-y-auto",
-        isCollapsed ? "w-16" : "w-64"
+        "fixed left-0 top-0 h-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-40 transition-all duration-300 overflow-y-auto",
+        isCollapsed ? "w-16" : "w-72"
       )}>
-        <div className="p-6 border-b border-slate-200">
+        {/* Modern Header with Logo */}
+        <div className="p-6 border-b border-slate-700/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-gradient-to-br from-primary via-primary/90 to-secondary rounded-xl flex items-center justify-center shadow-lg">
+                <Sparkles className="w-7 h-7 text-white" />
               </div>
               {!isCollapsed && (
-                <div className="ml-3">
-                  <h1 className="text-xl font-bold text-slate-900">Estética Pro</h1>
-                  <p className="text-sm text-slate-500">Professional Beauty System</p>
+                <div className="ml-4">
+                  <h1 className="text-xl font-bold text-white tracking-tight">Estética Pro</h1>
+                  <p className="text-sm text-slate-400 font-medium">Professional Beauty System</p>
                 </div>
               )}
             </div>
@@ -65,20 +66,20 @@ export default function Sidebar() {
               variant="ghost"
               size="sm"
               onClick={toggleSidebar}
-              className="p-2 h-8 w-8"
+              className="p-2 h-9 w-9 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
               title={isCollapsed ? "Expand Menu" : "Collapse Menu"}
             >
               {isCollapsed ? (
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-5 h-5" />
               ) : (
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-5 h-5" />
               )}
             </Button>
           </div>
         </div>
         
         <div className="p-4">
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {navigation.map((item) => {
               const isActive = location === item.href;
               const Icon = item.icon;
@@ -88,18 +89,30 @@ export default function Sidebar() {
                   <Link href={item.href}>
                     <div 
                       className={cn(
-                        "flex items-center px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer group relative",
+                        "flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 cursor-pointer group relative overflow-hidden",
                         isActive 
-                          ? "text-primary bg-primary/10" 
-                          : "text-slate-700 hover:bg-slate-100"
+                          ? "text-white bg-gradient-to-r from-primary to-secondary shadow-lg shadow-primary/25 border-l-4 border-secondary" 
+                          : "text-slate-300 hover:text-white hover:bg-slate-700/50 hover:translate-x-1"
                       )}
                       title={isCollapsed ? item.name : undefined}
                     >
-                      <Icon className={cn("w-5 h-5", isCollapsed ? "mx-auto" : "mr-3")} />
-                      {!isCollapsed && item.name}
-                      {isCollapsed && (
-                        <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                      {isActive && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 backdrop-blur-sm" />
+                      )}
+                      <Icon className={cn(
+                        "w-5 h-5 transition-transform duration-200 relative z-10",
+                        isCollapsed ? "mx-auto" : "mr-4",
+                        isActive && "scale-110"
+                      )} />
+                      {!isCollapsed && (
+                        <span className="relative z-10 tracking-wide">
                           {item.name}
+                        </span>
+                      )}
+                      {isCollapsed && (
+                        <div className="absolute left-full ml-4 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg border border-slate-600">
+                          {item.name}
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-slate-800 rotate-45 border-l border-b border-slate-600" />
                         </div>
                       )}
                     </div>
@@ -110,26 +123,21 @@ export default function Sidebar() {
           </ul>
         </div>
         
-        <div className={cn("absolute bottom-4", isCollapsed ? "left-2 right-2" : "left-4 right-4")}>
-        </div>
+        {/* Footer with User Info (if not collapsed) */}
+        {!isCollapsed && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700/50 bg-slate-800/50">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-secondary to-primary rounded-lg flex items-center justify-center">
+                <span className="text-white text-sm font-bold">EP</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-white">Professional</p>
+                <p className="text-xs text-slate-400">Beauty Expert</p>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
-      
-      {/* Expand indicator when collapsed */}
-      {isCollapsed && (
-        <div className="fixed left-16 top-1/2 transform -translate-y-1/2 z-50">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleSidebar}
-            className="h-12 w-6 bg-white/90 hover:bg-white border border-slate-200 rounded-r-lg shadow-md p-0"
-            title="Expand Menu"
-          >
-            <ChevronRight className="w-4 h-4 text-slate-600" />
-          </Button>
-        </div>
-      )}
-      
-
     </>
   );
 }

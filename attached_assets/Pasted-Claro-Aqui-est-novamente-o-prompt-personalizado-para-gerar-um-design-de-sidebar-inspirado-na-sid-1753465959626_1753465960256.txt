@@ -1,0 +1,32 @@
+Claro! Aqui está novamente o **prompt personalizado para gerar um design de sidebar inspirado na sidebar do AdminMart**, que é moderno, funcional e profissional, ideal para seu software BeautyFromBrazil:
+
+**Prompt para Sidebar Inspirada no AdminMart**
+
+Crie um design de **sidebar fixa e responsiva** para um sistema administrativo de salão de beleza, inspirado na sidebar do AdminMart. O layout deve contemplar:
+
+- Uma **barra lateral vertical fixa** à esquerda com largura média (cerca de 250-270px).
+- Inclusão de um **logo** no topo da sidebar, com espaço para imagem e nome do sistema (ex: "BeautyFromBrazil").
+- Um **menu de navegação vertical** com itens principais, cada um contendo:
+  - Ícone moderno alinhado à esquerda (utilizando SVG, FontAwesome ou emojis estilizados).
+  - Texto claro e legível para o nome do serviço (ex: Hair Cut, Hair Colour, Nail etc).
+  - Possibilidade de **submenus expansíveis** para categorias ou detalhes (ex: subitens dentro de Hair Cut).
+- Uso de cores sóbrias e profissionais, como tons escuros para fundo (cinza azulado, verde acinzentado) e cores vivas para hover e seleção (ex.: laranja, amarelo ou verde claro).
+- Um efeito visual de **realce no item ativo**, com borda lateral colorida e mudança no background.
+- **Menu colapsável/expandível** para telas menores, que transforma a sidebar em uma barra estreita só com ícones, preservando a usabilidade.
+- Animações suaves para abertura/fechamento de submenus e transições de hover.
+- A sidebar deve ser integrada a um layout fixo com topbar para usuário e conteúdo principal ajustável ao lado da sidebar.
+
+Use uma tipografia moderna e espaços generosos entre os itens para facilitar a navegação e a leitura.
+
+Se quiser, posso ajudar a transformar esse prompt em código HTML/CSS/JS ou em um componente React funcional para seu projeto. É só avisar!
+
+[1] https://adminmart.com
+[2] https://www.reddit.com/r/reactjs/comments/1bh274g/suggest_the_most_easiest_way_to_build_an_admin/
+[3] https://nextjstemplates.com/blog/admin-dashboard-templates
+[4] https://dribbble.com/tags/sidebar
+[5] https://docsbot.ai/prompts/business/responsive-admin-sidebar
+[6] https://docsbot.ai/prompts/productivity/responsive-sidebar-design
+[7] https://www.figma.com/community/website-templates/dashboards
+[8] https://www.creative-tim.com/blog/web-design/admin-dashboard-templates-for-your-next-project/
+[9] https://dribbble.com/tags/admin-panel
+[10] https://themefisher.com/free-responsive-html5-bootstrap-admin-templates
