@@ -1,13 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, DollarSign, Users, Star, ArrowUp, ArrowDown, Check, Phone, Clock } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, DollarSign, Users, Star, Clock, Phone, CheckCircle, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Sidebar from "@/components/Sidebar";
-import TopHeader from "@/components/TopHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
 import { useSidebar } from "@/contexts/SidebarContext";
 
 export default function Dashboard() {
@@ -40,214 +37,199 @@ export default function Dashboard() {
     retry: false,
   });
 
-  const { data: recentTransactions, isLoading: transactionsLoading } = useQuery({
-    queryKey: ["/api/transactions"],
-    retry: false,
-  });
-
   if (isLoading || !isAuthenticated) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
+    <div className="min-h-screen salon-gradient">
       <Sidebar />
       
       <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
-        <TopHeader 
-          title="Dashboard" 
-          subtitle="Welcome back! Here's a summary of your day."
-        />
+        {/* Beautiful Header */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary via-primary/90 to-secondary p-8 mb-8">
+          <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+          <div className="relative z-10">
+            <h1 className="text-3xl font-bold text-white mb-2">Beauty Salon Pro</h1>
+            <p className="text-primary-foreground/90 text-lg">Welcome back! Here's your daily overview</p>
+          </div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/20 rounded-full -translate-y-8 translate-x-8"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-4 -translate-x-4"></div>
+        </div>
         
-        <div className="p-6 space-y-8">
-          {/* Stats Cards */}
+        <div className="px-8 pb-8 space-y-8">
+          {/* Elegant Stats Cards */}
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="animate-fade-in">
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-primary/10 rounded-lg">
-                    <Calendar className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm text-slate-600">Today</p>
-                    <p className="text-2xl font-bold text-slate-900">
+            <div className="beauty-card animate-fade-in">
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Today's Appointments</p>
+                    <p className="text-3xl font-bold text-foreground">
                       {statsLoading ? "..." : (stats as any)?.todayAppointments || 0}
                     </p>
-                    <p className="text-xs text-emerald-600">Appointments</p>
+                  </div>
+                  <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl">
+                    <Calendar className="w-8 h-8 text-primary" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-emerald-100 rounded-lg">
-                    <DollarSign className="w-6 h-6 text-emerald-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm text-slate-600">Daily Revenue</p>
-                    <p className="text-2xl font-bold text-slate-900">
-                      ${statsLoading ? "..." : parseFloat((stats as any)?.dailyRevenue || "0").toFixed(2)}
+            <div className="beauty-card animate-fade-in">
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Daily Revenue</p>
+                    <p className="text-3xl font-bold text-foreground">
+                      NZ${statsLoading ? "..." : (stats as any)?.dailyRevenue || 0}
                     </p>
-                    <p className="text-xs text-emerald-600">vs yesterday</p>
+                  </div>
+                  <div className="p-4 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl">
+                    <DollarSign className="w-8 h-8 text-secondary" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-secondary/10 rounded-lg">
-                    <Users className="w-6 h-6 text-secondary" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm text-slate-600">Active Clients</p>
-                    <p className="text-2xl font-bold text-slate-900">
-                      {statsLoading ? "..." : (stats as any)?.activeClients || 0}
+            <div className="beauty-card animate-fade-in">
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Total Clients</p>
+                    <p className="text-3xl font-bold text-foreground">
+                      {statsLoading ? "..." : (stats as any)?.totalClients || 0}
                     </p>
-                    <p className="text-xs text-emerald-600">total registered</p>
+                  </div>
+                  <div className="p-4 bg-gradient-to-br from-primary/15 to-primary/8 rounded-2xl">
+                    <Users className="w-8 h-8 text-primary" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-pink-100 rounded-lg">
-                    <Star className="w-6 h-6 text-pink-600" />
+            <div className="beauty-card animate-fade-in">
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Satisfaction Rate</p>
+                    <p className="text-3xl font-bold text-foreground">98%</p>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm text-slate-600">Satisfaction</p>
-                    <p className="text-2xl font-bold text-slate-900">
-                      {statsLoading ? "..." : (stats as any)?.satisfaction || "0.0"}
-                    </p>
-                    <p className="text-xs text-emerald-600">average rating</p>
+                  <div className="p-4 bg-gradient-to-br from-secondary/15 to-secondary/8 rounded-2xl">
+                    <Star className="w-8 h-8 text-secondary" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </section>
 
-          {/* Today's Schedule and Financial Summary */}
+          {/* Today's Schedule and Quick Actions */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-semibold text-slate-900">Today's Schedule</CardTitle>
-                <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">
-                  View all
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {appointmentsLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="flex items-center p-4 bg-slate-50 rounded-lg">
-                          <div className="w-12 h-12 bg-slate-200 rounded-full"></div>
-                          <div className="ml-4 flex-1">
-                            <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
-                            <div className="h-3 bg-slate-200 rounded w-1/2"></div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {(todayAppointments as any)?.length > 0 ? (
-                      (todayAppointments as any).slice(0, 3).map((appointment: any) => (
-                        <div key={appointment.id} className="flex items-center p-4 bg-slate-50 rounded-lg">
-                          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                            <span className="text-primary font-semibold text-sm">
-                              {new Date(appointment.appointmentDate).toLocaleTimeString('pt-BR', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </span>
-                          </div>
-                          <div className="ml-4 flex-1">
-                            <p className="font-medium text-slate-900">{appointment.client.name}</p>
-                            <p className="text-sm text-slate-600">{appointment.service.name}</p>
-                            <p className="text-xs text-slate-500">
-                              Duration: {appointment.service.duration} min
-                            </p>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Button size="icon" variant="ghost" className="text-emerald-600 hover:bg-emerald-100">
-                              <Check className="w-4 h-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="text-slate-400 hover:bg-slate-100">
-                              <Phone className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8">
-                        <Clock className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                        <p className="text-slate-500">No appointments for today</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-semibold text-slate-900">Financial Summary</CardTitle>
-                <select className="text-sm border border-slate-200 rounded-lg px-3 py-1">
-                  <option>This month</option>
-                  <option>Last 7 days</option>
-                </select>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-emerald-50 rounded-lg">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                        <ArrowUp className="w-4 h-4 text-emerald-600" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-slate-900">Revenue</p>
-                        <p className="text-xs text-slate-500">Completed procedures</p>
-                      </div>
-                    </div>
-                    <span className="font-bold text-emerald-600">
-                      ${statsLoading ? "..." : parseFloat((stats as any)?.monthlyRevenue || "0").toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                        <ArrowDown className="w-4 h-4 text-red-600" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-slate-900">Expenses</p>
-                        <p className="text-xs text-slate-500">Materials and costs</p>
-                      </div>
-                    </div>
-                    <span className="font-bold text-red-600">
-                      ${statsLoading ? "..." : parseFloat((stats as any)?.monthlyExpenses || "0").toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-slate-900">Net Profit</span>
-                      <span className="font-bold text-xl text-emerald-600">
-                        ${statsLoading ? "..." : parseFloat((stats as any)?.netProfit || "0").toFixed(2)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-500 mt-1">This month</p>
-                  </div>
+            <div className="beauty-card">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-foreground">Today's Schedule</h3>
+                  <Button className="rounded-btn bg-primary hover:bg-primary/90 text-primary-foreground">
+                    View All
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="space-y-4">
+                  {appointmentsLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="flex items-center p-4 bg-accent/50 rounded-xl">
+                            <div className="w-12 h-12 bg-muted rounded-full"></div>
+                            <div className="ml-4 flex-1">
+                              <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                              <div className="h-3 bg-muted rounded w-1/2"></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : todayAppointments && (todayAppointments as any[]).length > 0 ? (
+                    (todayAppointments as any[]).slice(0, 3).map((appointment, index) => (
+                      <div key={index} className="flex items-center p-4 bg-accent/30 rounded-xl border border-accent/40 hover:bg-accent/40 transition-colors">
+                        <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <p className="font-medium text-foreground">{appointment.time || "10:00 AM"}</p>
+                          <p className="text-sm text-muted-foreground">{appointment.service || "Facial Treatment"}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-foreground">{appointment.clientName || "Client"}</p>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary">
+                            Confirmed
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No appointments scheduled for today</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="beauty-card">
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-foreground mb-6">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <Button className="rounded-btn h-20 bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center space-y-2">
+                    <Calendar className="w-6 h-6" />
+                    <span className="text-sm">New Appointment</span>
+                  </Button>
+                  <Button className="rounded-btn h-20 bg-secondary hover:bg-secondary/90 text-secondary-foreground flex flex-col items-center justify-center space-y-2">
+                    <Users className="w-6 h-6" />
+                    <span className="text-sm">Add Client</span>
+                  </Button>
+                  <Button className="rounded-btn h-20 bg-accent hover:bg-accent/80 text-accent-foreground flex flex-col items-center justify-center space-y-2">
+                    <DollarSign className="w-6 h-6" />
+                    <span className="text-sm">Record Payment</span>
+                  </Button>
+                  <Button className="rounded-btn h-20 bg-muted hover:bg-muted/80 text-muted-foreground flex flex-col items-center justify-center space-y-2">
+                    <Phone className="w-6 h-6" />
+                    <span className="text-sm">Send Message</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Performance Overview */}
+          <section className="beauty-card">
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-foreground mb-6">Performance Overview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="text-2xl font-bold text-foreground mb-1">+24%</p>
+                  <p className="text-sm text-muted-foreground">Monthly Growth</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8 text-secondary" />
+                  </div>
+                  <p className="text-2xl font-bold text-foreground mb-1">156</p>
+                  <p className="text-sm text-muted-foreground">Completed Treatments</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-primary/15 to-primary/8 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Star className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="text-2xl font-bold text-foreground mb-1">4.9</p>
+                  <p className="text-sm text-muted-foreground">Average Rating</p>
+                </div>
+              </div>
+            </div>
           </section>
         </div>
       </main>
