@@ -95,7 +95,7 @@ export default function Appointments() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
+      <main className="ml-72">
         <TopHeader title="Appointments" subtitle="Manage your schedule and appointments" />
         
         <div className="p-6 space-y-8">

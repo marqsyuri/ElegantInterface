@@ -45,7 +45,7 @@ export default function Dashboard() {
     <div className="h-screen overflow-hidden salon-gradient">
       <Sidebar />
       
-      <main className={`h-screen overflow-y-auto transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-72'}`}>
+      <main className="h-screen overflow-y-auto ml-72">
         {/* Beautiful Header */}
         <div className="relative overflow-hidden bg-gradient-to-r from-primary via-primary/90 to-secondary p-8 mb-8">
           <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>

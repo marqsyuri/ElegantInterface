@@ -10,17 +10,12 @@ import {
   Gift, 
   Settings,
   Sparkles,
-  X,
-  ChevronLeft,
-  ChevronRight,
   UserCheck,
   Mail,
   BarChart3,
   Leaf
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useSidebar } from "@/contexts/SidebarContext";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -40,41 +35,20 @@ const navigation = [
 
 export default function Sidebar() {
   const [location] = useLocation();
-  const { isCollapsed, toggleSidebar } = useSidebar();
 
   return (
     <>
-      <nav className={cn(
-        "fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-40 transition-all duration-300 flex flex-col",
-        isCollapsed ? "w-16" : "w-72"
-      )}>
+      <nav className="fixed left-0 top-0 h-screen w-72 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-40 flex flex-col">
         {/* Modern Header with Logo */}
         <div className="p-6 border-b border-slate-700/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary via-primary/90 to-secondary rounded-xl flex items-center justify-center shadow-lg">
-                <Sparkles className="w-7 h-7 text-white" />
-              </div>
-              {!isCollapsed && (
-                <div className="ml-4">
-                  <h1 className="text-xl font-bold text-white tracking-tight">Estética Pro</h1>
-                  <p className="text-sm text-slate-400 font-medium">Professional Beauty System</p>
-                </div>
-              )}
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary via-primary/90 to-secondary rounded-xl flex items-center justify-center shadow-lg">
+              <Sparkles className="w-7 h-7 text-white" />
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleSidebar}
-              className="p-2 h-9 w-9 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
-              title={isCollapsed ? "Expand Menu" : "Collapse Menu"}
-            >
-              {isCollapsed ? (
-                <ChevronRight className="w-5 h-5" />
-              ) : (
-                <ChevronLeft className="w-5 h-5" />
-              )}
-            </Button>
+            <div className="ml-4">
+              <h1 className="text-xl font-bold text-white tracking-tight">Estética Pro</h1>
+              <p className="text-sm text-slate-400 font-medium">Professional Beauty System</p>
+            </div>
           </div>
         </div>
         
@@ -94,27 +68,18 @@ export default function Sidebar() {
                           ? "text-white bg-gradient-to-r from-primary to-secondary shadow-lg shadow-primary/25 border-l-4 border-secondary" 
                           : "text-slate-300 hover:text-white hover:bg-slate-700/50 hover:translate-x-1"
                       )}
-                      title={isCollapsed ? item.name : undefined}
+                      title={item.name}
                     >
                       {isActive && (
                         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 backdrop-blur-sm" />
                       )}
                       <Icon className={cn(
-                        "w-5 h-5 transition-transform duration-200 relative z-10",
-                        isCollapsed ? "mx-auto" : "mr-4",
+                        "w-5 h-5 transition-transform duration-200 relative z-10 mr-4",
                         isActive && "scale-110"
                       )} />
-                      {!isCollapsed && (
-                        <span className="relative z-10 tracking-wide">
-                          {item.name}
-                        </span>
-                      )}
-                      {isCollapsed && (
-                        <div className="absolute left-full ml-4 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg border border-slate-600">
-                          {item.name}
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-slate-800 rotate-45 border-l border-b border-slate-600" />
-                        </div>
-                      )}
+                      <span className="relative z-10 tracking-wide">
+                        {item.name}
+                      </span>
                     </div>
                   </Link>
                 </li>
