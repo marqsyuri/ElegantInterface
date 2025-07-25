@@ -45,7 +45,7 @@ export default function Sidebar() {
   return (
     <>
       <nav className={cn(
-        "fixed left-0 top-0 h-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-40 transition-all duration-300 overflow-y-auto",
+        "fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-40 transition-all duration-300 flex flex-col",
         isCollapsed ? "w-16" : "w-72"
       )}>
         {/* Modern Header with Logo */}
@@ -78,7 +78,7 @@ export default function Sidebar() {
           </div>
         </div>
         
-        <div className="p-4">
+        <div className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-1">
             {navigation.map((item) => {
               const isActive = location === item.href;
