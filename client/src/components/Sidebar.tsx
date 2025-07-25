@@ -56,8 +56,8 @@ export default function Sidebar() {
               </div>
               {!isCollapsed && (
                 <div className="ml-3">
-                  <h1 className="text-xl font-bold text-slate-900">Aesthetic Pro</h1>
-                  <p className="text-sm text-slate-500">Professional Management</p>
+                  <h1 className="text-xl font-bold text-slate-900">Estética Pro</h1>
+                  <p className="text-sm text-slate-500">Professional Beauty System</p>
                 </div>
               )}
             </div>

@@ -1,0 +1,25 @@
+Aqui está um **prompt personalizado para gerar um design moderno e profissional da página inicial do software BeautyFromBrazil**, que você pode usar em ferramentas de IA generativa (como DALL-E, Midjourney, ou mesmo para briefing de designers):
+
+**Prompt para Design de Página de Salão de Beleza - BeautyFromBrazil**
+
+Crie um design elegante e moderno para a página inicial do software BeautyFromBrazil, um salão de beleza especializado. O layout deve conter:
+
+- Um cabeçalho fixo no topo com o nome "BeautyFromBrazil" e espaço para usuário.
+- Uma barra lateral fixa à esquerda com navegação clara usando ícones e texto para os seguintes serviços: Hair Cut (feminino e masculino), Hair Colour & Dye, Hair Treatment, Blow Dry, Hair Extensions, Nail (manicure e pedicure).
+- Uma área principal central exibindo seções para cada serviço em cartões com bordas arredondadas, sombras suaves, e texto de fácil leitura.
+- Uso de uma paleta de cores profissionais e suaves, com tons de verde, azul acinzentado e detalhes em laranja para destaque.
+- Tipografia moderna, com fontes arredondadas e bom espaçamento para legibilidade.
+- Design responsivo que adapta a sidebar para ícones em telas menores.
+- O visual geral deve transmitir organização, profissionalismo, limpeza, e acolhimento para clientes de beleza.
+
+Caso queira, posso também ajudar com um prompt para criação de imagens específicas dos serviços, ou para textos promocionais e de redes sociais para o salão. Quer?
+
+[1] https://mobirise.com/html-templates/pt/salon/
+[2] https://mobirise.com/html-templates/pt/beauty-parlour/
+[3] https://openart.ai/pt/blog/artigo/prompts-de-stable-diffusion-para-penteados
+[4] https://elements.envato.com/pt-br/web-templates/landing-page-templates/corte+de+cabelo
+[5] https://www.godaddy.com/resources/br/artigos/prompts-chat-gpt-para-marketing-digital
+[6] https://www.triade.club/instagram/3-prompts-para-profissionais-de-beleza-aumentarem-o-alcance-no-instagram-com-o-chatgpt/
+[7] https://elements.envato.com/pt-br/web-templates/salon
+[8] https://www.canva.com/pt_br/modelos/s/cabeleireiro/?continuation=250
+[9] https://www.tiktok.com/discover/prompt-para-gpt-para-criar-conteudos-para-nail-design

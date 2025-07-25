@@ -50,8 +50,8 @@ export default function Dashboard() {
         <div className="relative overflow-hidden bg-gradient-to-r from-primary via-primary/90 to-secondary p-8 mb-8">
           <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
           <div className="relative z-10">
-            <h1 className="text-3xl font-bold text-white mb-2">Beauty Salon Pro</h1>
-            <p className="text-primary-foreground/90 text-lg">Welcome back! Here's your daily overview</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Estética Pro</h1>
+            <p className="text-primary-foreground/90 text-lg">Your professional beauty management system</p>
           </div>
           <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/20 rounded-full -translate-y-8 translate-x-8"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-4 -translate-x-4"></div>
@@ -202,7 +202,58 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* Performance Overview */}
+          {/* Professional Services Overview */}
+          <section className="beauty-card">
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-foreground mb-6">Service Categories</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="text-center p-4 bg-accent/30 rounded-xl hover:bg-accent/40 transition-colors cursor-pointer">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <span className="text-xl">✂️</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">Hair Cut</p>
+                  <p className="text-xs text-muted-foreground">Men & Women</p>
+                </div>
+                <div className="text-center p-4 bg-accent/30 rounded-xl hover:bg-accent/40 transition-colors cursor-pointer">
+                  <div className="w-12 h-12 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <span className="text-xl">🎨</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">Hair Colour</p>
+                  <p className="text-xs text-muted-foreground">& Dye</p>
+                </div>
+                <div className="text-center p-4 bg-accent/30 rounded-xl hover:bg-accent/40 transition-colors cursor-pointer">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary/15 to-primary/8 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <span className="text-xl">💆</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">Hair Treatment</p>
+                  <p className="text-xs text-muted-foreground">& Care</p>
+                </div>
+                <div className="text-center p-4 bg-accent/30 rounded-xl hover:bg-accent/40 transition-colors cursor-pointer">
+                  <div className="w-12 h-12 bg-gradient-to-br from-secondary/15 to-secondary/8 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <span className="text-xl">💨</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">Blow Dry</p>
+                  <p className="text-xs text-muted-foreground">& Styling</p>
+                </div>
+                <div className="text-center p-4 bg-accent/30 rounded-xl hover:bg-accent/40 transition-colors cursor-pointer">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <span className="text-xl">🔗</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">Extensions</p>
+                  <p className="text-xs text-muted-foreground">Hair & Lash</p>
+                </div>
+                <div className="text-center p-4 bg-accent/30 rounded-xl hover:bg-accent/40 transition-colors cursor-pointer">
+                  <div className="w-12 h-12 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <span className="text-xl">💅</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">Nail Care</p>
+                  <p className="text-xs text-muted-foreground">Mani & Pedi</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Performance Metrics */}
           <section className="beauty-card">
             <div className="p-6">
               <h3 className="text-xl font-semibold text-foreground mb-6">Performance Overview</h3>
