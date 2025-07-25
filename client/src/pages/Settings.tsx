@@ -12,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Sidebar from "@/components/Sidebar";
 import TopHeader from "@/components/TopHeader";
+import { useSidebar } from "@/contexts/SidebarContext";
 import { useAuth } from "@/hooks/useAuth";
 import { insertUserSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,6 +30,7 @@ export default function Settings() {
   });
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
 
   const form = useForm<UserFormData>({
@@ -91,7 +93,7 @@ export default function Settings() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="ml-16 lg:ml-64 transition-all duration-300">
+      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <TopHeader title="Settings" subtitle="Manage your profile and system preferences" />
         
         <div className="p-6 space-y-8">

@@ -16,6 +16,7 @@ import TopHeader from "@/components/TopHeader";
 import { insertMessageSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useSidebar } from "@/contexts/SidebarContext";
 import { z } from "zod";
 
 const messageFormSchema = insertMessageSchema.omit({ userId: true });
@@ -29,6 +30,7 @@ export default function Communication() {
     monthlyPromotions: false,
   });
   const { toast } = useToast();
+  const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
 
   const form = useForm<MessageFormData>({
@@ -92,7 +94,7 @@ export default function Communication() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="ml-16 lg:ml-64 transition-all duration-300">
+      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <TopHeader title="Communication" subtitle="Manage messages, feedback and client interactions" />
         
         <div className="p-6 space-y-8">

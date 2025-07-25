@@ -16,6 +16,7 @@ import TopHeader from "@/components/TopHeader";
 import { insertClinicalRecordSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useSidebar } from "@/contexts/SidebarContext";
 import { z } from "zod";
 
 const clinicalFormSchema = insertClinicalRecordSchema.extend({
@@ -28,6 +29,7 @@ export default function Clinical() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const { toast } = useToast();
+  const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
 
   const form = useForm<ClinicalFormData>({
@@ -91,7 +93,7 @@ export default function Clinical() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       <Sidebar />
       
-      <main className="ml-16 lg:ml-64 transition-all duration-300">
+      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <TopHeader title="Clinical Records" subtitle="Record and track treatments performed" />
         
         <div className="p-6 space-y-8">
