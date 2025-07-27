@@ -107,23 +107,23 @@ button, a, [role="button"] {
   --card-foreground: hsl(150, 25%, 15%);
   --border: hsl(120, 15%, 88%);
   --input: hsl(120, 15%, 88%);
-  --primary: hsl(142, 76%, 36%);
+  --primary: hsl(145, 80%, 30%);
   --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(25, 85%, 65%);
-  --secondary-foreground: hsl(0, 0%, 100%);
-  --accent: hsl(142, 45%, 92%);
+  --secondary: hsl(45, 95%, 55%);
+  --secondary-foreground: hsl(0, 0%, 0%);
+  --accent: hsl(145, 45%, 92%);
   --accent-foreground: hsl(150, 25%, 15%);
   --destructive: hsl(0, 84.2%, 60.2%);
   --destructive-foreground: hsl(0, 0%, 100%);
-  --ring: hsl(142, 76%, 36%);
+  --ring: hsl(145, 80%, 30%);
   --radius: 1rem;
   
-  /* Beauty salon specific colors */
-  --sage-green: hsl(142, 30%, 75%);
-  --mint-green: hsl(150, 45%, 85%);
-  --soft-orange: hsl(25, 85%, 65%);
-  --peach: hsl(20, 75%, 82%);
-  --cream: hsl(45, 60%, 95%);
+  /* Brazilian-inspired colors */
+  --brazil-green: hsl(145, 80%, 30%);
+  --brazil-green-light: hsl(145, 60%, 45%);
+  --brazil-yellow: hsl(45, 95%, 55%);
+  --brazil-yellow-light: hsl(45, 85%, 70%);
+  --brazil-gold: hsl(40, 90%, 45%);
 }
 
 .dark {
@@ -170,11 +170,11 @@ button, a, [role="button"] {
   }
 
   .gradient-bg {
-    background: linear-gradient(135deg, var(--mint-green) 0%, var(--sage-green) 50%, var(--peach) 100%);
+    background: linear-gradient(135deg, var(--brazil-green) 0%, var(--brazil-green-light) 50%, var(--brazil-yellow) 100%);
   }
 
   .salon-gradient {
-    background: linear-gradient(135deg, var(--cream) 0%, var(--mint-green) 50%, var(--sage-green) 100%);
+    background: linear-gradient(135deg, var(--brazil-green) 0%, var(--brazil-green-light) 25%, var(--brazil-yellow-light) 75%, var(--brazil-yellow) 100%);
   }
 
   .card-shadow {
