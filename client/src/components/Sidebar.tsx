@@ -16,9 +16,12 @@ import {
   BarChart3,
   Leaf,
   Menu,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -39,15 +42,29 @@ const navigation = [
 export default function Sidebar() {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isExpanded, toggleExpanded } = useSidebar();
 
   return (
     <>
       {/* Mobile Menu Button */}
       <button
-        className="fixed top-4 left-4 z-50 lg:hidden bg-gradient-to-br from-primary to-secondary p-3 rounded-xl shadow-lg"
+        className="fixed top-4 left-4 z-50 lg:hidden bg-gradient-to-br from-green-700 to-yellow-400 p-3 rounded-xl shadow-lg"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       >
         <Menu className="w-6 h-6 text-white" />
+      </button>
+
+      {/* Desktop Expand/Collapse Button */}
+      <button
+        className="fixed top-4 left-4 z-50 hidden lg:block bg-gradient-to-br from-green-700 to-yellow-400 p-2 rounded-lg shadow-lg transition-all duration-300"
+        style={{ left: isExpanded ? '260px' : '60px' }}
+        onClick={toggleExpanded}
+      >
+        {isExpanded ? (
+          <ChevronLeft className="w-5 h-5 text-white" />
+        ) : (
+          <ChevronRight className="w-5 h-5 text-white" />
+        )}
       </button>
 
       {/* Mobile Overlay */}
@@ -60,8 +77,9 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <nav className={cn(
-        "fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-50 flex flex-col transition-transform duration-300",
-        "w-72", // Fixed width
+        "fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-40 flex flex-col transition-all duration-300",
+        // Dynamic width based on expansion state
+        isExpanded ? "w-72" : "w-16 lg:w-16",
         // Desktop: always visible, Mobile: slide in/out
         "lg:translate-x-0",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -77,15 +95,20 @@ export default function Sidebar() {
         </div>
 
         {/* Modern Header with Logo */}
-        <div className="p-6 border-b border-slate-700/50">
+        <div className={cn(
+          "p-6 border-b border-slate-700/50 transition-all duration-300",
+          !isExpanded && "p-3"
+        )}>
           <div className="flex items-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary via-primary/90 to-secondary rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-700 via-green-600 to-yellow-400 rounded-xl flex items-center justify-center shadow-lg">
               <Sparkles className="w-7 h-7 text-white" />
             </div>
-            <div className="ml-4">
-              <h1 className="text-xl font-bold text-white tracking-tight">Estética Pro</h1>
-              <p className="text-sm text-slate-400 font-medium">Professional Beauty System</p>
-            </div>
+            {isExpanded && (
+              <div className="ml-4 transition-opacity duration-300">
+                <h1 className="text-xl font-bold text-white tracking-tight">Estética Pro</h1>
+                <p className="text-sm text-slate-400 font-medium">Professional Beauty System</p>
+              </div>
+            )}
           </div>
         </div>
         
@@ -100,24 +123,28 @@ export default function Sidebar() {
                   <Link href={item.href}>
                     <div 
                       className={cn(
-                        "flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 cursor-pointer group relative overflow-hidden touch-target",
+                        "flex items-center rounded-xl font-medium transition-all duration-200 cursor-pointer group relative overflow-hidden touch-target",
+                        isExpanded ? "px-4 py-3" : "px-2 py-3 justify-center",
                         isActive 
-                          ? "text-white bg-gradient-to-r from-primary to-secondary shadow-lg shadow-primary/25 border-l-4 border-secondary" 
-                          : "text-slate-300 hover:text-white hover:bg-slate-700/50 hover:translate-x-1"
+                          ? "text-white bg-gradient-to-r from-green-700 to-yellow-400 shadow-lg shadow-green-700/25" + (isExpanded ? " border-l-4 border-yellow-400" : "")
+                          : "text-slate-300 hover:text-white hover:bg-slate-700/50" + (isExpanded ? " hover:translate-x-1" : "")
                       )}
                       title={item.name}
                       onClick={() => setIsMobileMenuOpen(false)} // Close mobile menu on navigation
                     >
                       {isActive && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 backdrop-blur-sm" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-green-700/20 to-yellow-400/20 backdrop-blur-sm" />
                       )}
                       <Icon className={cn(
-                        "w-5 h-5 transition-transform duration-200 relative z-10 mr-4",
+                        "w-5 h-5 transition-transform duration-200 relative z-10",
+                        isExpanded ? "mr-4" : "mr-0",
                         isActive && "scale-110"
                       )} />
-                      <span className="relative z-10 tracking-wide">
-                        {item.name}
-                      </span>
+                      {isExpanded && (
+                        <span className="relative z-10 tracking-wide transition-opacity duration-300">
+                          {item.name}
+                        </span>
+                      )}
                     </div>
                   </Link>
                 </li>

@@ -1,16 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, DollarSign, Users, Star, Clock, Phone, CheckCircle, TrendingUp } from "lucide-react";
+import { Calendar, DollarSign, Users, Star, Clock, Phone, CheckCircle, TrendingUp, UserPlus, FileText, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Sidebar from "@/components/Sidebar";
+import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useSidebar } from "@/contexts/SidebarContext";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
-  const { isCollapsed } = useSidebar();
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -42,11 +40,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen salon-gradient">
-      <Sidebar />
-      
-      {/* Mobile top padding to account for mobile menu button */}
-      <main className="lg:ml-72 pt-16 lg:pt-0 min-h-screen">
+    <PageLayout>
         {/* Beautiful Header */}
         <div className="relative overflow-hidden bg-gradient-to-r from-green-700 via-green-600 to-yellow-400 p-4 md:p-6 lg:p-8 mb-4 md:mb-6 lg:mb-8 mx-2 sm:mx-4 lg:mx-0 rounded-xl lg:rounded-none">
           <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
@@ -284,7 +278,6 @@ export default function Dashboard() {
             </div>
           </section>
         </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 }
