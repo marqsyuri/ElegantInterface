@@ -22,8 +22,31 @@ export function FileUpload({
 }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
+  const compressImage = useCallback((file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Resize image to max 600px width while maintaining aspect ratio
+        const maxWidth = 600;
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to compressed JPEG with 0.6 quality for smaller size
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        resolve(compressedDataUrl);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  }, []);
+
+  const processFiles = useCallback(async (selectedFiles: File[]) => {
     const validFiles: File[] = [];
     const invalidFiles: string[] = [];
 
@@ -41,72 +64,36 @@ export function FileUpload({
       alert(`Invalid file types: ${invalidFiles.join(', ')}\nOnly PNG and JPG files are allowed.`);
     }
 
-    const newFileUrls: string[] = [];
-    let processedCount = 0;
+    if (validFiles.length === 0) return;
 
-    validFiles.forEach(file => {
-      if (files.length + newFileUrls.length < maxFiles) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            newFileUrls.push(event.target.result as string);
-            processedCount++;
-            if (processedCount === validFiles.length) {
-              onFilesChange([...files, ...newFileUrls]);
-            }
-          }
-        };
-        reader.readAsDataURL(file);
+    try {
+      const compressedImages: string[] = [];
+      
+      for (const file of validFiles) {
+        if (files.length + compressedImages.length < maxFiles) {
+          const compressed = await compressImage(file);
+          compressedImages.push(compressed);
+        }
       }
-    });
-
-    if (validFiles.length === 0 && selectedFiles.length > 0) {
-      // All files were invalid
-      return;
+      
+      onFilesChange([...files, ...compressedImages]);
+    } catch (error) {
+      console.error('Error compressing images:', error);
+      alert('Error processing images. Please try again.');
     }
-  }, [files, maxFiles, onFilesChange]);
+  }, [files, maxFiles, onFilesChange, compressImage]);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    processFiles(selectedFiles);
+  }, [processFiles]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(false);
-
     const droppedFiles = Array.from(e.dataTransfer.files);
-    const validFiles: File[] = [];
-    const invalidFiles: string[] = [];
-
-    // Validate file types (only PNG and JPG)
-    droppedFiles.forEach(file => {
-      const fileType = file.type.toLowerCase();
-      if (fileType === 'image/png' || fileType === 'image/jpeg' || fileType === 'image/jpg') {
-        validFiles.push(file);
-      } else {
-        invalidFiles.push(file.name);
-      }
-    });
-
-    if (invalidFiles.length > 0) {
-      alert(`Invalid file types: ${invalidFiles.join(', ')}\nOnly PNG and JPG files are allowed.`);
-    }
-
-    const newFileUrls: string[] = [];
-    let processedCount = 0;
-
-    validFiles.forEach(file => {
-      if (files.length + newFileUrls.length < maxFiles) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            newFileUrls.push(event.target.result as string);
-            processedCount++;
-            if (processedCount === validFiles.length) {
-              onFilesChange([...files, ...newFileUrls]);
-            }
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  }, [files, maxFiles, onFilesChange]);
+    processFiles(droppedFiles);
+  }, [processFiles]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -153,7 +140,7 @@ export function FileUpload({
             Drag and drop images here, or click to select files
           </p>
           <p className="text-xs text-muted-foreground">
-            Maximum {maxFiles} files • PNG and JPG only
+            Maximum {maxFiles} files • PNG and JPG only • Images will be compressed
           </p>
         </div>
       </div>

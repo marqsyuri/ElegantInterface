@@ -131,6 +131,14 @@ The application uses a comprehensive database schema with the following main ent
 - Session persistence across deployments
 
 ## Recent Changes
+- **COMPLETED: Photo Upload System with Compression** (January 28, 2025)
+  - Implemented complete appointment photo upload system with before/after image support
+  - Added automatic image compression (600px max width, 60% JPEG quality) to prevent payload size errors
+  - Created drag-and-drop interface with PNG/JPG validation only
+  - Increased Express payload limits to 50MB for image handling
+  - Images stored as compressed base64 data in PostgreSQL JSONB fields
+  - Visual feedback with thumbnail previews and remove functionality
+  - Separate tabs for "before" and "after" photos in appointment form
 - **COMPLETED: Complete Gradient Removal** (January 28, 2025)
   - Removed ALL gradients from pages, dashboard, menus, and components
   - Replaced all gradient backgrounds with clean solid colors and borders
