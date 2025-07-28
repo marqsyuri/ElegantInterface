@@ -125,7 +125,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/appointments', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const appointmentData = insertAppointmentSchema.parse({ ...req.body, userId });
+      
+      // Validate image data if present
+      const { beforeImages = [], afterImages = [], ...restData } = req.body;
+      
+      // Validate image arrays
+      const validateImages = (images: any[], type: string) => {
+        if (!Array.isArray(images)) {
+          throw new Error(`${type} must be an array`);
+        }
+        return images.filter(img => typeof img === 'string' && img.startsWith('data:image/'));
+      };
+      
+      const validBeforeImages = validateImages(beforeImages, 'beforeImages');
+      const validAfterImages = validateImages(afterImages, 'afterImages');
+      
+      const appointmentData = insertAppointmentSchema.parse({ 
+        ...restData, 
+        userId,
+        beforeImages: validBeforeImages,
+        afterImages: validAfterImages
+      });
+      
       const appointment = await storage.createAppointment(appointmentData);
       res.json(appointment);
     } catch (error) {

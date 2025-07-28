@@ -24,15 +24,34 @@ export function FileUpload({
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
-    const newFileUrls: string[] = [];
+    const validFiles: File[] = [];
+    const invalidFiles: string[] = [];
 
+    // Validate file types (only PNG and JPG)
     selectedFiles.forEach(file => {
+      const fileType = file.type.toLowerCase();
+      if (fileType === 'image/png' || fileType === 'image/jpeg' || fileType === 'image/jpg') {
+        validFiles.push(file);
+      } else {
+        invalidFiles.push(file.name);
+      }
+    });
+
+    if (invalidFiles.length > 0) {
+      alert(`Invalid file types: ${invalidFiles.join(', ')}\nOnly PNG and JPG files are allowed.`);
+    }
+
+    const newFileUrls: string[] = [];
+    let processedCount = 0;
+
+    validFiles.forEach(file => {
       if (files.length + newFileUrls.length < maxFiles) {
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
             newFileUrls.push(event.target.result as string);
-            if (newFileUrls.length === selectedFiles.length) {
+            processedCount++;
+            if (processedCount === validFiles.length) {
               onFilesChange([...files, ...newFileUrls]);
             }
           }
@@ -40,6 +59,11 @@ export function FileUpload({
         reader.readAsDataURL(file);
       }
     });
+
+    if (validFiles.length === 0 && selectedFiles.length > 0) {
+      // All files were invalid
+      return;
+    }
   }, [files, maxFiles, onFilesChange]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -47,15 +71,34 @@ export function FileUpload({
     setIsDragOver(false);
 
     const droppedFiles = Array.from(e.dataTransfer.files);
-    const newFileUrls: string[] = [];
+    const validFiles: File[] = [];
+    const invalidFiles: string[] = [];
 
+    // Validate file types (only PNG and JPG)
     droppedFiles.forEach(file => {
-      if (files.length + newFileUrls.length < maxFiles && file.type.startsWith('image/')) {
+      const fileType = file.type.toLowerCase();
+      if (fileType === 'image/png' || fileType === 'image/jpeg' || fileType === 'image/jpg') {
+        validFiles.push(file);
+      } else {
+        invalidFiles.push(file.name);
+      }
+    });
+
+    if (invalidFiles.length > 0) {
+      alert(`Invalid file types: ${invalidFiles.join(', ')}\nOnly PNG and JPG files are allowed.`);
+    }
+
+    const newFileUrls: string[] = [];
+    let processedCount = 0;
+
+    validFiles.forEach(file => {
+      if (files.length + newFileUrls.length < maxFiles) {
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
             newFileUrls.push(event.target.result as string);
-            if (newFileUrls.length === droppedFiles.length) {
+            processedCount++;
+            if (processedCount === validFiles.length) {
               onFilesChange([...files, ...newFileUrls]);
             }
           }
@@ -98,7 +141,7 @@ export function FileUpload({
           id="file-input"
           type="file"
           multiple
-          accept={accept}
+          accept=".png,.jpg,.jpeg,image/png,image/jpeg"
           onChange={handleFileChange}
           className="hidden"
         />
@@ -110,7 +153,7 @@ export function FileUpload({
             Drag and drop images here, or click to select files
           </p>
           <p className="text-xs text-muted-foreground">
-            Maximum {maxFiles} files • JPG, PNG, GIF
+            Maximum {maxFiles} files • PNG and JPG only
           </p>
         </div>
       </div>

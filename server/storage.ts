@@ -209,6 +209,8 @@ export class DatabaseStorage implements IStorage {
         appointmentDate: appointments.appointmentDate,
         status: appointments.status,
         notes: appointments.notes,
+        beforeImages: appointments.beforeImages,
+        afterImages: appointments.afterImages,
         createdAt: appointments.createdAt,
         client: clients,
         service: services,
@@ -230,21 +232,21 @@ export class DatabaseStorage implements IStorage {
           gte(appointments.appointmentDate, startOfDay),
           lte(appointments.appointmentDate, endOfDay)
         )
-      );
+      ) as any;
     }
 
     return await query.orderBy(asc(appointments.appointmentDate));
   }
 
   async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
-    const [newAppointment] = await db.insert(appointments).values(appointment).returning();
+    const [newAppointment] = await db.insert(appointments).values(appointment as any).returning();
     return newAppointment;
   }
 
   async updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment> {
     const [updatedAppointment] = await db
       .update(appointments)
-      .set(appointment)
+      .set(appointment as any)
       .where(eq(appointments.id, id))
       .returning();
     return updatedAppointment;
