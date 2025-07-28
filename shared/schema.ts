@@ -83,6 +83,8 @@ export const appointments = pgTable("appointments", {
   appointmentDate: timestamp("appointment_date").notNull(),
   status: varchar("status").notNull().default("scheduled"), // scheduled, confirmed, completed, cancelled
   notes: text("notes"),
+  beforeImages: jsonb("before_images").$type<string[]>().default([]), // array of image URLs
+  afterImages: jsonb("after_images").$type<string[]>().default([]), // array of image URLs
   createdAt: timestamp("created_at").defaultNow(),
 });
 

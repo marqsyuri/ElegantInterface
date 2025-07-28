@@ -1,26 +1,28 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Plus, Calendar, Clock, User, Camera, CalendarDays, CheckCircle, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar } from "@/components/ui/calendar";
-import Sidebar from "@/components/Sidebar";
-import TopHeader from "@/components/TopHeader";
+import { FileUpload } from "@/components/ui/file-upload";
+import PageLayout from "@/components/PageLayout";
 import { insertAppointmentSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useSidebar } from "@/contexts/SidebarContext";
 import { z } from "zod";
 
 const appointmentFormSchema = insertAppointmentSchema.extend({
   appointmentDate: z.string().min(1, "Date is required"),
   appointmentTime: z.string().min(1, "Time is required"),
+  beforeImages: z.array(z.string()).optional(),
+  afterImages: z.array(z.string()).optional(),
 }).omit({ userId: true });
 
 type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
@@ -28,14 +30,17 @@ type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
 export default function Appointments() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [beforeImages, setBeforeImages] = useState<string[]>([]);
+  const [afterImages, setAfterImages] = useState<string[]>([]);
   const { toast } = useToast();
-  const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
 
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentFormSchema),
     defaultValues: {
       status: "scheduled",
+      beforeImages: [],
+      afterImages: [],
     },
   });
 
@@ -62,15 +67,19 @@ export default function Appointments() {
       await apiRequest('POST', '/api/appointments', {
         ...appointmentData,
         appointmentDate: appointmentDateTime.toISOString(),
+        beforeImages: beforeImages,
+        afterImages: afterImages,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       setIsDialogOpen(false);
       form.reset();
+      setBeforeImages([]);
+      setAfterImages([]);
       toast({
         title: "Success",
-        description: "Appointment created successfully!",
+        description: "Appointment created successfully with photos!",
       });
     },
     onError: (error) => {
@@ -91,229 +100,326 @@ export default function Appointments() {
     createAppointmentMutation.mutate(data);
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case "cancelled":
+        return <XCircle className="w-4 h-4 text-red-600" />;
+      case "completed":
+        return <CheckCircle className="w-4 h-4 text-blue-600" />;
+      default:
+        return <Clock className="w-4 h-4 text-yellow-600" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-green-50 border-green-100 text-green-700";
+      case "cancelled":
+        return "bg-red-50 border-red-100 text-red-700";
+      case "completed":
+        return "bg-blue-50 border-blue-100 text-blue-700";
+      default:
+        return "bg-yellow-50 border-yellow-100 text-yellow-700";
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
-      <Sidebar />
-      
-      <main className="lg:ml-72 pt-16 lg:pt-0">
-        <TopHeader title="Appointments" subtitle="Manage your schedule and appointments" />
-        
-        <div className="p-6 space-y-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-slate-900">Online Booking</CardTitle>
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90">
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Appointment
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
-                  <DialogHeader>
-                    <DialogTitle>New Appointment</DialogTitle>
-                  </DialogHeader>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="clientId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Client</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a client" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {(clients as any[])?.map((client: any) => (
-                                  <SelectItem key={client.id} value={client.id.toString()}>
-                                    {client.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="serviceId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Treatment</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a treatment" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {(services as any[])?.map((service: any) => (
-                                  <SelectItem key={service.id} value={service.id.toString()}>
-                                    {service.name} ({service.duration} min)
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="appointmentDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Date</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="appointmentTime"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Time</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select a time" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {timeSlots.map((time) => (
-                                    <SelectItem key={time} value={time}>
-                                      {time}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="notes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Notes</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Additional notes..." {...field} value={field.value || ""} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="flex space-x-3">
-                        <Button type="submit" disabled={createAppointmentMutation.isPending}>
-                          {createAppointmentMutation.isPending ? "Saving..." : "Confirm Appointment"}
-                        </Button>
-                        <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
-                  <div className="bg-slate-50 rounded-lg p-6">
-                    <div className="mb-4 flex items-center justify-between">
-                      <h4 className="font-medium text-slate-900">
-                        {selectedDate?.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                      </h4>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="icon">
-                          <ChevronLeft className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      className="rounded-md border"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="font-medium text-slate-900 mb-3">
-                      Appointments - {selectedDate?.toLocaleDateString('en-NZ')}
-                    </h4>
-                    <div className="space-y-3">
-                      {appointmentsLoading ? (
-                        <div className="space-y-3">
-                          {[...Array(3)].map((_, i) => (
-                            <div key={i} className="animate-pulse p-3 bg-slate-100 rounded-lg">
-                              <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
-                              <div className="h-3 bg-slate-200 rounded w-1/2"></div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (appointments as any[])?.length > 0 ? (
-                        (appointments as any[]).map((appointment: any) => (
-                          <div key={appointment.id} className="p-3 border border-slate-200 rounded-lg bg-white">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-slate-900">
-                                {new Date(appointment.appointmentDate).toLocaleTimeString('pt-BR', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
-                                })}
-                              </span>
-                              <span className={`px-2 py-1 text-xs rounded-full ${
-                                appointment.status === 'confirmed' 
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : appointment.status === 'scheduled'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-amber-100 text-amber-700'
-                              }`}>
-                                {appointment.status === 'confirmed' ? 'Confirmed' :
-                                 appointment.status === 'scheduled' ? 'Scheduled' : 'Pending'}
-                              </span>
-                            </div>
-                            <p className="text-sm text-slate-900 font-medium">{appointment.client.name}</p>
-                            <p className="text-sm text-slate-600">{appointment.service.name}</p>
-                            <p className="text-xs text-slate-500">Duration: {appointment.service.duration} min</p>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8">
-                          <p className="text-slate-500">No appointments for this date</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+    <PageLayout>
+      <div className="p-4 md:p-6 lg:p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Appointments</h1>
+          <p className="text-muted-foreground">Manage your client appointments with before/after photos</p>
         </div>
-      </main>
-    </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Left column - Calendar and Quick Actions */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5" />
+                  Select Date
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Input
+                    type="date"
+                    value={selectedDate?.toISOString().split('T')[0] || ''}
+                    onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                    className="w-full"
+                  />
+                  
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="w-full bg-green-700 hover:bg-green-800 text-white">
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Appointment
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Camera className="w-5 h-5" />
+                          Create New Appointment
+                        </DialogTitle>
+                      </DialogHeader>
+                      
+                      <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="clientId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Client</FormLabel>
+                                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select client" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {(clients as any[])?.map((client: any) => (
+                                        <SelectItem key={client.id} value={client.id.toString()}>
+                                          {client.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="serviceId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Service</FormLabel>
+                                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select service" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {(services as any[])?.map((service: any) => (
+                                        <SelectItem key={service.id} value={service.id.toString()}>
+                                          {service.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="appointmentDate"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Date</FormLabel>
+                                  <FormControl>
+                                    <Input type="date" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="appointmentTime"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Time</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select time" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {timeSlots.map((time) => (
+                                        <SelectItem key={time} value={time}>
+                                          {time}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <FormField
+                            control={form.control}
+                            name="notes"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Notes</FormLabel>
+                                <FormControl>
+                                  <Textarea placeholder="Additional notes..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <Tabs defaultValue="before" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                              <TabsTrigger value="before">Before Photos</TabsTrigger>
+                              <TabsTrigger value="after">After Photos</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="before" className="space-y-4">
+                              <FileUpload
+                                files={beforeImages}
+                                onFilesChange={setBeforeImages}
+                                maxFiles={5}
+                                label="Upload Before Photos"
+                              />
+                            </TabsContent>
+                            <TabsContent value="after" className="space-y-4">
+                              <FileUpload
+                                files={afterImages}
+                                onFilesChange={setAfterImages}
+                                maxFiles={5}
+                                label="Upload After Photos"
+                              />
+                            </TabsContent>
+                          </Tabs>
+
+                          <div className="flex justify-end gap-3">
+                            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" disabled={createAppointmentMutation.isPending}>
+                              {createAppointmentMutation.isPending ? "Creating..." : "Create Appointment"}
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right column - Appointments List */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Appointments for {selectedDate?.toLocaleDateString('en-NZ')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {appointmentsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div>
+                  </div>
+                ) : appointments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No appointments scheduled for this date</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(appointments as any[]).map((appointment) => (
+                      <div key={appointment.id} className="border border-border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-green-50 border border-green-100 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-green-700" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-foreground">
+                                {appointment.client?.name || 'Unknown Client'}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">
+                                {appointment.service?.name || 'Unknown Service'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border ${getStatusColor(appointment.status)}`}>
+                              {getStatusIcon(appointment.status)}
+                              {appointment.status?.charAt(0).toUpperCase() + appointment.status?.slice(1)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {new Date(appointment.appointmentDate).toLocaleTimeString('en-NZ', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+
+                        {appointment.notes && (
+                          <p className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
+                            {appointment.notes}
+                          </p>
+                        )}
+
+                        {/* Before/After Photos Preview */}
+                        {(appointment.beforeImages?.length > 0 || appointment.afterImages?.length > 0) && (
+                          <div className="space-y-3">
+                            {appointment.beforeImages?.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-medium text-foreground mb-2">Before Photos</h4>
+                                <div className="flex gap-2 overflow-x-auto">
+                                  {appointment.beforeImages.map((image: string, index: number) => (
+                                    <img
+                                      key={index}
+                                      src={image}
+                                      alt={`Before ${index + 1}`}
+                                      className="w-16 h-16 object-cover rounded-lg border border-border flex-shrink-0"
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {appointment.afterImages?.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-medium text-foreground mb-2">After Photos</h4>
+                                <div className="flex gap-2 overflow-x-auto">
+                                  {appointment.afterImages.map((image: string, index: number) => (
+                                    <img
+                                      key={index}
+                                      src={image}
+                                      alt={`After ${index + 1}`}
+                                      className="w-16 h-16 object-cover rounded-lg border border-border flex-shrink-0"
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </PageLayout>
   );
 }
