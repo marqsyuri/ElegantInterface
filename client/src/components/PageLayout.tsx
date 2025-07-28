@@ -10,7 +10,7 @@ export default function PageLayout({ children }: PageLayoutProps) {
   const { isExpanded } = useSidebar();
 
   return (
-    <div className="min-h-screen salon-gradient">
+    <div className="min-h-screen bg-background">
       <Sidebar />
       
       {/* Mobile top padding to account for mobile menu button */}

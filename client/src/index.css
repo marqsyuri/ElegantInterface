@@ -173,9 +173,7 @@ button, a, [role="button"] {
     background: linear-gradient(135deg, var(--brazil-green) 0%, var(--brazil-green-light) 50%, var(--brazil-yellow) 100%);
   }
 
-  .salon-gradient {
-    background: linear-gradient(135deg, var(--brazil-green) 0%, var(--brazil-green-light) 25%, var(--brazil-yellow-light) 75%, var(--brazil-yellow) 100%);
-  }
+
 
   .card-shadow {
     box-shadow: 0 2px 8px 0 rgb(142 200 142 / 0.1), 0 1px 3px -1px rgb(142 200 142 / 0.1);
