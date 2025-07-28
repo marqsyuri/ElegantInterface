@@ -48,7 +48,7 @@ export default function Sidebar() {
     <>
       {/* Mobile Menu Button */}
       <button
-        className="fixed top-4 left-4 z-50 lg:hidden bg-gradient-to-br from-green-700 to-yellow-400 p-3 rounded-xl shadow-lg"
+        className="fixed top-4 left-4 z-50 lg:hidden bg-green-700 border border-green-600 p-3 rounded-xl shadow-lg hover:bg-green-800"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       >
         <Menu className="w-6 h-6 text-white" />
@@ -56,7 +56,7 @@ export default function Sidebar() {
 
       {/* Desktop Expand/Collapse Button */}
       <button
-        className="fixed top-4 left-4 z-50 hidden lg:block bg-gradient-to-br from-green-700 to-yellow-400 p-2 rounded-lg shadow-lg transition-all duration-300"
+        className="fixed top-4 left-4 z-50 hidden lg:block bg-green-700 border border-green-600 p-2 rounded-lg shadow-lg transition-all duration-300 hover:bg-green-800"
         style={{ left: isExpanded ? '260px' : '60px' }}
         onClick={toggleExpanded}
       >
@@ -100,7 +100,7 @@ export default function Sidebar() {
           !isExpanded && "p-3"
         )}>
           <div className="flex items-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-700 via-green-600 to-yellow-400 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-green-700 border border-green-600 rounded-xl flex items-center justify-center shadow-lg">
               <Sparkles className="w-7 h-7 text-white" />
             </div>
             {isExpanded && (
@@ -126,14 +126,14 @@ export default function Sidebar() {
                         "flex items-center rounded-xl font-medium transition-all duration-200 cursor-pointer group relative overflow-hidden touch-target",
                         isExpanded ? "px-4 py-3" : "px-2 py-3 justify-center",
                         isActive 
-                          ? "text-white bg-gradient-to-r from-green-700 to-yellow-400 shadow-lg shadow-green-700/25" + (isExpanded ? " border-l-4 border-yellow-400" : "")
+                          ? "text-white bg-green-700 border border-green-600 shadow-lg" + (isExpanded ? " border-l-4 border-yellow-400" : "")
                           : "text-slate-300 hover:text-white hover:bg-slate-700/50" + (isExpanded ? " hover:translate-x-1" : "")
                       )}
                       title={item.name}
                       onClick={() => setIsMobileMenuOpen(false)} // Close mobile menu on navigation
                     >
                       {isActive && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-green-700/20 to-yellow-400/20 backdrop-blur-sm" />
+                        <div className="absolute inset-0 bg-green-600/20 backdrop-blur-sm" />
                       )}
                       <Icon className={cn(
                         "w-5 h-5 transition-transform duration-200 relative z-10",

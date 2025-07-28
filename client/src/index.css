@@ -169,9 +169,7 @@ button, a, [role="button"] {
     animation: slideUp 0.3s ease-out;
   }
 
-  .gradient-bg {
-    background: linear-gradient(135deg, var(--brazil-green) 0%, var(--brazil-green-light) 50%, var(--brazil-yellow) 100%);
-  }
+
 
 
 
