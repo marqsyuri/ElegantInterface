@@ -263,25 +263,76 @@ export default function Financial() {
                   <div className="space-y-6">
                     <div className="p-4 bg-white border border-slate-200 rounded-lg">
                       <h5 className="font-medium text-slate-900 mb-3">Monthly Summary</h5>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-slate-600">Total Income</p>
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                          <p className="text-sm text-green-700 font-medium">Total Income</p>
                           <p className="text-xl font-bold text-emerald-600">
                             ${statsLoading ? "..." : parseFloat(stats?.monthlyRevenue || "0").toFixed(2)}
                           </p>
+                          <p className="text-xs text-green-600">From appointments & transactions</p>
                         </div>
-                        <div>
-                          <p className="text-sm text-slate-600">Total Expenses</p>
+                        <div className="p-3 bg-red-50 rounded-lg border border-red-100">
+                          <p className="text-sm text-red-700 font-medium">Total Expenses</p>
                           <p className="text-xl font-bold text-red-600">
                             ${statsLoading ? "..." : parseFloat(stats?.monthlyExpenses || "0").toFixed(2)}
                           </p>
+                          <p className="text-xs text-red-600">Operating costs & supplies</p>
                         </div>
                       </div>
-                      <div className="mt-4 pt-4 border-t border-white/50">
-                        <p className="text-sm text-slate-600">Net Profit</p>
-                        <p className="text-2xl font-bold text-slate-900">
-                          ${statsLoading ? "..." : parseFloat(stats?.netProfit || "0").toFixed(2)}
-                        </p>
+                      
+                      {/* Appointments Revenue Breakdown */}
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                          <p className="text-sm text-blue-700 font-medium">Completed Revenue</p>
+                          <p className="text-lg font-bold text-blue-600">
+                            ${appointmentsLoading ? "..." : 
+                              appointments.filter((apt: any) => apt.status === 'completed')
+                                .reduce((sum: number, apt: any) => sum + parseFloat(apt.service?.price || 0), 0)
+                                .toFixed(2)
+                            }
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            {appointmentsLoading ? "..." : 
+                              appointments.filter((apt: any) => apt.status === 'completed').length
+                            } completed appointments
+                          </p>
+                        </div>
+                        <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                          <p className="text-sm text-yellow-700 font-medium">Pending Revenue</p>
+                          <p className="text-lg font-bold text-yellow-600">
+                            ${appointmentsLoading ? "..." : 
+                              appointments.filter((apt: any) => apt.status !== 'completed' && apt.status !== 'cancelled')
+                                .reduce((sum: number, apt: any) => sum + parseFloat(apt.service?.price || 0), 0)
+                                .toFixed(2)
+                            }
+                          </p>
+                          <p className="text-xs text-yellow-600">
+                            {appointmentsLoading ? "..." : 
+                              appointments.filter((apt: any) => apt.status !== 'completed' && apt.status !== 'cancelled').length
+                            } scheduled appointments
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4 border-t border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-slate-600">Net Profit</p>
+                            <p className="text-2xl font-bold text-slate-900">
+                              ${statsLoading ? "..." : parseFloat(stats?.netProfit || "0").toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-slate-600">Profit Margin</p>
+                            <p className="text-lg font-semibold text-slate-700">
+                              {statsLoading ? "..." : 
+                                parseFloat(stats?.monthlyRevenue || "0") > 0 ? 
+                                  `${((parseFloat(stats?.netProfit || "0") / parseFloat(stats?.monthlyRevenue || "0")) * 100).toFixed(1)}%`
+                                  : "0%"
+                              }
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
 

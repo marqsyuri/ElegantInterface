@@ -28,6 +28,8 @@ type ClinicalFormData = z.infer<typeof clinicalFormSchema>;
 export default function Clinical() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState<number>(0);
+  const [beforeImages, setBeforeImages] = useState<string[]>([]);
+  const [afterImages, setAfterImages] = useState<string[]>([]);
   const { toast } = useToast();
   const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
@@ -53,6 +55,8 @@ export default function Clinical() {
         procedureDate: new Date(data.procedureDate).toISOString().split('T')[0],
         resultRating: selectedRating || undefined,
         nextAppointment: data.nextAppointment ? new Date(data.nextAppointment).toISOString().split('T')[0] : undefined,
+        beforeImages: beforeImages,
+        afterImages: afterImages,
       };
       await apiRequest('POST', '/api/clinical-records', recordData);
     },
@@ -61,6 +65,8 @@ export default function Clinical() {
       setIsDialogOpen(false);
       form.reset();
       setSelectedRating(0);
+      setBeforeImages([]);
+      setAfterImages([]);
       toast({
         title: "Success",
         description: "Clinical record created successfully!",
@@ -79,6 +85,75 @@ export default function Clinical() {
     createClinicalRecordMutation.mutate(data);
   };
 
+  // Image compression and upload functions
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      
+      img.onload = () => {
+        const MAX_WIDTH = 600;
+        const scale = Math.min(1, MAX_WIDTH / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        resolve(compressedDataUrl);
+      };
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageUpload = async (files: FileList | null, type: 'before' | 'after') => {
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Please select a valid image file (PNG or JPG).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const compressedImage = await compressImage(file);
+      
+      if (type === 'before') {
+        setBeforeImages(prev => [...prev, compressedImage]);
+      } else {
+        setAfterImages(prev => [...prev, compressedImage]);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeImage = (index: number, type: 'before' | 'after') => {
+    if (type === 'before') {
+      setBeforeImages(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setAfterImages(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
   const procedures = [
     "Deep Facial Cleansing",
     "Chemical Peel",
@@ -90,7 +165,7 @@ export default function Clinical() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
+    <div className="min-h-screen bg-slate-50">
       <Sidebar />
       
       <main className="lg:ml-72 pt-16 lg:pt-0">
@@ -242,19 +317,82 @@ export default function Clinical() {
                               Before/After Photos
                             </label>
                             <div className="grid grid-cols-2 gap-4">
+                              {/* Before Photos */}
                               <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-2">Before</label>
-                                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-primary/40 transition-colors cursor-pointer">
+                                <div 
+                                  className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-primary/40 transition-colors cursor-pointer"
+                                  onClick={() => document.getElementById('before-upload')?.click()}
+                                >
                                   <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                                  <p className="text-sm text-slate-500">Click to add</p>
+                                  <p className="text-sm text-slate-500">Click to add photo</p>
+                                  <input
+                                    id="before-upload"
+                                    type="file"
+                                    accept="image/png,image/jpeg"
+                                    className="hidden"
+                                    onChange={(e) => handleImageUpload(e.target.files, 'before')}
+                                  />
                                 </div>
+                                {beforeImages.length > 0 && (
+                                  <div className="mt-2 space-y-2">
+                                    {beforeImages.map((image, index) => (
+                                      <div key={index} className="relative">
+                                        <img 
+                                          src={image} 
+                                          alt={`Before ${index + 1}`}
+                                          className="w-full h-20 object-cover rounded border"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => removeImage(index, 'before')}
+                                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
+
+                              {/* After Photos */}
                               <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-2">After</label>
-                                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-primary/40 transition-colors cursor-pointer">
+                                <div 
+                                  className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-primary/40 transition-colors cursor-pointer"
+                                  onClick={() => document.getElementById('after-upload')?.click()}
+                                >
                                   <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                                  <p className="text-sm text-slate-500">Click to add</p>
+                                  <p className="text-sm text-slate-500">Click to add photo</p>
+                                  <input
+                                    id="after-upload"
+                                    type="file"
+                                    accept="image/png,image/jpeg"
+                                    className="hidden"
+                                    onChange={(e) => handleImageUpload(e.target.files, 'after')}
+                                  />
                                 </div>
+                                {afterImages.length > 0 && (
+                                  <div className="mt-2 space-y-2">
+                                    {afterImages.map((image, index) => (
+                                      <div key={index} className="relative">
+                                        <img 
+                                          src={image} 
+                                          alt={`After ${index + 1}`}
+                                          className="w-full h-20 object-cover rounded border"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => removeImage(index, 'after')}
+                                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
