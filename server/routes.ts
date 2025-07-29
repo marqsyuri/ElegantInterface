@@ -140,8 +140,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validBeforeImages = validateImages(beforeImages, 'beforeImages');
       const validAfterImages = validateImages(afterImages, 'afterImages');
       
+      // Convert appointmentDate string to Date object
+      const appointmentDate = restData.appointmentDate ? new Date(restData.appointmentDate) : undefined;
+      
       const appointmentData = insertAppointmentSchema.parse({ 
         ...restData, 
+        appointmentDate,
         userId,
         beforeImages: validBeforeImages,
         afterImages: validAfterImages
