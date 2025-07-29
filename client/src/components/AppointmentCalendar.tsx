@@ -1,4 +1,5 @@
 import { useState } from "react";
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, ChevronLeft, ChevronRight, Clock, User, Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,9 +61,13 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
       const appointmentHour = appointmentDate.getHours();
       const appointmentMinute = appointmentDate.getMinutes();
       
+      // Check if appointment starts at this time slot or overlaps with it
+      const slotStartTime = hour * 60 + minute;
+      const appointmentStartTime = appointmentHour * 60 + appointmentMinute;
+      const appointmentEndTime = appointmentStartTime + (appointment.duration || 60);
+      
       return isSameDay(appointmentDate, day) && 
-             appointmentHour === hour && 
-             appointmentMinute === minute;
+             appointmentStartTime === slotStartTime; // Only show at start time to avoid duplicates
     });
   };
 
@@ -246,17 +251,34 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-8 gap-1">
+        <div className="grid grid-cols-8 gap-0 border border-slate-200 rounded-lg overflow-hidden">
           {/* Time column header */}
-          <div className="text-sm font-medium text-slate-600 p-2">Time</div>
+          <div className="text-sm font-medium text-slate-700 p-3 bg-slate-100 border-r border-slate-200">
+            Time
+          </div>
           
           {/* Day headers */}
-          {weekDays.map(day => (
-            <div key={day.toISOString()} className="text-sm font-medium text-center p-2">
-              <div>{format(day, "EEE", { locale: enNZ })}</div>
-              <div className="text-xs text-slate-500">{format(day, "d", { locale: enNZ })}</div>
-            </div>
-          ))}
+          {weekDays.map(day => {
+            const dayAppointments = getAppointmentsForDay(day);
+            const isToday = isSameDay(day, new Date());
+            
+            return (
+              <div 
+                key={day.toISOString()} 
+                className={`text-sm font-medium text-center p-3 border-r border-slate-200 ${
+                  isToday ? 'bg-primary/10 text-primary' : 'bg-slate-100'
+                }`}
+              >
+                <div className="font-semibold">{format(day, "EEE", { locale: enNZ })}</div>
+                <div className="text-xs text-slate-600">{format(day, "d", { locale: enNZ })}</div>
+                {dayAppointments.length > 0 && (
+                  <div className="text-xs mt-1 px-1 py-0.5 bg-primary/20 rounded text-primary">
+                    {dayAppointments.length}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {/* Time slots */}
           {timeSlots.map(({ hour, minute }) => {
@@ -264,46 +286,59 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
             timeSlotDate.setHours(hour, minute, 0, 0);
 
             return (
-              <>
+              <React.Fragment key={`time-slot-${hour}-${minute}`}>
                 {/* Time label */}
-                <div key={`time-${hour}-${minute}`} className="text-xs text-slate-600 p-1 border-r">
+                <div className="text-xs text-slate-600 p-2 border-r border-slate-200 bg-slate-50 font-medium">
                   {formatNZTime(timeSlotDate)}
                 </div>
                 
                 {/* Day columns */}
                 {weekDays.map(day => {
                   const appointmentsAtTime = getAppointmentsForTimeSlot(day, hour, minute);
+                  const dayAppointments = getAppointmentsForDay(day);
                   
                   return (
                     <div 
-                      key={`${day.toISOString()}-${hour}-${minute}`} 
-                      className="min-h-[60px] border border-slate-100 p-1 cursor-pointer hover:bg-slate-50"
+                      key={`${format(day, 'yyyy-MM-dd')}-${hour}-${minute}`}
+                      className="min-h-[50px] border border-slate-200 p-1 cursor-pointer hover:bg-slate-50 relative"
                       onClick={() => onDateChange(day)}
+                      title={`${format(day, 'EEE d MMM')} at ${formatNZTime(timeSlotDate)}`}
                     >
-                      {appointmentsAtTime.map(appointment => {
-                        const endTime = calculateEndTime(appointment.appointmentDate, appointment.duration);
-                        const statusColorClass = getStatusColor(appointment.status);
-                        return (
-                          <div 
-                            key={appointment.id} 
-                            className={`text-xs p-2 rounded mb-1 ${statusColorClass}`}
-                          >
-                            <div className="font-medium truncate">
-                              {appointment.client.name}
+                      {appointmentsAtTime.length > 0 ? (
+                        appointmentsAtTime.map(appointment => {
+                          const statusColorClass = getStatusColor(appointment.status);
+                          const duration = appointment.duration || 60;
+                          
+                          return (
+                            <div 
+                              key={appointment.id} 
+                              className={`text-xs p-1 rounded border shadow-sm ${statusColorClass} w-full`}
+                              title={`${appointment.client?.name} - ${appointment.service?.name} (${duration}min)`}
+                            >
+                              <div className="font-semibold truncate">
+                                {appointment.client?.name || 'No Client'}
+                              </div>
+                              <div className="truncate text-xs opacity-90">
+                                {appointment.service?.name || 'No Service'}  
+                              </div>
+                              <div className="text-xs opacity-75">
+                                {duration}min
+                              </div>
                             </div>
-                            <div className="truncate opacity-90">
-                              {appointment.service.name}
-                            </div>
-                            <div className="opacity-75 text-xs">
-                              {formatNZTime(parseISO(appointment.appointmentDate))} - {formatNZTime(endTime)}
-                            </div>
+                          );
+                        })
+                      ) : (
+                        // Show day total if no appointment at this specific time
+                        hour === 8 && minute === 0 && dayAppointments.length > 0 ? (
+                          <div className="text-xs text-slate-400 p-1">
+                            {dayAppointments.length} appointment{dayAppointments.length > 1 ? 's' : ''} today
                           </div>
-                        );
-                      })}
+                        ) : null
+                      )}
                     </div>
                   );
                 })}
-              </>
+              </React.Fragment>
             );
           })}
         </div>
