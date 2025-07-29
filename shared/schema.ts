@@ -95,6 +95,7 @@ export const appointments = pgTable("appointments", {
   clientId: integer("client_id").notNull().references(() => clients.id),
   serviceId: integer("service_id").notNull().references(() => services.id),
   appointmentDate: timestamp("appointment_date").notNull(),
+  duration: integer("duration").default(60), // in minutes
   status: varchar("status").notNull().default("scheduled"), // scheduled, confirmed, completed, cancelled
   notes: text("notes"),
   beforeImages: jsonb("before_images").$type<string[]>().default([]), // array of image URLs

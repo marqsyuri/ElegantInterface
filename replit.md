@@ -131,6 +131,17 @@ The application uses a comprehensive database schema with the following main ent
 - Session persistence across deployments
 
 ## Recent Changes
+- **COMPLETED: Appointment Calendar with New Zealand Time Format** (January 29, 2025)
+  - Implemented comprehensive appointment calendar with New Zealand time format using date-fns/enNZ locale
+  - Added duration field to appointments schema to handle same start/end time appointments
+  - Created AppointmentCalendar component with weekly and daily views
+  - Integrated calendar and list view modes with toggle functionality
+  - Enhanced appointment form with duration selection (30 mins to 2 hours)
+  - Added New Zealand time formatting throughout: "h:mm a" format with proper locale
+  - Calendar displays appointments with calculated end times based on duration
+  - Handles same start/end time appointments by using duration field for proper display
+  - Updated database schema with duration column for appointments
+  - Both calendar and list views show NZ-formatted times and dates
 - **COMPLETED: Business Hours Configuration Tab** (January 29, 2025)
   - Added comprehensive business hours management with tabbed Settings interface
   - Created three-tab system: Profile, Operating Hours, and Notifications
