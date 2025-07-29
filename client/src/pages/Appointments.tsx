@@ -435,7 +435,9 @@ export default function Appointments() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {appointmentsWithDetails.map((appointment: any) => {
+                    {appointmentsWithDetails
+                      .sort((a: any, b: any) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime())
+                      .map((appointment: any) => {
                       const endTime = new Date(parseISO(appointment.appointmentDate).getTime() + (appointment.duration || 60) * 60000);
                       
                       return (

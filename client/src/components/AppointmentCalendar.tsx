@@ -66,6 +66,13 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
     });
   };
 
+  const getAppointmentsForDay = (day: Date) => {
+    return appointments.filter(appointment => {
+      const appointmentDate = parseISO(appointment.appointmentDate);
+      return isSameDay(appointmentDate, day);
+    });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -275,18 +282,19 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
                     >
                       {appointmentsAtTime.map(appointment => {
                         const endTime = calculateEndTime(appointment.appointmentDate, appointment.duration);
+                        const statusColorClass = getStatusColor(appointment.status);
                         return (
                           <div 
                             key={appointment.id} 
-                            className="text-xs p-1 bg-green-100 border border-green-200 rounded mb-1"
+                            className={`text-xs p-2 rounded mb-1 ${statusColorClass}`}
                           >
-                            <div className="font-medium text-green-800 truncate">
+                            <div className="font-medium truncate">
                               {appointment.client.name}
                             </div>
-                            <div className="text-green-600 truncate">
+                            <div className="truncate opacity-90">
                               {appointment.service.name}
                             </div>
-                            <div className="text-green-500">
+                            <div className="opacity-75 text-xs">
                               {formatNZTime(parseISO(appointment.appointmentDate))} - {formatNZTime(endTime)}
                             </div>
                           </div>
