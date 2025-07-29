@@ -214,6 +214,7 @@ export class DatabaseStorage implements IStorage {
         clientId: appointments.clientId,
         serviceId: appointments.serviceId,
         appointmentDate: appointments.appointmentDate,
+        duration: appointments.duration,
         status: appointments.status,
         notes: appointments.notes,
         beforeImages: appointments.beforeImages,
@@ -239,7 +240,7 @@ export class DatabaseStorage implements IStorage {
           gte(appointments.appointmentDate, startOfDay),
           lte(appointments.appointmentDate, endOfDay)
         )
-      ) as any;
+      );
     }
 
     return await query.orderBy(asc(appointments.appointmentDate));

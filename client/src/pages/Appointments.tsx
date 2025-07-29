@@ -157,12 +157,8 @@ export default function Appointments() {
     }
   };
 
-  // Prepare appointments with client and service data for calendar
-  const appointmentsWithDetails = appointments.map((appointment: any) => ({
-    ...appointment,
-    client: clients.find((c: any) => c.id === appointment.clientId) || { id: appointment.clientId, name: 'Unknown Client' },
-    service: services.find((s: any) => s.id === appointment.serviceId) || { id: appointment.serviceId, name: 'Unknown Service' },
-  }));
+  // Use appointments data directly since it already includes client and service details from the JOIN
+  const appointmentsWithDetails = appointments as any[];
 
   return (
     <PageLayout>
