@@ -12,12 +12,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Sidebar from "@/components/Sidebar";
 import TopHeader from "@/components/TopHeader";
+import PageLayout from "@/components/PageLayout";
 import { insertMarketingCampaignSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useSidebar } from "@/contexts/SidebarContext";
 import { z } from "zod";
 
 const campaignFormSchema = insertMarketingCampaignSchema.omit({ userId: true });
@@ -26,7 +25,6 @@ type CampaignFormData = z.infer<typeof campaignFormSchema>;
 export default function Marketing() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
-  const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
 
   const form = useForm<CampaignFormData>({
@@ -97,11 +95,8 @@ export default function Marketing() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
-      <Sidebar />
-      
-      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
-        <TopHeader title="Marketing Campaigns" subtitle="Create and manage your marketing campaigns" />
+    <PageLayout>
+      <TopHeader title="Marketing Campaigns" subtitle="Create and manage your marketing campaigns" />
         
         <div className="p-6 space-y-8">
           <Tabs defaultValue="overview" className="space-y-6">
@@ -438,7 +433,6 @@ export default function Marketing() {
             </DialogContent>
           </Dialog>
         </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 }

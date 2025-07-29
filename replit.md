@@ -131,6 +131,18 @@ The application uses a comprehensive database schema with the following main ent
 - Session persistence across deployments
 
 ## Recent Changes
+- **COMPLETED: Analytics Button Alignment and Page Layout Consistency** (January 29, 2025)
+  - Aligned "Last 30 Days" selector with Overview tabs in Analytics page for consistent UI
+  - Converted Sustainability, Marketing, and Staff pages to use PageLayout component
+  - Ensured all pages expand properly when sidebar is collapsed, matching Dashboard behavior
+  - Aligned all "Add Log" and action buttons with tab navigation across all pages
+  - Created consistent layout pattern with buttons positioned inline with TabsList
+  - All pages now use PageLayout for unified sidebar expansion behavior
+- **COMPLETED: Add Log Button Alignment** (January 29, 2025)
+  - Aligned "Add Log Entry" button in Sustainability page with Overview tabs
+  - Aligned "Create Campaign" button in Marketing page with Overview tabs
+  - Aligned "Add Staff Member" button in Staff page with Overview tabs
+  - All action buttons now appear on same line as tab navigation for consistent layout
 - **COMPLETED: Appointment Calendar with New Zealand Time Format** (January 29, 2025)
   - Implemented comprehensive appointment calendar with New Zealand time format using date-fns/enNZ locale
   - Added duration field to appointments schema to handle same start/end time appointments

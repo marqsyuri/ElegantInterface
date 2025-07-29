@@ -13,12 +13,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import Sidebar from "@/components/Sidebar";
 import TopHeader from "@/components/TopHeader";
+import PageLayout from "@/components/PageLayout";
 import { insertStaffSchema, insertStaffScheduleSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useSidebar } from "@/contexts/SidebarContext";
 import { z } from "zod";
 
 const staffFormSchema = insertStaffSchema.omit({ userId: true });
@@ -32,7 +31,6 @@ export default function Staff() {
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
   const { toast } = useToast();
-  const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
 
   const staffForm = useForm<StaffFormData>({
@@ -126,11 +124,8 @@ export default function Staff() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
-      <Sidebar />
-      
-      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
-        <TopHeader title="Staff Management" subtitle="Manage your team members and schedules" />
+    <PageLayout>
+      <TopHeader title="Staff Management" subtitle="Manage your team members and schedules" />
         
         <div className="p-6 space-y-8">
           <Tabs defaultValue="overview" className="space-y-6">
@@ -513,7 +508,6 @@ export default function Staff() {
             </DialogContent>
           </Dialog>
         </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 }
