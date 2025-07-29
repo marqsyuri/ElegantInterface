@@ -368,8 +368,8 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    // Daily revenue
-    const [dailyRevenueResult] = await db
+    // Daily revenue from transactions
+    const [dailyTransactionsResult] = await db
       .select({ total: sql<string>`coalesce(sum(amount), 0)` })
       .from(transactions)
       .where(
@@ -379,6 +379,23 @@ export class DatabaseStorage implements IStorage {
           eq(transactions.transactionDate, today.toISOString().split('T')[0])
         )
       );
+
+    // Daily revenue from appointments
+    const [dailyAppointmentsResult] = await db
+      .select({ total: sql<string>`coalesce(sum(cast(services.price as decimal)), 0)` })
+      .from(appointments)
+      .innerJoin(services, eq(appointments.serviceId, services.id))
+      .where(
+        and(
+          eq(appointments.userId, userId),
+          gte(appointments.appointmentDate, today),
+          lte(appointments.appointmentDate, tomorrow),
+          eq(appointments.status, "completed")
+        )
+      );
+
+    // Total daily revenue
+    const dailyRevenue = parseFloat(dailyTransactionsResult.total || "0") + parseFloat(dailyAppointmentsResult.total || "0");
 
     // Active clients
     const [activeClientsResult] = await db
@@ -429,7 +446,7 @@ export class DatabaseStorage implements IStorage {
 
     return {
       todayAppointments: todayAppointmentsResult.count || 0,
-      dailyRevenue: dailyRevenueResult.total || "0",
+      dailyRevenue: dailyRevenue.toFixed(2),
       activeClients: activeClientsResult.count || 0,
       satisfaction: parseFloat(satisfactionResult.avg || "0").toFixed(1),
       monthlyRevenue: monthlyRevenueResult.total || "0",
