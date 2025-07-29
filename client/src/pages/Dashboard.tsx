@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, DollarSign, Users, Star, Clock, Phone, CheckCircle, TrendingUp, UserPlus, FileText, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
@@ -9,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -30,8 +32,14 @@ export default function Dashboard() {
     retry: false,
   });
 
+  const today = new Date().toISOString().split('T')[0];
   const { data: todayAppointments, isLoading: appointmentsLoading } = useQuery({
-    queryKey: ["/api/appointments", { date: new Date().toISOString().split('T')[0] }],
+    queryKey: ["/api/appointments", "today"],
+    queryFn: async () => {
+      const response = await fetch(`/api/appointments?date=${today}`);
+      if (!response.ok) throw new Error('Failed to fetch appointments');
+      return response.json();
+    },
     retry: false,
   });
 
@@ -121,7 +129,10 @@ export default function Dashboard() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-foreground">Today's Schedule</h3>
-                  <Button className="rounded-btn bg-green-50 border border-green-200 hover:bg-green-100 text-green-700">
+                  <Button 
+                    onClick={() => setLocation("/appointments")}
+                    className="rounded-btn bg-green-50 border border-green-200 hover:bg-green-100 text-green-700"
+                  >
                     View All
                   </Button>
                 </div>
