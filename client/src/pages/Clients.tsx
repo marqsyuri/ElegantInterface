@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, Search, MoreHorizontal } from "lucide-react";
+import { UserPlus, Search, MoreHorizontal, Edit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ type ClientFormData = z.infer<typeof clientFormSchema>;
 export default function Clients() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingClient, setEditingClient] = useState<any>(null);
   const { toast } = useToast();
   const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
@@ -39,6 +40,27 @@ export default function Clients() {
       loyaltyPoints: 0,
     },
   });
+
+  // Reset form when editingClient changes
+  const resetForm = (client?: any) => {
+    if (client) {
+      form.reset({
+        name: client.name || "",
+        email: client.email || "",
+        phone: client.phone || "",
+        cpf: client.cpf || "",
+        birthDate: client.birthDate || "",
+        healthHistory: client.healthHistory || "",
+        isActive: client.isActive ?? true,
+        loyaltyPoints: client.loyaltyPoints || 0,
+      });
+    } else {
+      form.reset({
+        isActive: true,
+        loyaltyPoints: 0,
+      });
+    }
+  };
 
   const { data: clients, isLoading: clientsLoading } = useQuery({
     queryKey: ["/api/clients"],
@@ -56,6 +78,7 @@ export default function Clients() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       setIsDialogOpen(false);
+      setEditingClient(null);
       form.reset();
       toast({
         title: "Success",
@@ -71,8 +94,51 @@ export default function Clients() {
     },
   });
 
+  const updateClientMutation = useMutation({
+    mutationFn: async (data: ClientFormData) => {
+      const clientData = {
+        ...data,
+        birthDate: data.birthDate ? new Date(data.birthDate).toISOString().split('T')[0] : null,
+      };
+      await apiRequest('PUT', `/api/clients/${editingClient.id}`, clientData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setIsDialogOpen(false);
+      setEditingClient(null);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Client updated successfully!",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update client. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: ClientFormData) => {
-    createClientMutation.mutate(data);
+    if (editingClient) {
+      updateClientMutation.mutate(data);
+    } else {
+      createClientMutation.mutate(data);
+    }
+  };
+
+  const handleEditClient = (client: any) => {
+    setEditingClient(client);
+    resetForm(client);
+    setIsDialogOpen(true);
+  };
+
+  const handleNewClient = () => {
+    setEditingClient(null);
+    resetForm();
+    setIsDialogOpen(true);
   };
 
   const filteredClients = (clients as any[])?.filter((client: any) =>
@@ -108,14 +174,14 @@ export default function Clients() {
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90">
+                    <Button onClick={handleNewClient} className="bg-primary hover:bg-primary/90">
                       <UserPlus className="w-4 h-4 mr-2" />
                       New Client
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
-                      <DialogTitle>New Client</DialogTitle>
+                      <DialogTitle>{editingClient ? "Edit Client" : "New Client"}</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -213,8 +279,9 @@ export default function Clients() {
                         />
 
                         <div className="flex space-x-3">
-                          <Button type="submit" disabled={createClientMutation.isPending}>
-                            {createClientMutation.isPending ? "Saving..." : "Save Client"}
+                          <Button type="submit" disabled={createClientMutation.isPending || updateClientMutation.isPending}>
+                            {(createClientMutation.isPending || updateClientMutation.isPending) ? "Saving..." : 
+                             editingClient ? "Update Client" : "Save Client"}
                           </Button>
                           <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                             Cancel
@@ -263,8 +330,12 @@ export default function Clients() {
                         <Badge variant={client.isActive ? "default" : "secondary"}>
                           {client.isActive ? "Active" : "Inactive"}
                         </Badge>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="w-4 h-4" />
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditClient(client)}
+                        >
+                          <Edit className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
