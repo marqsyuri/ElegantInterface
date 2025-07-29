@@ -158,13 +158,19 @@ export default function Dashboard() {
                           <Clock className="w-5 h-5 text-green-700" />
                         </div>
                         <div className="ml-4 flex-1">
-                          <p className="font-medium text-foreground">{appointment.time || "10:00 AM"}</p>
-                          <p className="text-sm text-muted-foreground">{appointment.service || "Facial Treatment"}</p>
+                          <p className="font-medium text-foreground">
+                            {new Date(appointment.appointmentDate).toLocaleTimeString('en-NZ', { 
+                              hour: 'numeric', 
+                              minute: '2-digit',
+                              hour12: true 
+                            })}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{appointment.service?.name || "Service"}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-medium text-foreground">{appointment.clientName || "Client"}</p>
+                          <p className="text-sm font-medium text-foreground">{appointment.client?.name || "Client"}</p>
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-50 border border-green-100 text-green-700">
-                            Confirmed
+                            {appointment.status || "scheduled"}
                           </span>
                         </div>
                       </div>
