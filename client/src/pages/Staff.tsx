@@ -149,7 +149,7 @@ export default function Staff() {
                       <Users className="w-8 h-8 text-blue-600" />
                       <div className="ml-4">
                         <p className="text-sm font-medium text-slate-600">Total Staff</p>
-                        <div className="text-2xl font-bold">{staff.length}</div>
+                        <div className="text-2xl font-bold">{(staff as any[]).length}</div>
                       </div>
                     </div>
                   </CardContent>
@@ -162,7 +162,7 @@ export default function Staff() {
                       <div className="ml-4">
                         <p className="text-sm font-medium text-slate-600">Active Staff</p>
                         <div className="text-2xl font-bold">
-                          {staff.filter((member: any) => member.isActive).length}
+                          {(staff as any[]).filter((member: any) => member.isActive).length}
                         </div>
                       </div>
                     </div>
@@ -176,8 +176,8 @@ export default function Staff() {
                       <div className="ml-4">
                         <p className="text-sm font-medium text-slate-600">Avg Commission</p>
                         <div className="text-2xl font-bold">
-                          {staff.length > 0 
-                            ? `${(staff.reduce((acc: number, member: any) => acc + parseFloat(member.commissionRate), 0) / staff.length).toFixed(1)}%`
+                          {(staff as any[]).length > 0 
+                            ? `${((staff as any[]).reduce((acc: number, member: any) => acc + parseFloat(member.commissionRate), 0) / (staff as any[]).length).toFixed(1)}%`
                             : '0%'
                           }
                         </div>
@@ -205,8 +205,8 @@ export default function Staff() {
                           </div>
                         ))}
                       </div>
-                    ) : staff?.length > 0 ? (
-                      staff.map((member: any) => (
+                    ) : (staff as any[])?.length > 0 ? (
+                      (staff as any[]).map((member: any) => (
                         <div key={member.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-primary/30 transition-colors">
                           <div className="flex items-center">
                             <Avatar>
