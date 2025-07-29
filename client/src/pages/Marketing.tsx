@@ -120,7 +120,7 @@ export default function Marketing() {
                       <Mail className="w-8 h-8 text-blue-600" />
                       <div className="ml-4">
                         <p className="text-sm font-medium text-slate-600">Total Campaigns</p>
-                        <div className="text-2xl font-bold">{campaigns.length}</div>
+                        <div className="text-2xl font-bold">{(campaigns as any[]).length}</div>
                       </div>
                     </div>
                   </CardContent>
@@ -133,7 +133,7 @@ export default function Marketing() {
                       <div className="ml-4">
                         <p className="text-sm font-medium text-slate-600">Sent</p>
                         <div className="text-2xl font-bold">
-                          {campaigns.filter((c: any) => c.status === 'sent').length}
+                          {(campaigns as any[]).filter((c: any) => c.status === 'sent').length}
                         </div>
                       </div>
                     </div>
@@ -147,8 +147,8 @@ export default function Marketing() {
                       <div className="ml-4">
                         <p className="text-sm font-medium text-slate-600">Open Rate</p>
                         <div className="text-2xl font-bold">
-                          {campaigns.length > 0 
-                            ? `${(campaigns.reduce((acc: number, c: any) => acc + parseFloat(c.openRate || 0), 0) / campaigns.length).toFixed(1)}%`
+                          {(campaigns as any[]).length > 0 
+                            ? `${((campaigns as any[]).reduce((acc: number, c: any) => acc + parseFloat(c.openRate || 0), 0) / (campaigns as any[]).length).toFixed(1)}%`
                             : '0%'
                           }
                         </div>
@@ -163,7 +163,7 @@ export default function Marketing() {
                       <Users className="w-8 h-8 text-purple-600" />
                       <div className="ml-4">
                         <p className="text-sm font-medium text-slate-600">Total Clients</p>
-                        <div className="text-2xl font-bold">{clients.length}</div>
+                        <div className="text-2xl font-bold">{(clients as any[]).length}</div>
                       </div>
                     </div>
                   </CardContent>
@@ -177,7 +177,7 @@ export default function Marketing() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {campaigns.slice(0, 5).map((campaign: any) => (
+                      {(campaigns as any[]).slice(0, 5).map((campaign: any) => (
                         <div key={campaign.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
                           <div className="flex-1">
                             <p className="font-medium text-slate-900">{campaign.name}</p>
@@ -191,7 +191,7 @@ export default function Marketing() {
                           </Badge>
                         </div>
                       ))}
-                      {campaigns.length === 0 && (
+                      {(campaigns as any[]).length === 0 && (
                         <p className="text-slate-500 text-center py-4">No campaigns yet</p>
                       )}
                     </div>

@@ -79,13 +79,13 @@ export default function Sustainability() {
   ];
 
   // Calculate sustainability metrics
-  const totalWastePrevented = logs.reduce((sum: number, log: any) => 
+  const totalWastePrevented = (logs as any[]).reduce((sum: number, log: any) => 
     sum + parseFloat(log.wastePrevented || 0), 0
   );
 
-  const recycledItems = logs.filter((log: any) => log.action === 'recycled').length;
-  const refilledItems = logs.filter((log: any) => log.action === 'refilled').length;
-  const disposedItems = logs.filter((log: any) => log.action === 'disposed').length;
+  const recycledItems = (logs as any[]).filter((log: any) => log.action === 'recycled').length;
+  const refilledItems = (logs as any[]).filter((log: any) => log.action === 'refilled').length;
+  const disposedItems = (logs as any[]).filter((log: any) => log.action === 'disposed').length;
 
   const getActionColor = (action: string) => {
     switch (action) {
@@ -182,8 +182,8 @@ export default function Sustainability() {
                   <CardContent>
                     <div className="space-y-4">
                       {actions.map((action) => {
-                        const count = logs.filter((log: any) => log.action === action.value).length;
-                        const percentage = logs.length > 0 ? (count / logs.length) * 100 : 0;
+                        const count = (logs as any[]).filter((log: any) => log.action === action.value).length;
+                        const percentage = (logs as any[]).length > 0 ? (count / (logs as any[]).length) * 100 : 0;
                         
                         return (
                           <div key={action.value}>
@@ -254,7 +254,7 @@ export default function Sustainability() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {logs.slice(0, 5).map((log: any) => (
+                    {(logs as any[]).slice(0, 5).map((log: any) => (
                       <div key={log.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
                         <div className="flex items-center">
                           <div className="flex items-center justify-center w-8 h-8 bg-primary/10 rounded-full">
@@ -277,7 +277,7 @@ export default function Sustainability() {
                         </div>
                       </div>
                     ))}
-                    {logs.length === 0 && (
+                    {(logs as any[]).length === 0 && (
                       <p className="text-slate-500 text-center py-4">No sustainability activities logged yet</p>
                     )}
                   </div>
@@ -305,8 +305,8 @@ export default function Sustainability() {
                           </div>
                         ))}
                       </div>
-                    ) : logs?.length > 0 ? (
-                      logs.map((log: any) => (
+                    ) : (logs as any[])?.length > 0 ? (
+                      (logs as any[]).map((log: any) => (
                         <div key={log.id} className="p-4 border border-slate-200 rounded-lg">
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex items-center">
@@ -416,7 +416,7 @@ export default function Sustainability() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {inventory.map((item: any) => (
+                            {(inventory as any[]).map((item: any) => (
                               <SelectItem key={item.id} value={item.id.toString()}>
                                 {item.name}
                               </SelectItem>
@@ -474,7 +474,7 @@ export default function Sustainability() {
                       <FormItem>
                         <FormLabel>Waste Prevented (grams)</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.1" placeholder="0.0" {...field} />
+                          <Input type="number" step="0.1" placeholder="0.0" {...field} value={field.value || ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -492,6 +492,7 @@ export default function Sustainability() {
                             placeholder="Additional notes about this action..." 
                             className="h-20"
                             {...field} 
+                            value={field.value || ""}
                           />
                         </FormControl>
                         <FormMessage />
