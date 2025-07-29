@@ -43,6 +43,11 @@ export default function Financial() {
     retry: false,
   });
 
+  const { data: appointments = [], isLoading: appointmentsLoading } = useQuery({
+    queryKey: ["/api/appointments"],
+    retry: false,
+  });
+
   const { data: stats = {}, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
     retry: false,
@@ -84,7 +89,7 @@ export default function Financial() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
+    <div className="min-h-screen bg-slate-50">
       <Sidebar />
       
       <main className="lg:ml-72 pt-16 lg:pt-0">
@@ -125,7 +130,7 @@ export default function Financial() {
                 <div>
                   <h4 className="font-medium text-slate-900 mb-4">Recent Transactions</h4>
                   <div className="space-y-3">
-                    {transactionsLoading ? (
+                    {(transactionsLoading || appointmentsLoading) ? (
                       <div className="space-y-3">
                         {[...Array(5)].map((_, i) => (
                           <div key={i} className="animate-pulse p-4 bg-slate-50 rounded-lg">
@@ -179,12 +184,84 @@ export default function Financial() {
                       </div>
                     )}
                   </div>
+                  
+                  {/* Appointments Revenue Section */}
+                  <div className="mt-8">
+                    <h4 className="font-medium text-slate-900 mb-4">Appointments Revenue</h4>
+                    <div className="space-y-3">
+                      {appointmentsLoading ? (
+                        <div className="space-y-3">
+                          {[...Array(3)].map((_, i) => (
+                            <div key={i} className="animate-pulse p-4 bg-blue-50 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <div className="w-10 h-10 bg-blue-200 rounded-full"></div>
+                                  <div className="ml-4">
+                                    <div className="h-4 bg-blue-200 rounded w-32 mb-1"></div>
+                                    <div className="h-3 bg-blue-200 rounded w-20"></div>
+                                  </div>
+                                </div>
+                                <div className="h-4 bg-blue-200 rounded w-20"></div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : appointments?.length > 0 ? (
+                        appointments.slice(0, 8).map((appointment: any) => (
+                          <div key={appointment.id} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-100">
+                            <div className="flex items-center">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                appointment.status === 'completed' 
+                                  ? 'bg-green-100' 
+                                  : appointment.status === 'confirmed'
+                                  ? 'bg-blue-100'
+                                  : 'bg-yellow-100'
+                              }`}>
+                                <ArrowUp className={`w-5 h-5 ${
+                                  appointment.status === 'completed' 
+                                    ? 'text-green-600' 
+                                    : appointment.status === 'confirmed'
+                                    ? 'text-blue-600'
+                                    : 'text-yellow-600'
+                                }`} />
+                              </div>
+                              <div className="ml-4">
+                                <p className="font-medium text-slate-900">
+                                  {appointment.service?.name || 'Service'} - {appointment.client?.name || 'Client'}
+                                </p>
+                                <p className="text-sm text-slate-500">
+                                  {new Date(appointment.appointmentDate).toLocaleDateString('en-NZ', {
+                                    weekday: 'short',
+                                    day: 'numeric', 
+                                    month: 'short'
+                                  })} • {appointment.status}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`font-semibold ${
+                              appointment.status === 'completed' 
+                                ? 'text-green-600' 
+                                : appointment.status === 'confirmed'
+                                ? 'text-blue-600'
+                                : 'text-yellow-600'
+                            }`}>
+                              {appointment.status === 'completed' ? '+' : ''}${parseFloat(appointment.service?.price || 0).toFixed(2)}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-slate-500">No appointments scheduled</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div>
                   <h4 className="font-medium text-slate-900 mb-4">Financial Summary</h4>
                   <div className="space-y-6">
-                    <div className="p-4 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg">
+                    <div className="p-4 bg-white border border-slate-200 rounded-lg">
                       <h5 className="font-medium text-slate-900 mb-3">Monthly Summary</h5>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
