@@ -107,19 +107,18 @@ export default function Sustainability() {
         <TopHeader title="Sustainability Tracking" subtitle="Monitor and reduce your environmental impact" />
         
         <div className="p-6 space-y-8">
-          <section className="flex justify-end items-center">
-            <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Add Log Entry
-            </Button>
-          </section>
-
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="logs">Activity Logs</TabsTrigger>
-              <TabsTrigger value="goals">Sustainability Goals</TabsTrigger>
-            </TabsList>
+            <div className="flex items-center justify-between">
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="logs">Activity Logs</TabsTrigger>
+                <TabsTrigger value="goals">Sustainability Goals</TabsTrigger>
+              </TabsList>
+              <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Add Log Entry
+              </Button>
+            </div>
 
             <TabsContent value="overview">
               {/* Key Metrics */}

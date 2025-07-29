@@ -104,19 +104,18 @@ export default function Marketing() {
         <TopHeader title="Marketing Campaigns" subtitle="Create and manage your marketing campaigns" />
         
         <div className="p-6 space-y-8">
-          <section className="flex justify-end items-center">
-            <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
-              <Send className="w-4 h-4" />
-              Create Campaign
-            </Button>
-          </section>
-
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
+            <div className="flex items-center justify-between">
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+              </TabsList>
+              <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
+                <Send className="w-4 h-4" />
+                Create Campaign
+              </Button>
+            </div>
 
             <TabsContent value="overview">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">

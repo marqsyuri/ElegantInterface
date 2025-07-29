@@ -133,19 +133,18 @@ export default function Staff() {
         <TopHeader title="Staff Management" subtitle="Manage your team members and schedules" />
         
         <div className="p-6 space-y-8">
-          <section className="flex justify-end items-center">
-            <Button onClick={() => setIsStaffDialogOpen(true)} className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Add Staff Member
-            </Button>
-          </section>
-
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="schedules">Schedules</TabsTrigger>
-              <TabsTrigger value="performance">Performance</TabsTrigger>
-            </TabsList>
+            <div className="flex items-center justify-between">
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="schedules">Schedules</TabsTrigger>
+                <TabsTrigger value="performance">Performance</TabsTrigger>
+              </TabsList>
+              <Button onClick={() => setIsStaffDialogOpen(true)} className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Add Staff Member
+              </Button>
+            </div>
 
             <TabsContent value="overview">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
