@@ -53,6 +53,9 @@ import {
   type InsertPayment,
   type SocialMediaPost,
   type InsertSocialMediaPost,
+  businessHours,
+  type BusinessHours,
+  type InsertBusinessHours,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, gte, lte, sql } from "drizzle-orm";
@@ -129,6 +132,10 @@ export interface IStorage {
   
   // Analytics operations
   getAnalytics(userId: string, dateRange?: string): Promise<any>;
+  
+  // Business hours operations
+  getBusinessHours(userId: string): Promise<BusinessHours[]>;
+  upsertBusinessHours(hours: InsertBusinessHours[]): Promise<BusinessHours[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -629,6 +636,39 @@ export class DatabaseStorage implements IStorage {
         cancelled: 0
       }
     };
+  }
+
+  // Business hours operations
+  async getBusinessHours(userId: string): Promise<BusinessHours[]> {
+    return await db
+      .select()
+      .from(businessHours)
+      .where(eq(businessHours.userId, userId))
+      .orderBy(asc(businessHours.dayOfWeek));
+  }
+
+  async upsertBusinessHours(hoursArray: InsertBusinessHours[]): Promise<BusinessHours[]> {
+    const results: BusinessHours[] = [];
+    
+    for (const hours of hoursArray) {
+      // Delete existing records for this user and day
+      await db
+        .delete(businessHours)
+        .where(and(
+          eq(businessHours.userId, hours.userId),
+          eq(businessHours.dayOfWeek, hours.dayOfWeek)
+        ));
+      
+      // Insert new record
+      const [newHours] = await db
+        .insert(businessHours)
+        .values(hours)
+        .returning();
+      
+      results.push(newHours);
+    }
+    
+    return results;
   }
 }
 

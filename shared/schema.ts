@@ -46,6 +46,20 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Business Hours table
+export const businessHours = pgTable("business_hours", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  dayOfWeek: varchar("day_of_week").notNull(), // monday, tuesday, etc.
+  isOpen: boolean("is_open").default(true),
+  openTime: varchar("open_time"), // HH:MM format
+  closeTime: varchar("close_time"), // HH:MM format
+  breakStartTime: varchar("break_start_time"), // Optional lunch break
+  breakEndTime: varchar("break_end_time"), // Optional lunch break
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Clients table
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
@@ -309,6 +323,11 @@ export const usersRelations = relations(users, ({ many }) => ({
   sustainabilityLogs: many(sustainabilityLogs),
   payments: many(payments),
   socialMediaPosts: many(socialMediaPosts),
+  businessHours: many(businessHours),
+}));
+
+export const businessHoursRelations = relations(businessHours, ({ one }) => ({
+  user: one(users, { fields: [businessHours.userId], references: [users.id] }),
 }));
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({
@@ -498,6 +517,12 @@ export const insertSocialMediaPostSchema = createInsertSchema(socialMediaPosts).
   createdAt: true,
 });
 
+export const insertBusinessHoursSchema = createInsertSchema(businessHours).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -535,3 +560,5 @@ export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type SocialMediaPost = typeof socialMediaPosts.$inferSelect;
 export type InsertSocialMediaPost = z.infer<typeof insertSocialMediaPostSchema>;
+export type BusinessHours = typeof businessHours.$inferSelect;
+export type InsertBusinessHours = z.infer<typeof insertBusinessHoursSchema>;

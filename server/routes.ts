@@ -445,6 +445,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Business hours routes
+  app.get('/api/business-hours', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const hours = await storage.getBusinessHours(userId);
+      res.json(hours);
+    } catch (error) {
+      console.error("Error fetching business hours:", error);
+      res.status(500).json({ message: "Failed to fetch business hours" });
+    }
+  });
+
+  app.post('/api/business-hours', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const hoursArray = req.body.map((hours: any) => ({
+        ...hours,
+        userId,
+      }));
+      const savedHours = await storage.upsertBusinessHours(hoursArray);
+      res.json(savedHours);
+    } catch (error) {
+      console.error("Error saving business hours:", error);
+      res.status(500).json({ message: "Failed to save business hours" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

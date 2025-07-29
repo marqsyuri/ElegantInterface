@@ -131,6 +131,17 @@ The application uses a comprehensive database schema with the following main ent
 - Session persistence across deployments
 
 ## Recent Changes
+- **COMPLETED: Business Hours Configuration Tab** (January 29, 2025)
+  - Added comprehensive business hours management with tabbed Settings interface
+  - Created three-tab system: Profile, Operating Hours, and Notifications
+  - Implemented full business hours CRUD operations with PostgreSQL storage
+  - Added day-by-day configuration with open/closed status toggles
+  - Included opening/closing times and lunch break scheduling
+  - Used New Zealand English terminology throughout (Operating Hours, Lunch breaks)
+  - Added informational help text explaining how hours affect appointment scheduling
+  - Created responsive time slot selection with 30-minute intervals
+  - Database schema includes business_hours table with user relations
+  - API endpoints for GET and POST business hours operations
 - **COMPLETED: Photo Upload System with Compression** (January 28, 2025)
   - Implemented complete appointment photo upload system with before/after image support
   - Added automatic image compression (600px max width, 60% JPEG quality) to prevent payload size errors
