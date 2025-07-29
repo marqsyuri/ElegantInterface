@@ -190,20 +190,32 @@ export default function Dashboard() {
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-foreground mb-6">Quick Actions</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <Button className="rounded-btn h-20 bg-green-50 border border-green-200 hover:bg-green-100 text-green-700 flex flex-col items-center justify-center space-y-2">
+                  <Button 
+                    onClick={() => setLocation("/appointments")}
+                    className="rounded-btn h-20 bg-green-50 border border-green-200 hover:bg-green-100 text-green-700 flex flex-col items-center justify-center space-y-2"
+                  >
                     <Calendar className="w-6 h-6" />
                     <span className="text-sm font-medium">New Appointment</span>
                   </Button>
-                  <Button className="rounded-btn h-20 bg-yellow-50 border border-yellow-200 hover:bg-yellow-100 text-yellow-700 flex flex-col items-center justify-center space-y-2">
-                    <Users className="w-6 h-6" />
+                  <Button 
+                    onClick={() => setLocation("/clients")}
+                    className="rounded-btn h-20 bg-yellow-50 border border-yellow-200 hover:bg-yellow-100 text-yellow-700 flex flex-col items-center justify-center space-y-2"
+                  >
+                    <UserPlus className="w-6 h-6" />
                     <span className="text-sm font-medium">Add Client</span>
                   </Button>
-                  <Button className="rounded-btn h-20 bg-green-50 border border-green-200 hover:bg-green-100 text-green-700 flex flex-col items-center justify-center space-y-2">
+                  <Button 
+                    onClick={() => setLocation("/financial")}
+                    className="rounded-btn h-20 bg-green-50 border border-green-200 hover:bg-green-100 text-green-700 flex flex-col items-center justify-center space-y-2"
+                  >
                     <DollarSign className="w-6 h-6" />
                     <span className="text-sm font-medium">Record Payment</span>
                   </Button>
-                  <Button className="rounded-btn h-20 bg-yellow-50 border border-yellow-200 hover:bg-yellow-100 text-yellow-700 flex flex-col items-center justify-center space-y-2">
-                    <Phone className="w-6 h-6" />
+                  <Button 
+                    onClick={() => setLocation("/communication")}
+                    className="rounded-btn h-20 bg-yellow-50 border border-yellow-200 hover:bg-yellow-100 text-yellow-700 flex flex-col items-center justify-center space-y-2"
+                  >
+                    <MessageSquare className="w-6 h-6" />
                     <span className="text-sm font-medium">Send Message</span>
                   </Button>
                 </div>
