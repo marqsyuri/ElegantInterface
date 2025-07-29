@@ -74,7 +74,7 @@ export default function Dashboard() {
                   <div>
                     <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Daily Revenue</p>
                     <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                      NZ${statsLoading ? "..." : (stats as any)?.dailyRevenue || 0}
+                      NZ${statsLoading ? "..." : parseFloat((stats as any)?.dailyRevenue || "0").toFixed(2)}
                     </p>
                   </div>
                   <div className="p-3 md:p-4 bg-yellow-50 rounded-2xl border border-yellow-100">
