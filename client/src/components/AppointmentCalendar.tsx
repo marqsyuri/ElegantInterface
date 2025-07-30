@@ -285,61 +285,59 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
             const timeSlotDate = new Date();
             timeSlotDate.setHours(hour, minute, 0, 0);
 
-            return (
-              <React.Fragment key={`time-slot-${hour}-${minute}`}>
-                {/* Time label */}
-                <div className="text-xs text-slate-600 p-2 border-r border-slate-200 bg-slate-50 font-medium">
-                  {formatNZTime(timeSlotDate)}
-                </div>
+            return [
+              // Time label
+              <div key={`time-${hour}-${minute}`} className="text-xs text-slate-600 p-2 border-r border-slate-200 bg-slate-50 font-medium">
+                {formatNZTime(timeSlotDate)}
+              </div>,
+              
+              // Day columns
+              ...weekDays.map(day => {
+                const appointmentsAtTime = getAppointmentsForTimeSlot(day, hour, minute);
+                const dayAppointments = getAppointmentsForDay(day);
                 
-                {/* Day columns */}
-                {weekDays.map(day => {
-                  const appointmentsAtTime = getAppointmentsForTimeSlot(day, hour, minute);
-                  const dayAppointments = getAppointmentsForDay(day);
-                  
-                  return (
-                    <div 
-                      key={`${format(day, 'yyyy-MM-dd')}-${hour}-${minute}`}
-                      className="min-h-[50px] border border-slate-200 p-1 cursor-pointer hover:bg-slate-50 relative"
-                      onClick={() => onDateChange(day)}
-                      title={`${format(day, 'EEE d MMM')} at ${formatNZTime(timeSlotDate)}`}
-                    >
-                      {appointmentsAtTime.length > 0 ? (
-                        appointmentsAtTime.map(appointment => {
-                          const statusColorClass = getStatusColor(appointment.status);
-                          const duration = appointment.duration || 60;
-                          
-                          return (
-                            <div 
-                              key={appointment.id} 
-                              className={`text-xs p-1 rounded border shadow-sm ${statusColorClass} w-full`}
-                              title={`${appointment.client?.name} - ${appointment.service?.name} (${duration}min)`}
-                            >
-                              <div className="font-semibold truncate">
-                                {appointment.client?.name || 'No Client'}
-                              </div>
-                              <div className="truncate text-xs opacity-90">
-                                {appointment.service?.name || 'No Service'}  
-                              </div>
-                              <div className="text-xs opacity-75">
-                                {duration}min
-                              </div>
+                return (
+                  <div 
+                    key={`${format(day, 'yyyy-MM-dd')}-${hour}-${minute}`}
+                    className="min-h-[50px] border border-slate-200 p-1 cursor-pointer hover:bg-slate-50 relative"
+                    onClick={() => onDateChange(day)}
+                    title={`${format(day, 'EEE d MMM')} at ${formatNZTime(timeSlotDate)}`}
+                  >
+                    {appointmentsAtTime.length > 0 ? (
+                      appointmentsAtTime.map(appointment => {
+                        const statusColorClass = getStatusColor(appointment.status);
+                        const duration = appointment.duration || 60;
+                        
+                        return (
+                          <div 
+                            key={appointment.id} 
+                            className={`text-xs p-1 rounded border shadow-sm ${statusColorClass} w-full`}
+                            title={`${appointment.client?.name} - ${appointment.service?.name} (${duration}min)`}
+                          >
+                            <div className="font-semibold truncate">
+                              {appointment.client?.name || 'No Client'}
                             </div>
-                          );
-                        })
-                      ) : (
-                        // Show day total if no appointment at this specific time
-                        hour === 8 && minute === 0 && dayAppointments.length > 0 ? (
-                          <div className="text-xs text-slate-400 p-1">
-                            {dayAppointments.length} appointment{dayAppointments.length > 1 ? 's' : ''} today
+                            <div className="truncate text-xs opacity-90">
+                              {appointment.service?.name || 'No Service'}  
+                            </div>
+                            <div className="text-xs opacity-75">
+                              {duration}min
+                            </div>
                           </div>
-                        ) : null
-                      )}
-                    </div>
-                  );
-                })}
-              </React.Fragment>
-            );
+                        );
+                      })
+                    ) : (
+                      // Show day total if no appointment at this specific time
+                      hour === 8 && minute === 0 && dayAppointments.length > 0 ? (
+                        <div className="text-xs text-slate-400 p-1">
+                          {dayAppointments.length} appointment{dayAppointments.length > 1 ? 's' : ''} today
+                        </div>
+                      ) : null
+                    )}
+                  </div>
+                );
+              })
+            ];
           })}
         </div>
       </CardContent>
