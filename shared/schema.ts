@@ -264,18 +264,7 @@ export const marketingCampaigns = pgTable("marketing_campaigns", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Sustainability tracking table
-export const sustainabilityLogs = pgTable("sustainability_logs", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  itemId: integer("item_id").references(() => inventory.id),
-  action: varchar("action").notNull(), // 'used', 'disposed', 'recycled', 'refilled'
-  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
-  wastePrevented: decimal("waste_prevented", { precision: 10, scale: 2 }).default("0"), // in grams
-  notes: text("notes"),
-  date: timestamp("date").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+
 
 // Payment transactions table
 export const payments = pgTable("payments", {
@@ -322,7 +311,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   staff: many(staff),
   notifications: many(notifications),
   marketingCampaigns: many(marketingCampaigns),
-  sustainabilityLogs: many(sustainabilityLogs),
+
   payments: many(payments),
   socialMediaPosts: many(socialMediaPosts),
   businessHours: many(businessHours),
@@ -410,10 +399,7 @@ export const marketingCampaignsRelations = relations(marketingCampaigns, ({ one 
   user: one(users, { fields: [marketingCampaigns.userId], references: [users.id] }),
 }));
 
-export const sustainabilityLogsRelations = relations(sustainabilityLogs, ({ one }) => ({
-  user: one(users, { fields: [sustainabilityLogs.userId], references: [users.id] }),
-  item: one(inventory, { fields: [sustainabilityLogs.itemId], references: [inventory.id] }),
-}));
+
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
   user: one(users, { fields: [payments.userId], references: [users.id] }),
@@ -504,10 +490,7 @@ export const insertMarketingCampaignSchema = createInsertSchema(marketingCampaig
   createdAt: true,
 });
 
-export const insertSustainabilityLogSchema = createInsertSchema(sustainabilityLogs).omit({
-  id: true,
-  createdAt: true,
-});
+
 
 export const insertPaymentSchema = createInsertSchema(payments).omit({
   id: true,
@@ -556,8 +539,8 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type MarketingCampaign = typeof marketingCampaigns.$inferSelect;
 export type InsertMarketingCampaign = z.infer<typeof insertMarketingCampaignSchema>;
-export type SustainabilityLog = typeof sustainabilityLogs.$inferSelect;
-export type InsertSustainabilityLog = z.infer<typeof insertSustainabilityLogSchema>;
+
+
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type SocialMediaPost = typeof socialMediaPosts.$inferSelect;

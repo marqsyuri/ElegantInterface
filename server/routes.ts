@@ -16,7 +16,7 @@ import {
   insertStaffScheduleSchema,
   insertNotificationSchema,
   insertMarketingCampaignSchema,
-  insertSustainabilityLogSchema,
+
   insertPaymentSchema,
   insertSocialMediaPostSchema,
 } from "@shared/schema";
@@ -424,29 +424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sustainability logs routes
-  app.get('/api/sustainability-logs', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const logs = await storage.getSustainabilityLogs(userId);
-      res.json(logs);
-    } catch (error) {
-      console.error("Error fetching sustainability logs:", error);
-      res.status(500).json({ message: "Failed to fetch sustainability logs" });
-    }
-  });
 
-  app.post('/api/sustainability-logs', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const logData = insertSustainabilityLogSchema.parse({ ...req.body, userId });
-      const log = await storage.createSustainabilityLog(logData);
-      res.json(log);
-    } catch (error) {
-      console.error("Error creating sustainability log:", error);
-      res.status(500).json({ message: "Failed to create sustainability log" });
-    }
-  });
 
   // Analytics routes
   app.get('/api/analytics', isAuthenticated, async (req: any, res) => {

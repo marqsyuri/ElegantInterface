@@ -14,7 +14,7 @@ import {
   UserCheck,
   Mail,
   BarChart3,
-  Leaf,
+
   Menu,
   X,
   ChevronLeft,
@@ -35,7 +35,7 @@ const navigation = [
   { name: "Staff", href: "/staff", icon: UserCheck },
   { name: "Marketing", href: "/marketing", icon: Mail },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Sustainability", href: "/sustainability", icon: Leaf },
+
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

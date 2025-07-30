@@ -14,7 +14,7 @@ import {
   staffSchedules,
   notifications,
   marketingCampaigns,
-  sustainabilityLogs,
+
   payments,
   socialMediaPosts,
   type User,
@@ -47,8 +47,7 @@ import {
   type InsertNotification,
   type MarketingCampaign,
   type InsertMarketingCampaign,
-  type SustainabilityLog,
-  type InsertSustainabilityLog,
+
   type Payment,
   type InsertPayment,
   type SocialMediaPost,
@@ -126,9 +125,7 @@ export interface IStorage {
   getMarketingCampaigns(userId: string): Promise<MarketingCampaign[]>;
   createMarketingCampaign(campaign: InsertMarketingCampaign): Promise<MarketingCampaign>;
   
-  // Sustainability operations
-  getSustainabilityLogs(userId: string): Promise<SustainabilityLog[]>;
-  createSustainabilityLog(log: InsertSustainabilityLog): Promise<SustainabilityLog>;
+
   
   // Analytics operations
   getAnalytics(userId: string, dateRange?: string): Promise<any>;
@@ -619,19 +616,7 @@ export class DatabaseStorage implements IStorage {
     return newCampaign;
   }
 
-  // Sustainability operations
-  async getSustainabilityLogs(userId: string): Promise<SustainabilityLog[]> {
-    return await db
-      .select()
-      .from(sustainabilityLogs)
-      .where(eq(sustainabilityLogs.userId, userId))
-      .orderBy(desc(sustainabilityLogs.date));
-  }
 
-  async createSustainabilityLog(logData: InsertSustainabilityLog): Promise<SustainabilityLog> {
-    const [newLog] = await db.insert(sustainabilityLogs).values(logData).returning();
-    return newLog;
-  }
 
   // Analytics operations
   async getAnalytics(userId: string, dateRange?: string): Promise<any> {
