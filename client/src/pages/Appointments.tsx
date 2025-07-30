@@ -167,6 +167,10 @@ export default function Appointments() {
   console.log('Debug - Appointments data:', appointments);
   console.log('Debug - Selected date:', selectedDate);
   console.log('Debug - Appointments count:', appointments.length);
+  
+  if (appointments.length > 0) {
+    console.log('Debug - First appointment:', appointments[0]);
+  }
 
   return (
     <PageLayout>

@@ -122,6 +122,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/appointments/:date', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const date = new Date(req.params.date);
+      const appointments = await storage.getAppointments(userId, date);
+      res.json(appointments);
+    } catch (error) {
+      console.error("Error fetching appointments by date:", error);
+      res.status(500).json({ message: "Failed to fetch appointments" });
+    }
+  });
+
   app.post('/api/appointments', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
