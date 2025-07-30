@@ -127,7 +127,7 @@ export default function Appointments() {
 
   const formatNZDateTime = (dateString: string) => {
     const date = parseISO(dateString);
-    const nzDate = dateFnsTz.utcToZonedTime(date, NZ_TIMEZONE);
+    const nzDate = dateFnsTz.toZonedTime(date, NZ_TIMEZONE);
     return format(nzDate, "EEEE, d MMMM yyyy 'at' h:mm a", { locale: enNZ });
   };
 
@@ -135,7 +135,7 @@ export default function Appointments() {
 
   const formatNZTime = (dateString: string) => {
     const date = parseISO(dateString);
-    const nzDate = dateFnsTz.utcToZonedTime(date, NZ_TIMEZONE);
+    const nzDate = dateFnsTz.toZonedTime(date, NZ_TIMEZONE);
     return format(nzDate, "h:mm a", { locale: enNZ });
   };
 

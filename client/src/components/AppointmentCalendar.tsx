@@ -46,12 +46,12 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
   });
 
   const formatNZTime = (date: Date) => {
-    const nzDate = dateFnsTz.utcToZonedTime(date, NZ_TIMEZONE);
+    const nzDate = dateFnsTz.toZonedTime(date, NZ_TIMEZONE);
     return format(nzDate, "h:mm a", { locale: enNZ });
   };
 
   const formatNZDate = (date: Date) => {
-    const nzDate = dateFnsTz.utcToZonedTime(date, NZ_TIMEZONE);
+    const nzDate = dateFnsTz.toZonedTime(date, NZ_TIMEZONE);
     return format(nzDate, "EEEE, d MMMM yyyy", { locale: enNZ });
   };
 
@@ -64,8 +64,8 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
   const getAppointmentsForTimeSlot = (day: Date, hour: number, minute: number) => {
     const filtered = appointments.filter(appointment => {
       const appointmentDate = parseISO(appointment.appointmentDate);
-      const nzAppointmentDate = dateFnsTz.utcToZonedTime(appointmentDate, NZ_TIMEZONE);
-      const nzDay = dateFnsTz.utcToZonedTime(day, NZ_TIMEZONE);
+      const nzAppointmentDate = dateFnsTz.toZonedTime(appointmentDate, NZ_TIMEZONE);
+      const nzDay = dateFnsTz.toZonedTime(day, NZ_TIMEZONE);
       
       const appointmentHour = nzAppointmentDate.getHours();
       const appointmentMinute = nzAppointmentDate.getMinutes();
@@ -88,8 +88,8 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
   const getAppointmentsForDay = (day: Date) => {
     return appointments.filter(appointment => {
       const appointmentDate = parseISO(appointment.appointmentDate);
-      const nzAppointmentDate = dateFnsTz.utcToZonedTime(appointmentDate, NZ_TIMEZONE);
-      const nzDay = dateFnsTz.utcToZonedTime(day, NZ_TIMEZONE);
+      const nzAppointmentDate = dateFnsTz.toZonedTime(appointmentDate, NZ_TIMEZONE);
+      const nzDay = dateFnsTz.toZonedTime(day, NZ_TIMEZONE);
       return isSameDay(nzAppointmentDate, nzDay);
     });
   };
