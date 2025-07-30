@@ -20,6 +20,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { enNZ } from "date-fns/locale";
+import * as dateFnsTz from "date-fns-tz";
 import { z } from "zod";
 
 const appointmentFormSchema = insertAppointmentSchema.extend({
@@ -126,12 +127,16 @@ export default function Appointments() {
 
   const formatNZDateTime = (dateString: string) => {
     const date = parseISO(dateString);
-    return format(date, "EEEE, d MMMM yyyy 'at' h:mm a", { locale: enNZ });
+    const nzDate = dateFnsTz.utcToZonedTime(date, NZ_TIMEZONE);
+    return format(nzDate, "EEEE, d MMMM yyyy 'at' h:mm a", { locale: enNZ });
   };
+
+  const NZ_TIMEZONE = 'Pacific/Auckland';
 
   const formatNZTime = (dateString: string) => {
     const date = parseISO(dateString);
-    return format(date, "h:mm a", { locale: enNZ });
+    const nzDate = dateFnsTz.utcToZonedTime(date, NZ_TIMEZONE);
+    return format(nzDate, "h:mm a", { locale: enNZ });
   };
 
   const getStatusIcon = (status: string) => {
@@ -163,14 +168,7 @@ export default function Appointments() {
   // Use appointments data directly since it already includes client and service details from the JOIN
   const appointmentsWithDetails = appointments as any[];
   
-  // Debug logging
-  console.log('Debug - Appointments data:', appointments);
-  console.log('Debug - Selected date:', selectedDate);
-  console.log('Debug - Appointments count:', appointments.length);
-  
-  if (appointments.length > 0) {
-    console.log('Debug - First appointment:', appointments[0]);
-  }
+
 
   return (
     <PageLayout>

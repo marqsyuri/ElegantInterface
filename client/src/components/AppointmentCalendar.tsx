@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { enNZ } from "date-fns/locale";
+import * as dateFnsTz from "date-fns-tz";
 
 interface Appointment {
   id: number;
@@ -34,6 +35,9 @@ interface AppointmentCalendarProps {
 export default function AppointmentCalendar({ selectedDate, onDateChange, appointments }: AppointmentCalendarProps) {
   const [viewMode, setViewMode] = useState<'day' | 'week'>('week');
   
+  // New Zealand timezone
+  const NZ_TIMEZONE = 'Pacific/Auckland';
+  
   // Generate time slots for the calendar (8 AM to 8 PM in 30-minute intervals)
   const timeSlots = Array.from({ length: 24 }, (_, i) => {
     const hour = 8 + Math.floor(i / 2);
@@ -42,11 +46,13 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
   });
 
   const formatNZTime = (date: Date) => {
-    return format(date, "h:mm a", { locale: enNZ });
+    const nzDate = dateFnsTz.utcToZonedTime(date, NZ_TIMEZONE);
+    return format(nzDate, "h:mm a", { locale: enNZ });
   };
 
   const formatNZDate = (date: Date) => {
-    return format(date, "EEEE, d MMMM yyyy", { locale: enNZ });
+    const nzDate = dateFnsTz.utcToZonedTime(date, NZ_TIMEZONE);
+    return format(nzDate, "EEEE, d MMMM yyyy", { locale: enNZ });
   };
 
   const getWeekDays = (date: Date) => {
@@ -58,30 +64,20 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
   const getAppointmentsForTimeSlot = (day: Date, hour: number, minute: number) => {
     const filtered = appointments.filter(appointment => {
       const appointmentDate = parseISO(appointment.appointmentDate);
-      const appointmentHour = appointmentDate.getHours();
-      const appointmentMinute = appointmentDate.getMinutes();
+      const nzAppointmentDate = dateFnsTz.utcToZonedTime(appointmentDate, NZ_TIMEZONE);
+      const nzDay = dateFnsTz.utcToZonedTime(day, NZ_TIMEZONE);
+      
+      const appointmentHour = nzAppointmentDate.getHours();
+      const appointmentMinute = nzAppointmentDate.getMinutes();
       
       // Check if appointment starts at this time slot or overlaps with it
       const slotStartTime = hour * 60 + minute;
       const appointmentStartTime = appointmentHour * 60 + appointmentMinute;
-      const appointmentEndTime = appointmentStartTime + (appointment.duration || 60);
       
-      const isMatch = isSameDay(appointmentDate, day) && 
+      const isMatch = isSameDay(nzAppointmentDate, nzDay) && 
              appointmentStartTime === slotStartTime; // Only show at start time to avoid duplicates
              
-      // Debug logging for today's 2:30 PM slot
-      if (hour === 14 && minute === 30) {
-        console.log('Debug 2:30 PM slot:', {
-          day: day.toDateString(),
-          appointmentDate: appointmentDate.toDateString(),
-          appointmentTime: `${appointmentHour}:${appointmentMinute}`,
-          slotTime: `${hour}:${minute}`,
-          isSameDay: isSameDay(appointmentDate, day),
-          timeMatch: appointmentStartTime === slotStartTime,
-          isMatch,
-          appointment
-        });
-      }
+
       
       return isMatch;
     });
@@ -92,7 +88,9 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
   const getAppointmentsForDay = (day: Date) => {
     return appointments.filter(appointment => {
       const appointmentDate = parseISO(appointment.appointmentDate);
-      return isSameDay(appointmentDate, day);
+      const nzAppointmentDate = dateFnsTz.utcToZonedTime(appointmentDate, NZ_TIMEZONE);
+      const nzDay = dateFnsTz.utcToZonedTime(day, NZ_TIMEZONE);
+      return isSameDay(nzAppointmentDate, nzDay);
     });
   };
 
