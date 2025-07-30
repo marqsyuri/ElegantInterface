@@ -53,6 +53,9 @@ export default function Appointments() {
 
   const { data: appointments = [], isLoading: appointmentsLoading } = useQuery({
     queryKey: ["/api/appointments", selectedDate?.toISOString().split('T')[0]],
+    queryFn: () => fetch(`/api/appointments/${selectedDate?.toISOString().split('T')[0]}`, {
+      credentials: 'include'
+    }).then(res => res.json()),
     retry: false,
   });
 
