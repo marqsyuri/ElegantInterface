@@ -17,10 +17,12 @@ import { insertClientSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { ImageUpload } from "@/components/ImageUpload";
 import { z } from "zod";
 
 const clientFormSchema = insertClientSchema.extend({
   birthDate: z.string().optional(),
+  profileImage: z.string().optional(),
 }).omit({ userId: true });
 
 type ClientFormData = z.infer<typeof clientFormSchema>;
@@ -29,6 +31,7 @@ export default function Clients() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingClient, setEditingClient] = useState<any>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const { toast } = useToast();
   const { isCollapsed } = useSidebar();
   const queryClient = useQueryClient();
@@ -54,11 +57,13 @@ export default function Clients() {
         isActive: client.isActive ?? true,
         loyaltyPoints: client.loyaltyPoints || 0,
       });
+      setProfileImage(client.profileImage || null);
     } else {
       form.reset({
         isActive: true,
         loyaltyPoints: 0,
       });
+      setProfileImage(null);
     }
   };
 
@@ -72,6 +77,7 @@ export default function Clients() {
       const clientData = {
         ...data,
         birthDate: data.birthDate ? new Date(data.birthDate).toISOString().split('T')[0] : null,
+        profileImage: profileImage,
       };
       await apiRequest('POST', '/api/clients', clientData);
     },
@@ -99,6 +105,7 @@ export default function Clients() {
       const clientData = {
         ...data,
         birthDate: data.birthDate ? new Date(data.birthDate).toISOString().split('T')[0] : null,
+        profileImage: profileImage,
       };
       await apiRequest('PUT', `/api/clients/${editingClient.id}`, clientData);
     },
@@ -185,6 +192,15 @@ export default function Clients() {
                     </DialogHeader>
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        {/* Profile Image Upload */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Profile Photo</label>
+                          <ImageUpload
+                            currentImage={profileImage || undefined}
+                            onImageChange={setProfileImage}
+                          />
+                        </div>
+                        
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
@@ -315,7 +331,7 @@ export default function Clients() {
                   filteredClients.map((client: any) => (
                     <div key={client.id} className="flex items-center p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
                       <Avatar className="w-12 h-12">
-                        <AvatarImage src={`https://images.unsplash.com/photo-${1500000000000 + (client.id * 12345)}?w=80&h=80&fit=crop&crop=face`} alt="Client photo" />
+                        <AvatarImage src={client.profileImage || undefined} alt="Client photo" />
                         <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getInitials(client.name)}</AvatarFallback>
                       </Avatar>
                       <div className="ml-4 flex-1">

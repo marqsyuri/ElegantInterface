@@ -69,6 +69,7 @@ export const clients = pgTable("clients", {
   phone: varchar("phone"),
   email: varchar("email"),
   birthDate: date("birth_date"),
+  profileImage: text("profile_image"), // base64 encoded image
   healthHistory: text("health_history"),
   isActive: boolean("is_active").default(true),
   loyaltyPoints: integer("loyalty_points").default(0),
