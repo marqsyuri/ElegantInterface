@@ -52,7 +52,7 @@ export default function Appointments() {
   });
 
   const { data: appointments = [], isLoading: appointmentsLoading } = useQuery({
-    queryKey: ["/api/appointments", { date: selectedDate?.toISOString().split('T')[0] }],
+    queryKey: ["/api/appointments", selectedDate?.toISOString().split('T')[0]],
     retry: false,
   });
 
