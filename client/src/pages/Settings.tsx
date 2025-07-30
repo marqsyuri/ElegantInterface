@@ -17,6 +17,7 @@ import TopHeader from "@/components/TopHeader";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useAuth } from "@/hooks/useAuth";
 import { insertUserSchema, insertBusinessHoursSchema, type BusinessHours } from "@shared/schema";
+import { PublicLinkManager } from "@/components/PublicLinkManager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -185,7 +186,7 @@ export default function Settings() {
 
             <CardContent>
               <Tabs defaultValue="profile" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="profile" className="flex items-center gap-2">
                     <User className="w-4 h-4" />
                     Profile
@@ -193,6 +194,10 @@ export default function Settings() {
                   <TabsTrigger value="hours" className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     Operating Hours
+                  </TabsTrigger>
+                  <TabsTrigger value="link" className="flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4" />
+                    Client Access
                   </TabsTrigger>
                   <TabsTrigger value="notifications" className="flex items-center gap-2">
                     <Bell className="w-4 h-4" />

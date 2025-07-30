@@ -63,6 +63,7 @@ import { eq, and, desc, asc, gte, lte, sql } from "drizzle-orm";
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByPublicLink(publicLink: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser & { id: string }): Promise<User>;
   
   // Client operations
@@ -139,6 +140,11 @@ export class DatabaseStorage implements IStorage {
   // User operations (mandatory for Replit Auth)
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByPublicLink(publicLink: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.publicLink, publicLink));
     return user;
   }
 

@@ -19,7 +19,17 @@ import {
 
   insertPaymentSchema,
   insertSocialMediaPostSchema,
+  users,
+  clients,
+  notifications,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
+
+// Utility function to generate unique ID
+function generateUniqueId(): string {
+  return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -34,6 +44,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Generate or regenerate public link
+  app.post('/api/user/generate-public-link', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Generate a unique public link
+      const publicLink = generateUniqueId();
+      
+      // Update user with new public link
+      await db.update(users)
+        .set({ publicLink, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+
+      res.json({ publicLink });
+    } catch (error) {
+      console.error("Error generating public link:", error);
+      res.status(500).json({ message: "Failed to generate public link" });
     }
   });
 
@@ -463,6 +493,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error saving business hours:", error);
       res.status(500).json({ message: "Failed to save business hours" });
+    }
+  });
+
+  // Public API routes for client access (no authentication required)
+  app.get('/api/public/company/:publicLink', async (req, res) => {
+    try {
+      const { publicLink } = req.params;
+      
+      // Get company info by public link
+      const company = await storage.getUserByPublicLink(publicLink);
+      if (!company) {
+        return res.status(404).json({ message: 'Company not found' });
+      }
+
+      // Get business hours
+      const businessHours = await storage.getBusinessHours(company.id);
+      
+      // Get services
+      const services = await storage.getServices(company.id);
+
+      // Return public company information
+      res.json({
+        clinicName: company.clinicName,
+        clinicAddress: company.clinicAddress,
+        clinicPhone: company.clinicPhone,
+        clinicWhatsapp: company.clinicWhatsapp,
+        specialties: company.specialties,
+        businessHours,
+        services,
+      });
+    } catch (error) {
+      console.error("Error fetching company info:", error);
+      res.status(500).json({ message: "Failed to fetch company information" });
+    }
+  });
+
+  app.post('/api/public/company/:publicLink/booking', async (req, res) => {
+    try {
+      const { publicLink } = req.params;
+      const bookingData = req.body;
+      
+      // Get company by public link
+      const company = await storage.getUserByPublicLink(publicLink);
+      if (!company) {
+        return res.status(404).json({ message: 'Company not found' });
+      }
+
+      // Create or find client
+      let client = await db.select().from(clients)
+        .where(and(
+          eq(clients.email, bookingData.email),
+          eq(clients.userId, company.id)
+        ));
+
+      if (client.length === 0) {
+        // Create new client
+        const [newClient] = await db.insert(clients).values({
+          userId: company.id,
+          name: bookingData.name,
+          email: bookingData.email,
+          phone: bookingData.phone,
+          dateOfBirth: bookingData.dateOfBirth || null,
+        }).returning();
+        client = [newClient];
+      }
+
+      // Create appointment request (pending status)
+      const appointmentData = {
+        userId: company.id,
+        clientId: client[0].id,
+        serviceId: parseInt(bookingData.serviceId),
+        appointmentDate: new Date(bookingData.preferredDate),
+        startTime: bookingData.preferredTime,
+        endTime: bookingData.preferredTime, // Will be calculated based on service duration
+        status: 'pending' as const,
+        notes: bookingData.notes || '',
+      };
+
+      const appointment = await storage.createAppointment(appointmentData);
+
+      // Create a notification for the business owner
+      await db.insert(notifications).values({
+        userId: company.id,
+        clientId: client[0].id,
+        appointmentId: appointment.id,
+        type: 'booking_request',
+        title: 'New Booking Request',
+        message: `${bookingData.name} has requested an appointment on ${bookingData.preferredDate} at ${bookingData.preferredTime}`,
+        channel: 'in_app',
+        status: 'pending',
+      });
+
+      res.json({ 
+        message: 'Booking request submitted successfully',
+        appointmentId: appointment.id 
+      });
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      res.status(500).json({ message: "Failed to create booking request" });
     }
   });
 

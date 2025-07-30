@@ -42,6 +42,7 @@ export const users = pgTable("users", {
   clinicAddress: text("clinic_address"),
   clinicPhone: varchar("clinic_phone"),
   clinicWhatsapp: varchar("clinic_whatsapp"),
+  publicLink: varchar("public_link").unique(), // Unique identifier for client access
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

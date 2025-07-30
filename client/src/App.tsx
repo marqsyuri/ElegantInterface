@@ -20,6 +20,8 @@ import Settings from "@/pages/Settings";
 import Staff from "@/pages/Staff";
 import Marketing from "@/pages/Marketing";
 import Analytics from "@/pages/Analytics";
+import ClientAccess from "@/pages/ClientAccess";
+import ClientBooking from "@/pages/ClientBooking";
 
 import NotFound from "@/pages/not-found";
 
@@ -28,6 +30,10 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public client access routes - no authentication required */}
+      <Route path="/client/:publicLink" component={ClientAccess} />
+      <Route path="/client/:publicLink/book" component={ClientBooking} />
+      
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
