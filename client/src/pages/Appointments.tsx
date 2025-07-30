@@ -352,7 +352,7 @@ export default function Appointments() {
                         <FormItem>
                           <FormLabel>Notes</FormLabel>
                           <FormControl>
-                            <Textarea placeholder="Additional notes..." {...field} />
+                            <Textarea placeholder="Additional notes..." {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
