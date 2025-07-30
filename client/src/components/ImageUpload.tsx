@@ -109,20 +109,20 @@ export function ImageUpload({
 
   return (
     <div className={`space-y-3 ${className}`}>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {/* Avatar Preview */}
-        <Avatar className="w-16 h-16">
+        <Avatar className="w-12 h-12 flex-shrink-0">
           <AvatarImage src={previewImage || undefined} alt="Profile preview" />
           <AvatarFallback className="bg-slate-100">
-            <User className="w-8 h-8 text-slate-400" />
+            <User className="w-6 h-6 text-slate-400" />
           </AvatarFallback>
         </Avatar>
 
         {/* Upload Controls */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {!previewImage ? (
             <div
-              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+              className={`border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-colors ${
                 isDragging
                   ? 'border-primary bg-primary/5'
                   : 'border-slate-300 hover:border-primary/50 hover:bg-slate-50'
@@ -132,17 +132,17 @@ export function ImageUpload({
               onDragLeave={handleDragLeave}
               onClick={() => fileInputRef.current?.click()}
             >
-              <Upload className="w-6 h-6 mx-auto mb-2 text-slate-400" />
+              <Upload className="w-5 h-5 mx-auto mb-1 text-slate-400" />
               <p className="text-sm text-slate-600">
-                Drop image here or click to upload
+                Click to upload
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500">
                 JPG or PNG, max 10MB
               </p>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <p className="text-sm text-slate-600 flex-1">Profile photo uploaded</p>
+              <p className="text-sm text-slate-600 flex-1 truncate">Profile photo uploaded</p>
               <Button
                 type="button"
                 variant="outline"

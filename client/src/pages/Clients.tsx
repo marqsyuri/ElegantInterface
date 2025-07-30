@@ -186,12 +186,12 @@ export default function Clients() {
                       New Client
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[600px]">
+                  <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>{editingClient ? "Edit Client" : "New Client"}</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
                         {/* Profile Image Upload */}
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Profile Photo</label>
@@ -201,7 +201,7 @@ export default function Clients() {
                           />
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                           <FormField
                             control={form.control}
                             name="name"
@@ -231,7 +231,7 @@ export default function Clients() {
                           />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                           <FormField
                             control={form.control}
                             name="phone"
