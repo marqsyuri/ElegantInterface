@@ -159,6 +159,11 @@ export default function Appointments() {
 
   // Use appointments data directly since it already includes client and service details from the JOIN
   const appointmentsWithDetails = appointments as any[];
+  
+  // Debug logging
+  console.log('Debug - Appointments data:', appointments);
+  console.log('Debug - Selected date:', selectedDate);
+  console.log('Debug - Appointments count:', appointments.length);
 
   return (
     <PageLayout>

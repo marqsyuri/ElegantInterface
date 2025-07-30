@@ -56,7 +56,7 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
   };
 
   const getAppointmentsForTimeSlot = (day: Date, hour: number, minute: number) => {
-    return appointments.filter(appointment => {
+    const filtered = appointments.filter(appointment => {
       const appointmentDate = parseISO(appointment.appointmentDate);
       const appointmentHour = appointmentDate.getHours();
       const appointmentMinute = appointmentDate.getMinutes();
@@ -66,9 +66,27 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
       const appointmentStartTime = appointmentHour * 60 + appointmentMinute;
       const appointmentEndTime = appointmentStartTime + (appointment.duration || 60);
       
-      return isSameDay(appointmentDate, day) && 
+      const isMatch = isSameDay(appointmentDate, day) && 
              appointmentStartTime === slotStartTime; // Only show at start time to avoid duplicates
+             
+      // Debug logging for today's 2:30 PM slot
+      if (hour === 14 && minute === 30) {
+        console.log('Debug 2:30 PM slot:', {
+          day: day.toDateString(),
+          appointmentDate: appointmentDate.toDateString(),
+          appointmentTime: `${appointmentHour}:${appointmentMinute}`,
+          slotTime: `${hour}:${minute}`,
+          isSameDay: isSameDay(appointmentDate, day),
+          timeMatch: appointmentStartTime === slotStartTime,
+          isMatch,
+          appointment
+        });
+      }
+      
+      return isMatch;
     });
+    
+    return filtered;
   };
 
   const getAppointmentsForDay = (day: Date) => {
