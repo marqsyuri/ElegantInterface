@@ -304,12 +304,12 @@ export default function Marketing() {
 
           {/* Create Campaign Dialog */}
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create Marketing Campaign</DialogTitle>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
                   <FormField
                     control={form.control}
                     name="name"
@@ -397,7 +397,7 @@ export default function Marketing() {
                         <FormControl>
                           <Textarea 
                             placeholder="Enter your campaign message..." 
-                            className="h-24"
+                            className="h-20 text-sm"
                             {...field} 
                           />
                         </FormControl>
