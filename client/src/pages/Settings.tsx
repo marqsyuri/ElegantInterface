@@ -558,6 +558,10 @@ export default function Settings() {
                   </div>
                 </TabsContent>
 
+                <TabsContent value="link" className="space-y-6">
+                  {user && <PublicLinkManager user={user} />}
+                </TabsContent>
+
                 <TabsContent value="notifications" className="mt-6">
                   <div className="space-y-6">
                     <h4 className="font-medium text-slate-900">Notification Preferences</h4>

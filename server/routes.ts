@@ -595,6 +595,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public company info endpoint
+  app.get('/api/public/company/:publicLink', async (req, res) => {
+    try {
+      const { publicLink } = req.params;
+      
+      // Find company by public link
+      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
+      
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Return public company information
+      res.json({
+        clinicName: company.clinicName,
+        clinicAddress: company.clinicAddress,
+        clinicPhone: company.clinicPhone,
+        clinicWhatsapp: company.clinicWhatsapp,
+        email: company.email,
+        profileImageUrl: company.profileImageUrl,
+        publicLink: company.publicLink
+      });
+    } catch (error) {
+      console.error("Error fetching company info:", error);
+      res.status(500).json({ message: "Failed to fetch company information" });
+    }
+  });
+
+  // Public services endpoint
+  app.get('/api/public/services/:publicLink', async (req, res) => {
+    try {
+      const { publicLink } = req.params;
+      
+      // Find company by public link
+      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
+      
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Get services for this company
+      const services = await storage.getServices(company.id);
+      res.json(services);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      res.status(500).json({ message: "Failed to fetch services" });
+    }
+  });
+
+  // Public business hours endpoint
+  app.get('/api/public/business-hours/:publicLink', async (req, res) => {
+    try {
+      const { publicLink } = req.params;
+      
+      // Find company by public link
+      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
+      
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Get business hours for this company
+      const businessHours = await storage.getBusinessHours(company.id);
+      res.json(businessHours);
+    } catch (error) {
+      console.error("Error fetching business hours:", error);
+      res.status(500).json({ message: "Failed to fetch business hours" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

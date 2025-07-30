@@ -1,203 +1,137 @@
 import { useState } from "react";
-import { useRoute } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Clock, 
-  User, 
-  Mail, 
-  Phone,
-  MessageCircle,
-  CheckCircle,
-  Sparkles
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useParams, useLocation } from "wouter";
+import { ArrowLeft, Calendar, User, Phone, Mail, MessageSquare, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
-// Form schema for client registration and booking
-const bookingFormSchema = z.object({
-  // Client information
+const bookingSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(8, "Please enter a valid phone number"),
-  dateOfBirth: z.string().optional(),
-  
-  // Booking information
+  phone: z.string().min(10, "Please enter a valid phone number"),
   serviceId: z.string().min(1, "Please select a service"),
   preferredDate: z.string().min(1, "Please select a preferred date"),
   preferredTime: z.string().min(1, "Please select a preferred time"),
   notes: z.string().optional(),
+  isNewClient: z.boolean().default(true),
 });
 
-type BookingFormData = z.infer<typeof bookingFormSchema>;
+type BookingFormData = z.infer<typeof bookingSchema>;
+
+interface Service {
+  id: number;
+  name: string;
+  description: string;
+  duration: number;
+  price: number;
+  category: string;
+}
 
 interface CompanyInfo {
   clinicName: string;
-  clinicAddress: string;
-  clinicPhone: string;
-  clinicWhatsapp: string;
-  specialties: string;
-  businessHours: Array<{
-    dayOfWeek: string;
-    isOpen: boolean;
-    openTime: string;
-    closeTime: string;
-  }>;
-  services: Array<{
-    id: number;
-    name: string;
-    description: string;
-    price: string;
-    duration: number;
-  }>;
+  publicLink: string;
 }
 
 export default function ClientBooking() {
-  const [, params] = useRoute("/client/:publicLink/book");
-  const [bookingComplete, setBookingComplete] = useState(false);
-  const publicLink = params?.publicLink;
+  const params = useParams();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [bookingComplete, setBookingComplete] = useState(false);
+  const publicLink = params.publicLink;
+
+  const { data: company } = useQuery({
+    queryKey: [`/api/public/company/${publicLink}`],
+    enabled: !!publicLink,
+  });
+
+  const { data: services } = useQuery({
+    queryKey: [`/api/public/services/${publicLink}`],
+    enabled: !!publicLink,
+  });
 
   const form = useForm<BookingFormData>({
-    resolver: zodResolver(bookingFormSchema),
+    resolver: zodResolver(bookingSchema),
     defaultValues: {
       name: "",
       email: "",
       phone: "",
-      dateOfBirth: "",
       serviceId: "",
       preferredDate: "",
       preferredTime: "",
       notes: "",
+      isNewClient: true,
     },
   });
 
-  const { data: companyInfo, isLoading } = useQuery<CompanyInfo>({
-    queryKey: [`/api/public/company/${publicLink}`],
-    enabled: !!publicLink,
-    retry: false,
-  });
-
-  // Generate available time slots based on business hours
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 9; hour <= 17; hour++) {
-      for (let minute of [0, 30]) {
-        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        const displayHour = hour > 12 ? hour - 12 : hour;
-        const period = hour >= 12 ? 'PM' : 'AM';
-        slots.push({
-          value: time,
-          label: `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`
-        });
-      }
-    }
-    return slots;
-  };
-
-  // Generate next 30 days for booking
-  const generateAvailableDates = () => {
-    const dates = [];
-    const today = new Date();
-    
-    for (let i = 1; i <= 30; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-      
-      // Check if the clinic is open on this day
-      const businessHour = companyInfo?.businessHours.find(h => h.dayOfWeek === dayOfWeek);
-      if (businessHour?.isOpen) {
-        dates.push({
-          value: date.toISOString().split('T')[0],
-          label: date.toLocaleDateString('en-NZ', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })
-        });
-      }
-    }
-    return dates;
-  };
-
-  const createBookingMutation = useMutation({
+  const bookingMutation = useMutation({
     mutationFn: async (data: BookingFormData) => {
-      return await apiRequest('POST', `/api/public/company/${publicLink}/booking`, data);
+      return await apiRequest('POST', `/api/public/book/${publicLink}`, data);
     },
     onSuccess: () => {
       setBookingComplete(true);
       toast({
-        title: "Booking Request Submitted!",
-        description: "We'll contact you soon to confirm your appointment.",
+        title: "Booking Request Submitted",
+        description: "We'll contact you shortly to confirm your appointment.",
       });
     },
     onError: (error) => {
       toast({
         title: "Booking Failed",
-        description: "There was an error submitting your booking. Please try again.",
+        description: "Please try again or contact us directly.",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: BookingFormData) => {
-    createBookingMutation.mutate(data);
+    bookingMutation.mutate(data);
   };
 
-  const handleBackToProfile = () => {
-    window.location.href = `/client/${publicLink}`;
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-yellow-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
-    );
-  }
+  const timeSlots = [
+    "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+    "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM",
+    "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM"
+  ];
 
   if (bookingComplete) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-yellow-50 flex items-center justify-center">
-        <Card className="w-full max-w-md mx-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center">
             <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold text-slate-900 mb-2">Booking Submitted!</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Booking Submitted!</h2>
             <p className="text-slate-600 mb-6">
-              Thank you for your booking request. {companyInfo?.clinicName} will contact you soon to confirm your appointment.
+              Thank you for your booking request. We'll contact you within 24 hours to confirm your appointment details.
             </p>
             <div className="space-y-3">
               <Button 
-                onClick={handleBackToProfile}
-                className="w-full bg-green-600 hover:bg-green-700"
+                onClick={() => setLocation(`/client/${publicLink}`)}
+                variant="outline" 
+                className="w-full"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to {companyInfo?.clinicName}
+                Back to Clinic Info
               </Button>
-              {companyInfo?.clinicWhatsapp && (
+              {company?.clinicWhatsapp && (
                 <Button 
-                  variant="outline"
                   onClick={() => {
-                    const message = encodeURIComponent("Hi! I just submitted a booking request through your website.");
-                    window.open(`https://wa.me/${companyInfo.clinicWhatsapp.replace(/\D/g, '')}?text=${message}`, '_blank');
+                    const message = encodeURIComponent(
+                      `Hi! I just submitted a booking request through your website. My name is ${form.getValues('name')}.`
+                    );
+                    window.open(`https://wa.me/${company.clinicWhatsapp.replace(/\D/g, '')}?text=${message}`, '_blank');
                   }}
-                  className="w-full"
+                  className="w-full bg-green-600 hover:bg-green-700"
                 >
-                  <MessageCircle className="w-4 h-4 mr-2" />
+                  <MessageSquare className="w-4 h-4 mr-2" />
                   Contact via WhatsApp
                 </Button>
               )}
@@ -209,33 +143,29 @@ export default function ClientBooking() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-yellow-50">
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
-        {/* Header */}
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="mb-6">
           <Button 
             variant="ghost" 
-            onClick={handleBackToProfile}
+            onClick={() => setLocation(`/client/${publicLink}`)}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to {companyInfo?.clinicName}
+            Back to {company?.clinicName || 'Clinic Info'}
           </Button>
           
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-4">
-              <Sparkles className="w-8 h-8 text-green-600 mr-2" />
-              <h1 className="text-3xl font-bold text-slate-900">Book Your Appointment</h1>
-            </div>
-            <p className="text-slate-600">Fill out the form below to request an appointment</p>
-          </div>
+          <h1 className="text-3xl font-bold text-slate-900">Book Appointment</h1>
+          <p className="text-slate-600 mt-2">
+            Fill out the form below and we'll get back to you to confirm your appointment.
+          </p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Calendar className="w-5 h-5 mr-2 text-green-600" />
-              Booking Form
+              Appointment Details
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -243,8 +173,8 @@ export default function ClientBooking() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 {/* Personal Information */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-                    <User className="w-5 h-5 mr-2" />
+                  <h3 className="font-semibold text-slate-900 flex items-center">
+                    <User className="w-4 h-4 mr-2" />
                     Personal Information
                   </h3>
                   
@@ -256,29 +186,13 @@ export default function ClientBooking() {
                         <FormItem>
                           <FormLabel>Full Name *</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter your full name" {...field} />
+                            <Input placeholder="Your full name" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address *</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="your@email.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                     <FormField
                       control={form.control}
                       name="phone"
@@ -292,46 +206,43 @@ export default function ClientBooking() {
                         </FormItem>
                       )}
                     />
-                    
-                    <FormField
-                      control={form.control}
-                      name="dateOfBirth"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date of Birth</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="your.email@example.com" type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
-                {/* Appointment Information */}
+                {/* Service Selection */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-                    <Calendar className="w-5 h-5 mr-2" />
-                    Appointment Details
-                  </h3>
+                  <h3 className="font-semibold text-slate-900">Service Selection</h3>
                   
                   <FormField
                     control={form.control}
                     name="serviceId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Select Service *</FormLabel>
+                        <FormLabel>Choose Service *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Choose a service" />
+                              <SelectValue placeholder="Select a service" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {companyInfo?.services.map((service) => (
+                            {services?.map((service: Service) => (
                               <SelectItem key={service.id} value={service.id.toString()}>
-                                {service.name} - ${service.price}
+                                {service.name} - ${service.price} ({service.duration} min)
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -340,6 +251,11 @@ export default function ClientBooking() {
                       </FormItem>
                     )}
                   />
+                </div>
+
+                {/* Preferred Date & Time */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-slate-900">Preferred Date & Time</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
@@ -348,25 +264,18 @@ export default function ClientBooking() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Preferred Date *</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select date" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {generateAvailableDates().map((date) => (
-                                <SelectItem key={date.value} value={date.value}>
-                                  {date.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <Input 
+                              type="date" 
+                              min={new Date().toISOString().split('T')[0]}
+                              {...field} 
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="preferredTime"
@@ -380,9 +289,9 @@ export default function ClientBooking() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {generateTimeSlots().map((slot) => (
-                                <SelectItem key={slot.value} value={slot.value}>
-                                  {slot.label}
+                              {timeSlots.map((time) => (
+                                <SelectItem key={time} value={time}>
+                                  {time}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -392,44 +301,43 @@ export default function ClientBooking() {
                       )}
                     />
                   </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Additional Notes</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Any special requests or information we should know..."
-                            className="resize-none"
-                            rows={3}
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 text-lg font-semibold bg-green-600 hover:bg-green-700"
-                  disabled={createBookingMutation.isPending}
-                >
-                  {createBookingMutation.isPending ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Submitting...
-                    </div>
-                  ) : (
-                    <>
-                      <Calendar className="w-5 h-5 mr-2" />
-                      Submit Booking Request
-                    </>
+                {/* Additional Notes */}
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Additional Notes</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Any special requests or information we should know..."
+                          className="h-20"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </Button>
+                />
+
+                <div className="pt-4 border-t border-slate-200">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-700">
+                      <strong>Please note:</strong> This is a booking request. We'll contact you within 24 hours 
+                      to confirm your appointment and discuss any specific requirements.
+                    </p>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-green-600 hover:bg-green-700" 
+                    disabled={bookingMutation.isPending}
+                  >
+                    {bookingMutation.isPending ? "Submitting..." : "Submit Booking Request"}
+                  </Button>
+                </div>
               </form>
             </Form>
           </CardContent>
