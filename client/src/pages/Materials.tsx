@@ -78,25 +78,7 @@ export default function Materials() {
     return { status: "ok", color: "emerald", text: "Stock OK" };
   };
 
-  const epiItems = [
-    "Disposable gloves",
-    "Surgical mask", 
-    "Disposable gown",
-    "Safety glasses",
-    "70% Alcohol"
-  ];
-
-  const handleChecklistChange = (item: string, checked: boolean) => {
-    setCheckedItems(prev => ({ ...prev, [item]: checked }));
-  };
-
-  const confirmChecklist = () => {
-    toast({
-      title: "Checklist Confirmed",
-      description: "PPE checked for next appointment.",
-    });
-    setCheckedItems({});
-  };
+  // PPE checklist removed as per requirements
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
@@ -255,50 +237,8 @@ export default function Materials() {
             </CardHeader>
 
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div>
-                  <h4 className="font-medium text-slate-900 mb-4">PPE Checklist</h4>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-slate-50 rounded-lg">
-                      <h5 className="font-medium text-slate-900 mb-3">Next Appointment</h5>
-                      <div className="space-y-3">
-                        {epiItems.map((item) => (
-                          <div key={item} className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <Checkbox 
-                                checked={checkedItems[item] || false}
-                                onCheckedChange={(checked) => 
-                                  handleChecklistChange(item, checked as boolean)
-                                }
-                              />
-                              <span className="text-slate-700">{item}</span>
-                            </div>
-                            <span className="text-sm text-emerald-600">✓ Available</span>
-                          </div>
-                        ))}
-                      </div>
-                      <Button 
-                        className="mt-4 w-full bg-emerald-600 hover:bg-emerald-700"
-                        onClick={confirmChecklist}
-                      >
-                        Confirm Checklist
-                      </Button>
-                    </div>
-
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h5 className="font-medium text-blue-900 mb-2">Safety Guidelines</h5>
-                      <ul className="text-sm text-blue-800 space-y-1">
-                        <li>• Always sanitise hands before and after each treatment</li>
-                        <li>• Use fresh PPE for each client</li>
-                        <li>• Dispose of materials in appropriate waste</li>
-                        <li>• Keep work environment clean at all times</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-medium text-slate-900 mb-4">Stock Control</h4>
+              <div className="space-y-4">
+                <h4 className="font-medium text-slate-900 mb-4">Inventory Management</h4>
                   <div className="space-y-4">
                     {inventoryLoading ? (
                       <div className="space-y-4">
@@ -385,7 +325,6 @@ export default function Materials() {
                       </div>
                     )}
                   </div>
-                </div>
               </div>
             </CardContent>
           </Card>

@@ -62,6 +62,7 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
   };
 
   const getAppointmentsForTimeSlot = (day: Date, hour: number, minute: number) => {
+    if (!Array.isArray(appointments)) return [];
     const filtered = appointments.filter(appointment => {
       const appointmentDate = parseISO(appointment.appointmentDate);
       const nzAppointmentDate = dateFnsTz.toZonedTime(appointmentDate, NZ_TIMEZONE);

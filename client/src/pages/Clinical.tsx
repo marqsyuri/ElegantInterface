@@ -155,13 +155,16 @@ export default function Clinical() {
   };
 
   const procedures = [
-    "Deep Facial Cleansing",
+    "Deep Cleansing Facial",
+    "Microdermabrasion",
     "Chemical Peel",
-    "Radiofrequency",
+    "Radio Frequency Treatment", 
     "Microneedling",
-    "Facial Hydration",
-    "Lymphatic Drainage",
-    "Facial Lifting",
+    "Hydrating Facial",
+    "Lymphatic Drainage Massage",
+    "Anti-Aging Facial Treatment",
+    "Acne Treatment",
+    "Skin Brightening Treatment",
   ];
 
   return (

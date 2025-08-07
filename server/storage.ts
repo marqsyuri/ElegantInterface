@@ -682,3 +682,62 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+
+// Procedure storage
+export const procedureStorage = {
+  async getProcedures(userId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(procedures)
+      .where(eq(procedures.userId, userId))
+      .orderBy(asc(procedures.name));
+  },
+
+  async createProcedure(userId: string, procedure: any): Promise<any> {
+    const [newProcedure] = await db.insert(procedures).values({
+      ...procedure,
+      userId
+    }).returning();
+    return newProcedure;
+  },
+
+  async updateProcedure(id: number, userId: string, updates: any): Promise<any> {
+    const [updatedProcedure] = await db
+      .update(procedures)
+      .set(updates)
+      .where(and(eq(procedures.id, id), eq(procedures.userId, userId)))
+      .returning();
+    return updatedProcedure;
+  },
+
+  async deductMaterialsForProcedure(procedureId: number, userId: string): Promise<void> {
+    // Get the procedure with its required materials
+    const [procedure] = await db
+      .select()
+      .from(procedures)
+      .where(and(eq(procedures.id, procedureId), eq(procedures.userId, userId)));
+
+    if (!procedure || !procedure.requiredMaterials) return;
+
+    // Deduct each material from inventory
+    for (const material of procedure.requiredMaterials as any[]) {
+      const [currentMaterial] = await db
+        .select()
+        .from(materials)
+        .where(and(
+          eq(materials.id, material.materialId),
+          eq(materials.userId, userId)
+        ));
+
+      if (currentMaterial && currentMaterial.currentStock >= material.quantity) {
+        await db
+          .update(materials)
+          .set({
+            currentStock: currentMaterial.currentStock - material.quantity,
+            updatedAt: new Date()
+          })
+          .where(eq(materials.id, material.materialId));
+      }
+    }
+  }
+};

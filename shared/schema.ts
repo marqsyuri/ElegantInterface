@@ -86,6 +86,20 @@ export const services = pgTable("services", {
   description: text("description"),
   duration: integer("duration"), // in minutes
   price: decimal("price", { precision: 10, scale: 2 }),
+  category: varchar("category").notNull().default("General"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Procedures table
+export const procedures = pgTable("procedures", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: varchar("category").notNull(),
+  duration: integer("duration"), // in minutes
+  materials: jsonb("materials").$type<{ materialId: number; quantity: number }[]>().default([]),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -98,7 +112,7 @@ export const appointments = pgTable("appointments", {
   serviceId: integer("service_id").notNull().references(() => services.id),
   appointmentDate: timestamp("appointment_date").notNull(),
   duration: integer("duration").default(60), // in minutes
-  status: varchar("status").notNull().default("scheduled"), // scheduled, confirmed, completed, cancelled
+  status: varchar("status").notNull().default("pending"), // pending, confirmed, scheduled, completed, cancelled
   notes: text("notes"),
   beforeImages: jsonb("before_images").$type<string[]>().default([]), // array of image URLs
   afterImages: jsonb("after_images").$type<string[]>().default([]), // array of image URLs
@@ -111,9 +125,17 @@ export const clinicalRecords = pgTable("clinical_records", {
   userId: varchar("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").notNull().references(() => clients.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
+  procedureId: integer("procedure_id").references(() => procedures.id),
   procedureDate: date("procedure_date").notNull(),
   procedure: varchar("procedure").notNull(),
   observations: text("observations"),
+  clientName: varchar("client_name"),
+  clientPhone: varchar("client_phone"),
+  clientEmail: varchar("client_email"),
+  serviceRequested: varchar("service_requested"),
+  preferredDate: varchar("preferred_date"),
+  preferredTime: varchar("preferred_time"),
+  notes: text("notes"),
   resultRating: integer("result_rating"), // 1-5 scale
   beforeImages: jsonb("before_images"), // array of image URLs
   afterImages: jsonb("after_images"), // array of image URLs
@@ -337,6 +359,10 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
   appointments: many(appointments),
 }));
 
+export const proceduresRelations = relations(procedures, ({ one }) => ({
+  user: one(users, { fields: [procedures.userId], references: [users.id] }),
+}));
+
 export const appointmentsRelations = relations(appointments, ({ one }) => ({
   user: one(users, { fields: [appointments.userId], references: [users.id] }),
   client: one(clients, { fields: [appointments.clientId], references: [clients.id] }),
@@ -347,6 +373,7 @@ export const clinicalRecordsRelations = relations(clinicalRecords, ({ one }) => 
   user: one(users, { fields: [clinicalRecords.userId], references: [users.id] }),
   client: one(clients, { fields: [clinicalRecords.clientId], references: [clients.id] }),
   appointment: one(appointments, { fields: [clinicalRecords.appointmentId], references: [appointments.id] }),
+  procedure: one(procedures, { fields: [clinicalRecords.procedureId], references: [procedures.id] }),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
@@ -466,6 +493,11 @@ export const insertLoyaltyPackageSchema = createInsertSchema(loyaltyPackages).om
 });
 
 export const insertClientPackageSchema = createInsertSchema(clientPackages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProcedureSchema = createInsertSchema(procedures).omit({
   id: true,
   createdAt: true,
 });

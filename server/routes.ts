@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, procedureStorage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import {
   insertClientSchema,
@@ -16,7 +16,7 @@ import {
   insertStaffScheduleSchema,
   insertNotificationSchema,
   insertMarketingCampaignSchema,
-
+  insertProcedureSchema,
   insertPaymentSchema,
   insertSocialMediaPostSchema,
   users,
@@ -24,7 +24,7 @@ import {
   notifications,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, lte, or, asc } from "drizzle-orm";
 
 // Utility function to generate unique ID
 function generateUniqueId(): string {
@@ -203,8 +203,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/appointments/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
       const updates = insertAppointmentSchema.partial().parse(req.body);
+      
+      // If appointment is being marked as completed, deduct materials from inventory
+      if (updates.status === 'completed') {
+        const appointments = await storage.getAppointments(userId);
+        const appointment = appointments.find(a => a.id === id);
+        
+        if (appointment && appointment.service && appointment.service.name) {
+          const procedures = await procedureStorage.getProcedures(userId);
+          const matchingProcedure = procedures.find(p => 
+            p.name.toLowerCase() === appointment.service.name.toLowerCase()
+          );
+          
+          if (matchingProcedure) {
+            await procedureStorage.deductMaterialsForProcedure(matchingProcedure.id, userId);
+          }
+        }
+      }
+      
       const appointment = await storage.updateAppointment(id, updates);
       res.json(appointment);
     } catch (error) {
@@ -662,6 +681,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching business hours:", error);
       res.status(500).json({ message: "Failed to fetch business hours" });
+    }
+  });
+
+  // Procedures routes
+  app.get('/api/procedures', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const procedures = await procedureStorage.getProcedures(userId);
+      res.json(procedures);
+    } catch (error) {
+      console.error("Error fetching procedures:", error);
+      res.status(500).json({ message: "Failed to fetch procedures" });
+    }
+  });
+
+  app.post('/api/procedures', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const procedureData = insertProcedureSchema.parse({ ...req.body, userId });
+      const procedure = await procedureStorage.createProcedure(userId, procedureData);
+      res.json(procedure);
+    } catch (error) {
+      console.error("Error creating procedure:", error);
+      res.status(500).json({ message: "Failed to create procedure" });
+    }
+  });
+
+  app.put('/api/procedures/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const updates = insertProcedureSchema.partial().parse(req.body);
+      const procedure = await procedureStorage.updateProcedure(id, userId, updates);
+      res.json(procedure);
+    } catch (error) {
+      console.error("Error updating procedure:", error);
+      res.status(500).json({ message: "Failed to update procedure" });
+    }
+  });
+
+  // Public booked slots endpoint for client booking
+  app.get('/api/public/booked-slots/:publicLink/:date', async (req, res) => {
+    try {
+      const { publicLink, date } = req.params;
+      
+      // Find company by public link
+      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
+      
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Get booked appointments for the selected date
+      const selectedDate = new Date(date);
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const bookedAppointments = await db
+        .select({
+          startTime: appointments.startTime,
+          endTime: appointments.endTime,
+          duration: appointments.duration,
+        })
+        .from(appointments)
+        .where(
+          and(
+            eq(appointments.userId, company.id),
+            gte(appointments.appointmentDate, startOfDay),
+            lte(appointments.appointmentDate, endOfDay),
+            or(
+              eq(appointments.status, 'confirmed'),
+              eq(appointments.status, 'scheduled')
+            )
+          )
+        );
+
+      res.json(bookedAppointments);
+    } catch (error) {
+      console.error("Error fetching booked slots:", error);
+      res.status(500).json({ message: "Failed to fetch booked slots" });
+    }
+  });
+
+  // API endpoint to deduct materials when appointment is completed
+  app.post('/api/appointments/:id/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const appointmentId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const { procedureId } = req.body;
+
+      // Update appointment status to completed
+      await storage.updateAppointment(appointmentId, { status: 'completed' });
+
+      // If procedure ID is provided, deduct materials
+      if (procedureId) {
+        await procedureStorage.deductMaterialsForProcedure(procedureId, userId);
+      }
+
+      res.json({ message: 'Appointment completed and materials deducted successfully' });
+    } catch (error) {
+      console.error("Error completing appointment:", error);
+      res.status(500).json({ message: "Failed to complete appointment" });
     }
   });
 

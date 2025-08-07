@@ -58,6 +58,93 @@ export default function ClientBooking() {
     enabled: !!publicLink,
   });
 
+  const { data: businessHours } = useQuery({
+    queryKey: [`/api/public/business-hours/${publicLink}`],
+    enabled: !!publicLink,
+  });
+
+  const { data: bookedSlots } = useQuery({
+    queryKey: [`/api/public/booked-slots/${publicLink}/${form.watch('preferredDate')}`],
+    enabled: !!publicLink && !!form.watch('preferredDate'),
+  });
+
+  // Generate available time slots based on business hours and booked appointments
+  const generateAvailableTimeSlots = () => {
+    if (!businessHours || !form.watch('preferredDate') || !form.watch('serviceId')) {
+      return [];
+    }
+
+    const selectedService = services?.find((s: Service) => s.id === parseInt(form.watch('serviceId')));
+    if (!selectedService) return [];
+
+    const selectedDate = form.watch('preferredDate');
+    const dayOfWeek = new Date(selectedDate).getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[dayOfWeek];
+
+    const todayHours = businessHours?.find((bh: any) => bh.dayOfWeek === dayName);
+    if (!todayHours || !todayHours.isOpen) {
+      return [];
+    }
+
+    const slots = [];
+    const startTime = todayHours.openTime;
+    const endTime = todayHours.closeTime;
+    const lunchStart = todayHours.lunchStart;
+    const lunchEnd = todayHours.lunchEnd;
+
+    // Generate 30-minute slots
+    let currentTime = startTime;
+    while (currentTime < endTime) {
+      // Skip lunch break
+      if (lunchStart && lunchEnd && currentTime >= lunchStart && currentTime < lunchEnd) {
+        currentTime = addMinutes(currentTime, 30);
+        continue;
+      }
+
+      // Check if slot is available (not booked)
+      const isBooked = bookedSlots?.some((slot: any) => {
+        const slotStart = slot.startTime;
+        const slotEnd = slot.endTime;
+        return currentTime >= slotStart && currentTime < slotEnd;
+      });
+
+      // Check if there's enough time for the service
+      const serviceEndTime = addMinutes(currentTime, selectedService.duration);
+      if (serviceEndTime <= endTime && !isBooked) {
+        slots.push({
+          value: currentTime,
+          label: formatTime(currentTime),
+        });
+      }
+
+      currentTime = addMinutes(currentTime, 30);
+    }
+
+    return slots;
+  };
+
+  // Helper functions
+  const addMinutes = (timeString: string, minutes: number): string => {
+    const [hours, mins] = timeString.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, mins + minutes, 0, 0);
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  };
+
+  const formatTime = (timeString: string): string => {
+    const [hours, mins] = timeString.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, mins, 0, 0);
+    return date.toLocaleTimeString('en-NZ', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+  };
+
+  const availableTimeSlots = generateAvailableTimeSlots();
+
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -96,11 +183,7 @@ export default function ClientBooking() {
     bookingMutation.mutate(data);
   };
 
-  const timeSlots = [
-    "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-    "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM",
-    "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM"
-  ];
+
 
   if (bookingComplete) {
     return (
@@ -289,11 +372,19 @@ export default function ClientBooking() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {timeSlots.map((time) => (
-                                <SelectItem key={time} value={time}>
-                                  {time}
+                              {availableTimeSlots.length > 0 ? (
+                                availableTimeSlots.map((slot) => (
+                                  <SelectItem key={slot.value} value={slot.value}>
+                                    {slot.label}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="" disabled>
+                                  {!form.watch('preferredDate') ? 'Please select a date first' :
+                                   !form.watch('serviceId') ? 'Please select a service first' :
+                                   'No available times for selected date'}
                                 </SelectItem>
-                              ))}
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />

@@ -151,7 +151,8 @@ export default function Clients() {
   const filteredClients = (clients as any[])?.filter((client: any) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     client.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    client.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    client.cpf?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
   const getInitials = (name: string) => {

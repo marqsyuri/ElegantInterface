@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { FileUpload } from "@/components/ui/file-upload";
 import PageLayout from "@/components/PageLayout";
 import AppointmentCalendar from "@/components/AppointmentCalendar";
+import AppointmentDetailsDialog from "@/components/AppointmentDetailsDialog";
 import { insertAppointmentSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +40,8 @@ export default function Appointments() {
   const [beforeImages, setBeforeImages] = useState<string[]>([]);
   const [afterImages, setAfterImages] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -123,6 +126,41 @@ export default function Appointments() {
 
   const onSubmit = (data: AppointmentFormData) => {
     createAppointmentMutation.mutate(data);
+  };
+
+  // Handle booking approval/rejection
+  const handleApproveBooking = async (appointmentId: number) => {
+    try {
+      await apiRequest('PUT', `/api/appointments/${appointmentId}`, { status: 'confirmed' });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      toast({
+        title: "Booking Approved",
+        description: "The appointment has been confirmed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve booking",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectBooking = async (appointmentId: number) => {
+    try {
+      await apiRequest('PUT', `/api/appointments/${appointmentId}`, { status: 'cancelled' });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      toast({
+        title: "Booking Rejected",
+        description: "The appointment has been cancelled.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject booking",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatNZDateTime = (dateString: string) => {
@@ -411,7 +449,7 @@ export default function Appointments() {
           <AppointmentCalendar
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
-            appointments={appointmentsWithDetails}
+            appointments={Array.isArray(appointments) ? appointments : []}
           />
         ) : (
           <div className="space-y-6">
@@ -435,19 +473,26 @@ export default function Appointments() {
               <CardContent>
                 {appointmentsLoading ? (
                   <div className="text-center py-8">Loading appointments...</div>
-                ) : appointmentsWithDetails.length === 0 ? (
+                ) : !Array.isArray(appointments) || appointments.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     No appointments scheduled for {format(selectedDate, "EEEE, d MMMM yyyy", { locale: enNZ })}
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {appointmentsWithDetails
+                    {(Array.isArray(appointments) ? appointments : [])
                       .sort((a: any, b: any) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime())
                       .map((appointment: any) => {
                       const endTime = new Date(parseISO(appointment.appointmentDate).getTime() + (appointment.duration || 60) * 60000);
                       
                       return (
-                        <div key={appointment.id} className="p-4 border rounded-lg bg-slate-50">
+                        <div 
+                          key={appointment.id} 
+                          className="p-4 border rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
+                          onClick={() => {
+                            setSelectedAppointment(appointment);
+                            setIsDetailsDialogOpen(true);
+                          }}
+                        >
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
                               <div className="flex items-center gap-2">
@@ -494,6 +539,32 @@ export default function Appointments() {
                               )}
                             </div>
                           )}
+
+                          {/* Approval buttons for pending bookings */}
+                          {appointment.status === 'pending' && (
+                            <div className="mt-4 flex space-x-2 pt-3 border-t">
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApproveBooking(appointment.id);
+                                }}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                Approve Booking
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRejectBooking(appointment.id);
+                                }}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -503,6 +574,16 @@ export default function Appointments() {
             </Card>
           </div>
         )}
+        
+        {/* Appointment Details Dialog */}
+        <AppointmentDetailsDialog
+          appointment={selectedAppointment}
+          isOpen={isDetailsDialogOpen}
+          onClose={() => {
+            setIsDetailsDialogOpen(false);
+            setSelectedAppointment(null);
+          }}
+        />
       </div>
     </PageLayout>
   );
