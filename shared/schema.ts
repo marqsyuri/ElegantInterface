@@ -507,26 +507,24 @@ export const insertProcedureSchema = z.object({
   description: z.string().optional(),
   category: z.string(),
   duration: z.number(),
-  price: z.union([z.string(), z.number()]).optional(),
   materials: z.array(z.object({
     materialId: z.number(),
     quantity: z.number()
   })).default([]),
   isActive: z.boolean().default(true),
-});
+}).passthrough();
 
 export const updateProcedureSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   category: z.string().optional(),
   duration: z.number().optional(),
-  price: z.union([z.string(), z.number()]).optional(),
   materials: z.array(z.object({
     materialId: z.number(),
     quantity: z.number()
   })).optional(),
   isActive: z.boolean().optional(),
-});
+}).passthrough();
 
 export const insertStaffSchema = createInsertSchema(staff).omit({
   id: true,
