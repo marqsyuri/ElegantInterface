@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Calendar, Clock, User, Camera, CalendarDays, CheckCircle, XCircle, List } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,12 @@ export default function Appointments() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [beforeImages, setBeforeImages] = useState<string[]>([]);
+  const [clientSearch, setClientSearch] = useState("");
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [filteredClients, setFilteredClients] = useState<any[]>([]);
+  const [filteredServices, setFilteredServices] = useState<any[]>([]);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [selectedService, setSelectedService] = useState<any>(null);
   const [afterImages, setAfterImages] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -72,6 +78,26 @@ export default function Appointments() {
     queryKey: ["/api/services"],
     retry: false,
   });
+
+  const { data: procedures = [] } = useQuery({
+    queryKey: ["/api/procedures"],
+    retry: false,
+  });
+
+  // Combine services and procedures
+  const allServices = [...(services as any[]), ...(procedures as any[])];
+
+  // Reset search fields when dialog closes
+  useEffect(() => {
+    if (!isDialogOpen) {
+      setClientSearch("");
+      setServiceSearch("");
+      setFilteredClients([]);
+      setFilteredServices([]);
+      setSelectedClient(null);
+      setSelectedService(null);
+    }
+  }, [isDialogOpen]);
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: AppointmentFormData) => {
@@ -260,20 +286,43 @@ export default function Appointments() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Client</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select client" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {(clients as any[])?.map((client: any) => (
-                                  <SelectItem key={client.id} value={client.id.toString()}>
-                                    {client.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  placeholder="Type to search clients..."
+                                  value={clientSearch}
+                                  onChange={(e) => {
+                                    setClientSearch(e.target.value);
+                                    if (e.target.value.length >= 3) {
+                                      const filtered = (clients as any[])?.filter((client: any) =>
+                                        client.name.toLowerCase().includes(e.target.value.toLowerCase())
+                                      ) || [];
+                                      setFilteredClients(filtered);
+                                    } else {
+                                      setFilteredClients([]);
+                                    }
+                                  }}
+                                />
+                                {filteredClients.length > 0 && (
+                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                    {filteredClients.map((client: any) => (
+                                      <div
+                                        key={client.id}
+                                        className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+                                        onClick={() => {
+                                          setSelectedClient(client);
+                                          setClientSearch(client.name);
+                                          setFilteredClients([]);
+                                          field.onChange(client.id);
+                                        }}
+                                      >
+                                        {client.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -285,20 +334,48 @@ export default function Appointments() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Service</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select service" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {(services as any[])?.map((service: any) => (
-                                  <SelectItem key={service.id} value={service.id.toString()}>
-                                    {service.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  placeholder="Type to search services/procedures..."
+                                  value={serviceSearch}
+                                  onChange={(e) => {
+                                    setServiceSearch(e.target.value);
+                                    if (e.target.value.length >= 3) {
+                                      const filtered = allServices?.filter((service: any) =>
+                                        service.name.toLowerCase().includes(e.target.value.toLowerCase())
+                                      ) || [];
+                                      setFilteredServices(filtered);
+                                    } else {
+                                      setFilteredServices([]);
+                                    }
+                                  }}
+                                />
+                                {filteredServices.length > 0 && (
+                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                    {filteredServices.map((service: any) => (
+                                      <div
+                                        key={`${service.id}-${service.category || 'procedure'}`}
+                                        className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+                                        onClick={() => {
+                                          setSelectedService(service);
+                                          setServiceSearch(service.name);
+                                          setFilteredServices([]);
+                                          field.onChange(service.id);
+                                        }}
+                                      >
+                                        <div className="flex justify-between items-center">
+                                          <span>{service.name}</span>
+                                          <span className="text-xs text-gray-500">
+                                            {service.category || 'Procedure'}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
