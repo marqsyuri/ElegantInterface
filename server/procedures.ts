@@ -17,6 +17,7 @@ export class DatabaseProcedureStorage implements ProcedureStorage {
       .values({
         ...data,
         userId,
+        price: typeof data.price === 'number' ? data.price.toString() : data.price,
       })
       .returning();
     
@@ -24,9 +25,13 @@ export class DatabaseProcedureStorage implements ProcedureStorage {
   }
 
   async updateProcedure(id: number, userId: string, data: any): Promise<any> {
+    const updateData = {
+      ...data,
+      price: typeof data.price === 'number' ? data.price.toString() : data.price,
+    };
     const [procedure] = await db
       .update(procedures)
-      .set(data)
+      .set(updateData)
       .where(and(eq(procedures.id, id), eq(procedures.userId, userId)))
       .returning();
     

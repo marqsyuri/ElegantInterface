@@ -769,12 +769,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/procedures', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      // Convert price to string if it's a number
-      const bodyWithConvertedPrice = {
-        ...req.body,
-        price: typeof req.body.price === 'number' ? req.body.price.toString() : req.body.price
-      };
-      const procedureData = insertProcedureSchema.parse({ ...bodyWithConvertedPrice, userId });
+      const procedureData = insertProcedureSchema.parse({ ...req.body, userId });
       const procedure = await procedureStorage.createProcedure(userId, procedureData);
       res.json(procedure);
     } catch (error) {
@@ -787,12 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.claims.sub;
-      // Convert price to string if it's a number
-      const bodyWithConvertedPrice = {
-        ...req.body,
-        price: typeof req.body.price === 'number' ? req.body.price.toString() : req.body.price
-      };
-      const updates = updateProcedureSchema.parse(bodyWithConvertedPrice);
+      const updates = updateProcedureSchema.parse(req.body);
       const procedure = await procedureStorage.updateProcedure(id, userId, updates);
       res.json(procedure);
     } catch (error) {

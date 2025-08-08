@@ -506,11 +506,7 @@ export const insertProcedureSchema = createInsertSchema(procedures).omit({
   id: true,
   createdAt: true,
 }).extend({
-  price: z.preprocess((val) => {
-    if (typeof val === "number") return val.toString();
-    if (val === "" || val === null || val === undefined) return "0";
-    return val;
-  }, z.string()),
+  price: z.union([z.string(), z.number()]).optional(),
 });
 
 export const updateProcedureSchema = z.object({
@@ -518,11 +514,7 @@ export const updateProcedureSchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(),
   duration: z.number().optional(),
-  price: z.preprocess((val) => {
-    if (typeof val === "number") return val.toString();
-    if (val === "" || val === null || val === undefined) return "0";
-    return val;
-  }, z.string()).optional(),
+  price: z.union([z.string(), z.number()]).optional(),
   materials: z.array(z.object({
     materialId: z.number(),
     quantity: z.number()
