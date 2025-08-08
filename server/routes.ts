@@ -18,6 +18,7 @@ import {
   insertNotificationSchema,
   insertMarketingCampaignSchema,
   insertProcedureSchema,
+  updateProcedureSchema,
   insertPaymentSchema,
   insertSocialMediaPostSchema,
   users,
@@ -781,7 +782,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.claims.sub;
-      const updates = insertProcedureSchema.partial().parse(req.body);
+      console.log('Received procedure update data:', JSON.stringify(req.body, null, 2));
+      const updates = updateProcedureSchema.parse(req.body);
       const procedure = await procedureStorage.updateProcedure(id, userId, updates);
       res.json(procedure);
     } catch (error) {
