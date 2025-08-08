@@ -623,16 +623,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { publicLink } = req.params;
       const bookingData = req.body;
       
-      console.log('Booking request received:', { publicLink, bookingData });
-      
       // Get company by public link
       const company = await storage.getUserByPublicLink(publicLink);
       if (!company) {
-        console.log('Company not found for public link:', publicLink);
         return res.status(404).json({ message: 'Company not found' });
       }
-      
-      console.log('Company found:', company.id);
 
       // Create or find client
       let client = await db.select().from(clients)
@@ -653,14 +648,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         client = [newClient];
       }
 
-      // Create appointment request (pending status)
+      // Create appointment request (pending status) - using procedure instead of service
       const appointmentData = {
         userId: company.id,
         clientId: client[0].id,
-        serviceId: parseInt(bookingData.serviceId),
+        serviceId: parseInt(bookingData.serviceId), // This will be procedure ID
+        serviceType: 'procedure' as const, // Mark as procedure type
         appointmentDate: new Date(bookingData.preferredDate),
         startTime: bookingData.preferredTime,
-        endTime: bookingData.preferredTime, // Will be calculated based on service duration
+        endTime: bookingData.preferredTime, // Will be calculated based on procedure duration
         status: 'pending' as const,
         notes: bookingData.notes || '',
       };
@@ -719,8 +715,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public services endpoint
-  app.get('/api/public/services/:publicLink', async (req, res) => {
+  // Public procedures endpoint (replacing services for client booking)
+  app.get('/api/public/procedures/:publicLink', async (req, res) => {
     try {
       const { publicLink } = req.params;
       
@@ -731,12 +727,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Company not found" });
       }
 
-      // Get services for this company
-      const services = await storage.getServices(company.id);
-      res.json(services);
+      // Get procedures instead of services
+      const procedures = await procedureStorage.getProcedures(company.id);
+      res.json(procedures);
     } catch (error) {
-      console.error("Error fetching services:", error);
-      res.status(500).json({ message: "Failed to fetch services" });
+      console.error("Error fetching procedures:", error);
+      res.status(500).json({ message: "Failed to fetch procedures" });
     }
   });
 

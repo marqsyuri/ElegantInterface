@@ -27,13 +27,14 @@ const bookingSchema = z.object({
 
 type BookingFormData = z.infer<typeof bookingSchema>;
 
-interface Service {
+interface Procedure {
   id: number;
   name: string;
   description: string;
   duration: number;
-  price: number;
+  price: string;
   category: string;
+  materials?: any[];
 }
 
 interface CompanyInfo {
@@ -83,8 +84,8 @@ export default function ClientBooking() {
     enabled: !!publicLink,
   });
 
-  const { data: services } = useQuery<Service[]>({
-    queryKey: [`/api/public/services/${publicLink}`],
+  const { data: procedures } = useQuery<Procedure[]>({
+    queryKey: [`/api/public/procedures/${publicLink}`],
     enabled: !!publicLink,
   });
 
@@ -104,8 +105,8 @@ export default function ClientBooking() {
       return [];
     }
 
-    const selectedService = services?.find((s: Service) => s.id === parseInt(form.watch('serviceId')));
-    if (!selectedService) return [];
+    const selectedProcedure = procedures?.find((p: Procedure) => p.id === parseInt(form.watch('serviceId')));
+    if (!selectedProcedure) return [];
 
     const selectedDate = form.watch('preferredDate');
     const dayOfWeek = new Date(selectedDate).getDay(); // 0 = Sunday, 1 = Monday, etc.
@@ -139,9 +140,9 @@ export default function ClientBooking() {
         return currentTime >= slotStart && currentTime < slotEnd;
       });
 
-      // Check if there's enough time for the service
-      const serviceEndTime = addMinutes(currentTime, selectedService.duration);
-      if (serviceEndTime <= endTime && !isBooked) {
+      // Check if there's enough time for the procedure
+      const procedureEndTime = addMinutes(currentTime, selectedProcedure.duration);
+      if (procedureEndTime <= endTime && !isBooked) {
         slots.push({
           value: currentTime,
           label: formatTime(currentTime),
@@ -322,26 +323,26 @@ export default function ClientBooking() {
                   />
                 </div>
 
-                {/* Service Selection */}
+                {/* Procedure Selection */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-slate-900">Service Selection</h3>
+                  <h3 className="font-semibold text-slate-900">Procedure Selection</h3>
                   
                   <FormField
                     control={form.control}
                     name="serviceId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Choose Service *</FormLabel>
+                        <FormLabel>Choose Procedure *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a service" />
+                              <SelectValue placeholder="Select a procedure" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {services?.map((service: Service) => (
-                              <SelectItem key={service.id} value={service.id.toString()}>
-                                {service.name} - ${service.price} ({service.duration} min)
+                            {procedures?.map((procedure: Procedure) => (
+                              <SelectItem key={procedure.id} value={procedure.id.toString()}>
+                                {procedure.name} - ${procedure.price} ({procedure.duration} min)
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -397,7 +398,7 @@ export default function ClientBooking() {
                               ) : (
                                 <SelectItem value="no-times-available" disabled>
                                   {!form.watch('preferredDate') ? 'Please select a date first' :
-                                   !form.watch('serviceId') ? 'Please select a service first' :
+                                   !form.watch('serviceId') ? 'Please select a procedure first' :
                                    'No available times for selected date'}
                                 </SelectItem>
                               )}
