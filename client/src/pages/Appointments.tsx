@@ -85,8 +85,21 @@ export default function Appointments() {
     retry: false,
   });
 
-  // Combine services and procedures
-  const allServices = [...(services as any[]), ...(procedures as any[])];
+  // Combine services and procedures with prefixed IDs to avoid conflicts
+  const formattedServices = (services as any[]).map(service => ({
+    ...service,
+    id: `service_${service.id}`,
+    type: 'service'
+  }));
+  
+  const formattedProcedures = (procedures as any[]).map(procedure => ({
+    ...procedure,
+    id: `procedure_${procedure.id}`,
+    type: 'procedure',
+    category: procedure.category || 'Procedure'
+  }));
+  
+  const allServices = [...formattedServices, ...formattedProcedures];
 
   // Reset search fields when dialog closes
   useEffect(() => {
@@ -369,9 +382,17 @@ export default function Appointments() {
                                           setSelectedService(service);
                                           setServiceSearch(service.name);
                                           setFilteredServices([]);
-                                          field.onChange(service.id);
-                                          // Set serviceType in form - if service has category, it's a service; otherwise it's a procedure
-                                          form.setValue('serviceType', service.category ? 'service' : 'procedure');
+                                          
+                                          // Extract the real ID and set the type
+                                          if (service.type === 'procedure') {
+                                            const realId = parseInt(service.id.replace('procedure_', ''));
+                                            field.onChange(realId);
+                                            form.setValue('serviceType', 'procedure');
+                                          } else {
+                                            const realId = parseInt(service.id.replace('service_', ''));
+                                            field.onChange(realId);
+                                            form.setValue('serviceType', 'service');
+                                          }
                                         }}
                                       >
                                         <div className="flex justify-between items-center">
