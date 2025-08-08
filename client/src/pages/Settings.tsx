@@ -22,8 +22,7 @@ import { PublicLinkManager } from "@/components/PublicLinkManager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { ObjectUploader } from "@/components/ObjectUploader";
-import type { UploadResult } from "@uppy/core";
+// Removed ObjectUploader imports - using custom upload implementation
 
 const userFormSchema = insertUserSchema.partial().pick({
   email: true,
@@ -240,66 +239,92 @@ export default function Settings() {
                               <AvatarImage src={user?.profileImageUrl || ""} alt="Profile photo" />
                               <AvatarFallback>{getInitials()}</AvatarFallback>
                             </Avatar>
-                            <div>
-                              <ObjectUploader
-                                maxNumberOfFiles={1}
-                                maxFileSize={5242880}
-                                onGetUploadParameters={async () => {
-                                  const response = await apiRequest('POST', '/api/objects/upload');
-                                  return {
-                                    method: 'PUT' as const,
-                                    url: response.uploadURL,
-                                  };
-                                }}
-                                onComplete={(result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
-                                  console.log('Upload result:', result);
-                                  if (result.successful && result.successful.length > 0) {
-                                    const uploadedFile = result.successful[0];
-                                    // Get the upload URL from the file's upload response
-                                    const uploadUrl = (uploadedFile as any).uploadURL || 
-                                                     (uploadedFile.response && (uploadedFile.response as any).uploadURL) ||
-                                                     uploadedFile.name; // fallback to file name/path
+                            <div className="w-full">
+                              {/* Custom Upload Area - Exact design as shown */}
+                              <div 
+                                className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors cursor-pointer bg-gray-50 w-full"
+                                onClick={() => {
+                                  const input = document.createElement('input');
+                                  input.type = 'file';
+                                  input.accept = 'image/jpeg,image/jpg,image/png';
+                                  input.onchange = async (e) => {
+                                    const file = (e.target as HTMLInputElement).files?.[0];
+                                    if (!file) return;
                                     
-                                    console.log('Upload URL:', uploadUrl);
+                                    if (file.size > 10485760) { // 10MB
+                                      toast({
+                                        title: "Error",
+                                        description: "File size must be less than 10MB",
+                                        variant: "destructive",
+                                      });
+                                      return;
+                                    }
                                     
-                                    // Update user profile with new image URL
-                                    apiRequest('PUT', '/api/profile-image', {
-                                      profileImageUrl: uploadUrl
-                                    }).then(() => {
+                                    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+                                      toast({
+                                        title: "Error", 
+                                        description: "Only JPG and PNG files are allowed",
+                                        variant: "destructive",
+                                      });
+                                      return;
+                                    }
+                                    
+                                    try {
+                                      // Get upload URL
+                                      const uploadResponse = await apiRequest('POST', '/api/objects/upload', {});
+                                      console.log('Upload response:', uploadResponse);
+                                      
+                                      if (!uploadResponse.uploadURL) {
+                                        throw new Error('No upload URL received');
+                                      }
+                                      
+                                      // Upload file directly to the signed URL
+                                      const uploadResult = await fetch(uploadResponse.uploadURL, {
+                                        method: 'PUT',
+                                        body: file,
+                                        headers: {
+                                          'Content-Type': file.type
+                                        }
+                                      });
+                                      
+                                      if (!uploadResult.ok) {
+                                        throw new Error(`Upload failed: ${uploadResult.status}`);
+                                      }
+                                      
+                                      // Convert upload URL to object path for saving
+                                      const objectPath = uploadResponse.uploadURL.split('?')[0]; // Remove query params
+                                      console.log('Object path:', objectPath);
+                                      
+                                      // Update user profile with new image URL
+                                      await apiRequest('PUT', '/api/profile-image', {
+                                        profileImageUrl: objectPath
+                                      });
+                                      
                                       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
                                       toast({
                                         title: "Success",
                                         description: "Profile photo updated successfully!",
                                       });
-                                    }).catch((error) => {
-                                      console.error('Profile image update error:', error);
+                                      
+                                    } catch (error: any) {
+                                      console.error('Upload error:', error);
                                       toast({
                                         title: "Error",
-                                        description: "Failed to update profile photo: " + (error.message || 'Unknown error'),
+                                        description: `Failed to upload photo: ${error.message}`,
                                         variant: "destructive",
                                       });
-                                    });
-                                  } else if (result.failed && result.failed.length > 0) {
-                                    console.error('Upload failed:', result.failed);
-                                    toast({
-                                      title: "Error",
-                                      description: "Failed to upload photo: " + (result.failed[0]?.error?.message || 'Unknown error'),
-                                      variant: "destructive",
-                                    });
-                                  } else {
-                                    console.error('No successful or failed uploads:', result);
-                                    toast({
-                                      title: "Error",
-                                      description: "Failed to upload photo. Please try again.",
-                                      variant: "destructive",
-                                    });
-                                  }
+                                    }
+                                  };
+                                  input.click();
                                 }}
-                                buttonClassName="w-full"
                               >
-                                Change Photo
-                              </ObjectUploader>
-                              <p className="text-sm text-slate-500 mt-1">JPG, PNG or GIF (max. 5MB)</p>
+                                <div className="flex flex-col items-center">
+                                  <User className="w-8 h-8 text-gray-400 mb-2" />
+                                  <Upload className="w-5 h-5 text-gray-400 mb-2" />
+                                  <p className="text-gray-600 font-medium">Click to upload</p>
+                                  <p className="text-sm text-gray-400">JPG or PNG, max 10MB</p>
+                                </div>
+                              </div>
                             </div>
                           </div>
 
