@@ -187,10 +187,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert appointmentDate string to Date object
       const appointmentDate = restData.appointmentDate ? new Date(restData.appointmentDate) : undefined;
       
+      // Calculate total amount based on service/procedure price
+      let totalAmount = 0;
+      if (restData.serviceType === 'procedure') {
+        const procedure = await procedureStorage.getProcedure(restData.serviceId, userId);
+        totalAmount = parseFloat(procedure?.price || '0');
+      } else {
+        const services = await storage.getServices(userId);
+        const selectedService = services.find(s => s.id === restData.serviceId);
+        totalAmount = parseFloat(selectedService?.price || '0');
+      }
+      
       const appointmentData = insertAppointmentSchema.parse({ 
         ...restData, 
         appointmentDate,
         userId,
+        totalAmount: totalAmount.toString(),
+        paidAmount: '0',
+        paymentStatus: 'pending',
         beforeImages: validBeforeImages,
         afterImages: validAfterImages
       });
@@ -231,6 +245,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating appointment:", error);
       res.status(500).json({ message: "Failed to update appointment" });
+    }
+  });
+
+  // Record payment for appointment
+  app.post('/api/appointments/:id/payment', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const appointmentId = parseInt(req.params.id);
+      const { amount, fullPayment } = req.body;
+      
+      // Get the appointment
+      const appointments = await storage.getAppointments(userId);
+      const appointment = appointments.find(a => a.id === appointmentId);
+      
+      if (!appointment) {
+        return res.status(404).json({ message: 'Appointment not found' });
+      }
+      
+      const totalAmount = parseFloat(appointment.totalAmount || '0');
+      const currentPaid = parseFloat(appointment.paidAmount || '0');
+      const paymentAmount = fullPayment ? (totalAmount - currentPaid) : parseFloat(amount);
+      const newPaidAmount = currentPaid + paymentAmount;
+      
+      // Update appointment payment status
+      let paymentStatus = 'partial';
+      if (newPaidAmount >= totalAmount) {
+        paymentStatus = 'paid';
+      }
+      
+      // Update appointment
+      const updatedAppointment = await storage.updateAppointment(appointmentId, {
+        paidAmount: newPaidAmount.toString(),
+        paymentStatus,
+      });
+      
+      // Create financial transaction
+      await storage.createTransaction({
+        userId,
+        clientId: appointment.clientId,
+        appointmentId,
+        type: 'income',
+        description: `Payment for ${appointment.service.name} - ${appointment.client.name}`,
+        amount: paymentAmount.toString(),
+        transactionDate: new Date().toISOString().split('T')[0],
+        category: 'Service Payment',
+        isPaid: true,
+      });
+      
+      res.json(updatedAppointment);
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      res.status(500).json({ message: 'Failed to record payment' });
     }
   });
 

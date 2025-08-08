@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Clock, User, Phone, Mail, FileText, Camera, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, User, Phone, Mail, FileText, Camera, CheckCircle, XCircle, AlertTriangle, DollarSign, CreditCard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +22,7 @@ interface AppointmentDetailsProps {
 export default function AppointmentDetailsDialog({ appointment, isOpen, onClose }: AppointmentDetailsProps) {
   const [status, setStatus] = useState(appointment?.status || 'pending');
   const [notes, setNotes] = useState(appointment?.notes || '');
+  const [paidAmount, setPaidAmount] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -45,12 +47,67 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
     },
   });
 
+  const recordPaymentMutation = useMutation({
+    mutationFn: async (data: { amount: number; fullPayment: boolean }) => {
+      await apiRequest('POST', `/api/appointments/${appointment.id}/payment`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Success",
+        description: "Payment recorded successfully!",
+      });
+      setPaidAmount('');
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to record payment",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!appointment) return null;
 
   const handleStatusChange = (newStatus: string) => {
     const updatedStatus = newStatus || status;
     setStatus(updatedStatus);
     updateAppointmentMutation.mutate({ status: updatedStatus, notes });
+  };
+
+  const handleFullPayment = () => {
+    const totalAmount = parseFloat(appointment.totalAmount || '0');
+    recordPaymentMutation.mutate({ amount: totalAmount, fullPayment: true });
+  };
+
+  const handlePartialPayment = () => {
+    const amount = parseFloat(paidAmount);
+    if (amount > 0) {
+      recordPaymentMutation.mutate({ amount, fullPayment: false });
+    }
+  };
+
+  const getPaymentStatus = () => {
+    const total = parseFloat(appointment.totalAmount || '0');
+    const paid = parseFloat(appointment.paidAmount || '0');
+    const remaining = total - paid;
+    
+    if (paid === 0) return 'unpaid';
+    if (remaining <= 0) return 'paid';
+    return 'partial';
+  };
+
+  const getPaymentBadge = () => {
+    const status = getPaymentStatus();
+    const config = {
+      unpaid: { variant: "destructive" as const, label: "Unpaid" },
+      partial: { variant: "secondary" as const, label: "Partially Paid" },
+      paid: { variant: "default" as const, label: "Paid in Full" },
+    };
+    const { variant, label } = config[status];
+    return <Badge variant={variant}>{label}</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
@@ -181,6 +238,85 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
                     rows={3}
                   />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment Information */}
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-3 flex items-center">
+                <DollarSign className="w-4 h-4 mr-2" />
+                Payment Information
+              </h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-slate-600">Total Amount</label>
+                    <div className="text-lg font-semibold">
+                      ${parseFloat(appointment.totalAmount || '0').toFixed(2)}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-600">Amount Paid</label>
+                    <div className="text-lg font-semibold text-green-600">
+                      ${parseFloat(appointment.paidAmount || '0').toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm text-slate-600">Outstanding Balance</label>
+                    <div className="text-lg font-semibold text-red-600">
+                      ${Math.max(0, parseFloat(appointment.totalAmount || '0') - parseFloat(appointment.paidAmount || '0')).toFixed(2)}
+                    </div>
+                  </div>
+                  {getPaymentBadge()}
+                </div>
+
+                {getPaymentStatus() !== 'paid' && (
+                  <div className="space-y-3 border-t pt-4">
+                    <h4 className="font-medium">Record Payment</h4>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleFullPayment}
+                        disabled={recordPaymentMutation.isPending}
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        Full Payment
+                      </Button>
+                    </div>
+                    
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <label className="text-sm font-medium mb-1 block">Custom Amount</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max={parseFloat(appointment.totalAmount || '0')}
+                          placeholder="0.00"
+                          value={paidAmount}
+                          onChange={(e) => setPaidAmount(e.target.value)}
+                        />
+                      </div>
+                      <Button
+                        onClick={handlePartialPayment}
+                        disabled={!paidAmount || recordPaymentMutation.isPending}
+                        variant="outline"
+                      >
+                        Record Payment
+                      </Button>
+                    </div>
+                    
+                    <p className="text-xs text-slate-500">
+                      This will be automatically recorded in your financial records.
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -21,6 +21,7 @@ const procedureFormSchema = z.object({
   description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   duration: z.number().min(15, "Duration must be at least 15 minutes"),
+  price: z.number().min(0, "Price must be positive"),
   materials: z.array(z.object({
     materialId: z.number(),
     quantity: z.number().min(1, "Quantity must be at least 1"),
@@ -43,6 +44,7 @@ export default function Procedures() {
       description: "",
       category: "",
       duration: 60,
+      price: 0,
       materials: [],
     },
   });
@@ -126,6 +128,7 @@ export default function Procedures() {
       description: procedure.description || "",
       category: procedure.category,
       duration: procedure.duration,
+      price: parseFloat(procedure.price) || 0,
     });
     setMaterialSelections(procedure.materials || []);
     setIsDialogOpen(true);
@@ -243,6 +246,27 @@ export default function Procedures() {
                               step="15"
                               {...field} 
                               onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Price (NZD $)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              step="0.01"
+                              placeholder="0.00"
+                              {...field} 
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                             />
                           </FormControl>
                           <FormMessage />

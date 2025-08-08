@@ -99,6 +99,7 @@ export const procedures = pgTable("procedures", {
   description: text("description"),
   category: varchar("category").notNull(),
   duration: integer("duration"), // in minutes
+  price: decimal("price", { precision: 10, scale: 2 }).default('0'),
   materials: jsonb("materials").$type<{ materialId: number; quantity: number }[]>().default([]),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -115,6 +116,9 @@ export const appointments = pgTable("appointments", {
   duration: integer("duration").default(60), // in minutes
   status: varchar("status").notNull().default("pending"), // pending, confirmed, scheduled, completed, cancelled
   notes: text("notes"),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).default('0'),
+  paidAmount: decimal("paid_amount", { precision: 10, scale: 2 }).default('0'),
+  paymentStatus: varchar("payment_status").default("pending"), // pending, partial, paid
   beforeImages: jsonb("before_images").$type<string[]>().default([]), // array of image URLs
   afterImages: jsonb("after_images").$type<string[]>().default([]), // array of image URLs
   createdAt: timestamp("created_at").defaultNow(),
