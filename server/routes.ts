@@ -623,11 +623,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { publicLink } = req.params;
       const bookingData = req.body;
       
+      console.log('Booking request received:', { publicLink, bookingData });
+      
       // Get company by public link
       const company = await storage.getUserByPublicLink(publicLink);
       if (!company) {
+        console.log('Company not found for public link:', publicLink);
         return res.status(404).json({ message: 'Company not found' });
       }
+      
+      console.log('Company found:', company.id);
 
       // Create or find client
       let client = await db.select().from(clients)
@@ -660,7 +665,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: bookingData.notes || '',
       };
 
+      console.log('Creating appointment with data:', appointmentData);
       const appointment = await storage.createAppointment(appointmentData);
+      console.log('Appointment created:', appointment);
 
       // Create a notification for the business owner
       await db.insert(notifications).values({

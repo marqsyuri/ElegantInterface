@@ -177,7 +177,7 @@ export default function ClientBooking() {
 
   const bookingMutation = useMutation({
     mutationFn: async (data: BookingFormData) => {
-      return await apiRequest('POST', `/api/public/book/${publicLink}`, data);
+      return await apiRequest('POST', `/api/public/company/${publicLink}/booking`, data);
     },
     onSuccess: () => {
       setBookingComplete(true);
