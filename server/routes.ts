@@ -626,7 +626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/objects/:objectPath(*)", isAuthenticated, async (req, res) => {
+  app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
     const userId = req.user?.claims?.sub;
     const objectStorageService = new ObjectStorageService();
     try {

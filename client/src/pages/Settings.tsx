@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell } from "lucide-react";
+import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
