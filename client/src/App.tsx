@@ -15,6 +15,7 @@ import Clinical from "@/pages/Clinical";
 import Financial from "@/pages/Financial";
 import Communication from "@/pages/Communication";
 import Materials from "@/pages/Materials";
+import Procedures from "@/pages/Procedures";
 import Loyalty from "@/pages/Loyalty";
 import Settings from "@/pages/Settings";
 import Staff from "@/pages/Staff";
@@ -45,6 +46,7 @@ function Router() {
           <Route path="/financial" component={Financial} />
           <Route path="/communication" component={Communication} />
           <Route path="/materials" component={Materials} />
+          <Route path="/procedures" component={Procedures} />
           <Route path="/loyalty" component={Loyalty} />
           <Route path="/staff" component={Staff} />
           <Route path="/marketing" component={Marketing} />

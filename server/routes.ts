@@ -21,6 +21,8 @@ import {
   insertSocialMediaPostSchema,
   users,
   clients,
+  appointments,
+  services,
   notifications,
 } from "@shared/schema";
 import { db } from "./db";
@@ -742,8 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const bookedAppointments = await db
         .select({
-          startTime: appointments.startTime,
-          endTime: appointments.endTime,
+          appointmentDate: appointments.appointmentDate,
           duration: appointments.duration,
         })
         .from(appointments)
