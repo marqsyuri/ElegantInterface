@@ -395,7 +395,7 @@ export default function ClientBooking() {
                                   </SelectItem>
                                 ))
                               ) : (
-                                <SelectItem value="" disabled>
+                                <SelectItem value="no-times-available" disabled>
                                   {!form.watch('preferredDate') ? 'Please select a date first' :
                                    !form.watch('serviceId') ? 'Please select a service first' :
                                    'No available times for selected date'}
