@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,11 +22,31 @@ import { PublicLinkManager } from "@/components/PublicLinkManager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import type { UploadResult } from "@uppy/core";
 
-const userFormSchema = insertUserSchema.omit({ id: true });
+const userFormSchema = insertUserSchema.partial().pick({
+  email: true,
+  firstName: true,
+  lastName: true,
+  professionalRegistration: true,
+  specialties: true,
+  clinicName: true,
+  clinicCnpj: true,
+  clinicAddress: true,
+  clinicPhone: true,
+  clinicWhatsapp: true,
+});
 type UserFormData = z.infer<typeof userFormSchema>;
 
-const businessHoursFormSchema = z.array(insertBusinessHoursSchema.omit({ userId: true }));
+const businessHoursFormSchema = z.array(z.object({
+  dayOfWeek: z.string(),
+  isOpen: z.boolean(),
+  openTime: z.string().optional(),
+  closeTime: z.string().optional(),
+  breakStartTime: z.string().optional(),
+  breakEndTime: z.string().optional(),
+}));
 type BusinessHoursFormData = z.infer<typeof businessHoursFormSchema>;
 
 const daysOfWeek = [
@@ -58,7 +79,7 @@ export default function Settings() {
   });
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isCollapsed } = useSidebar();
+  const { isExpanded } = useSidebar();
   const queryClient = useQueryClient();
 
   const form = useForm<UserFormData>({
@@ -85,7 +106,7 @@ export default function Settings() {
 
   const [hoursForm, setHoursForm] = useState<BusinessHoursFormData>(() => {
     return daysOfWeek.map(day => {
-      const existingHour = businessHours.find((h: BusinessHours) => h.dayOfWeek === day.value);
+      const existingHour = Array.isArray(businessHours) ? businessHours.find((h: any) => h.dayOfWeek === day.value) : null;
       return {
         dayOfWeek: day.value,
         isOpen: existingHour?.isOpen ?? true,
@@ -173,7 +194,10 @@ export default function Settings() {
     <div className="min-h-screen bg-slate-50">
       <Sidebar />
       
-      <main className="lg:ml-72 pt-16 lg:pt-0">
+      <main className={cn(
+        "transition-all duration-300 pt-16 lg:pt-0",
+        isExpanded ? "lg:ml-72" : "lg:ml-16"
+      )}>
         <TopHeader title="Settings" subtitle="Manage your profile and system preferences" />
         
         <div className="p-6 space-y-8">
@@ -217,9 +241,41 @@ export default function Settings() {
                               <AvatarFallback>{getInitials()}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <Button type="button" variant="outline">
+                              <ObjectUploader
+                                maxNumberOfFiles={1}
+                                maxFileSize={5242880}
+                                onGetUploadParameters={async () => {
+                                  const response = await apiRequest('POST', '/api/objects/upload');
+                                  return {
+                                    method: 'PUT' as const,
+                                    url: response.uploadURL,
+                                  };
+                                }}
+                                onComplete={(result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+                                  const uploadedFile = result.successful?.[0];
+                                  if (uploadedFile && 'uploadURL' in uploadedFile && uploadedFile.uploadURL) {
+                                    // Update user profile with new image URL
+                                    apiRequest('PUT', '/api/profile-image', {
+                                      profileImageUrl: uploadedFile.uploadURL
+                                    }).then(() => {
+                                      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                                      toast({
+                                        title: "Success",
+                                        description: "Profile photo updated successfully!",
+                                      });
+                                    }).catch(() => {
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to update profile photo.",
+                                        variant: "destructive",
+                                      });
+                                    });
+                                  }
+                                }}
+                                buttonClassName="w-full"
+                              >
                                 Change Photo
-                              </Button>
+                              </ObjectUploader>
                               <p className="text-sm text-slate-500 mt-1">JPG, PNG or GIF (max. 5MB)</p>
                             </div>
                           </div>

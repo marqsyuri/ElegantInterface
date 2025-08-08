@@ -32,7 +32,7 @@ const navigation = [
   { name: "Financial", href: "/financial", icon: CreditCard },
   { name: "Communication", href: "/communication", icon: MessageCircle },
   { name: "PPE & Materials", href: "/materials", icon: ShieldCheck },
-  { name: "Procedures", href: "/procedures", icon: Stethoscope },
+  { name: "Procedures", href: "/procedures", icon: Sparkles },
   { name: "Loyalty", href: "/loyalty", icon: Gift },
   { name: "Staff", href: "/staff", icon: UserCheck },
   { name: "Marketing", href: "/marketing", icon: Mail },
@@ -114,8 +114,8 @@ export default function Sidebar() {
           </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4">
-          <ul className="space-y-1">
+        <div className="flex-1 overflow-hidden p-4">
+          <ul className="space-y-1 overflow-y-auto max-h-full pr-2 scrollbar-hide">
             {navigation.map((item) => {
               const isActive = location === item.href;
               const Icon = item.icon;
@@ -126,7 +126,7 @@ export default function Sidebar() {
                     <div 
                       className={cn(
                         "flex items-center rounded-xl font-medium transition-all duration-200 cursor-pointer group relative overflow-hidden touch-target",
-                        isExpanded ? "px-4 py-3" : "px-2 py-3 justify-center",
+                        isExpanded ? "px-4 py-3" : "px-2 py-3 justify-center items-center",
                         isActive 
                           ? "text-white bg-green-700 border border-green-600 shadow-lg" + (isExpanded ? " border-l-4 border-yellow-400" : "")
                           : "text-slate-300 hover:text-white hover:bg-slate-700/50" + (isExpanded ? " hover:translate-x-1" : "")
@@ -140,7 +140,8 @@ export default function Sidebar() {
                       <Icon className={cn(
                         "w-5 h-5 transition-transform duration-200 relative z-10",
                         isExpanded ? "mr-4" : "mr-0",
-                        isActive && "scale-110"
+                        isActive && "scale-110",
+                        !isExpanded && "mx-auto"
                       )} />
                       {isExpanded && (
                         <span className="relative z-10 tracking-wide transition-opacity duration-300">

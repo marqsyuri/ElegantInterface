@@ -137,6 +137,9 @@ export interface IStorage {
   // Business hours operations
   getBusinessHours(userId: string): Promise<BusinessHours[]>;
   upsertBusinessHours(hours: InsertBusinessHours[]): Promise<BusinessHours[]>;
+  
+  // Profile operations
+  updateUserProfileImage(userId: string, profileImageUrl: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -164,6 +167,16 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async updateUserProfileImage(userId: string, profileImageUrl: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        profileImageUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   // Client operations

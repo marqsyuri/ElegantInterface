@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { procedureStorage } from "./procedures";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import {
   insertClientSchema,
   insertServiceSchema,
@@ -582,6 +583,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error saving business hours:", error);
       res.status(500).json({ message: "Failed to save business hours" });
+    }
+  });
+
+  // Object storage routes for photo upload
+  app.post('/api/objects/upload', isAuthenticated, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error('Error getting upload URL:', error);
+      res.status(500).json({ message: 'Failed to get upload URL' });
+    }
+  });
+
+  app.put('/api/profile-image', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { profileImageUrl } = req.body;
+      
+      if (!profileImageUrl) {
+        return res.status(400).json({ message: 'Profile image URL is required' });
+      }
+
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        profileImageUrl,
+        {
+          owner: userId,
+          visibility: "public",
+        },
+      );
+
+      // Update user profile with new image URL
+      await storage.updateUserProfileImage(userId, objectPath);
+      
+      res.json({ message: 'Profile image updated successfully', objectPath });
+    } catch (error) {
+      console.error('Error updating profile image:', error);
+      res.status(500).json({ message: 'Failed to update profile image' });
+    }
+  });
+
+  app.get("/objects/:objectPath(*)", isAuthenticated, async (req, res) => {
+    const userId = req.user?.claims?.sub;
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const objectFile = await objectStorageService.getObjectEntityFile(
+        req.path,
+      );
+      const canAccess = await objectStorageService.canAccessObjectEntity({
+        objectFile,
+        userId: userId,
+        requestedPermission: "READ" as any,
+      });
+      if (!canAccess) {
+        return res.sendStatus(401);
+      }
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error checking object access:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
     }
   });
 
