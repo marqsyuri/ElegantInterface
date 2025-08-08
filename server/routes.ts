@@ -575,7 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: bookingData.name,
           email: bookingData.email,
           phone: bookingData.phone,
-          dateOfBirth: bookingData.dateOfBirth || null,
+          birthDate: bookingData.dateOfBirth || null,
         }).returning();
         client = [newClient];
       }

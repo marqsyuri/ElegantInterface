@@ -10,6 +10,7 @@ import {
   inventory,
   loyaltyPackages,
   clientPackages,
+  procedures,
   staff,
   staffSchedules,
   notifications,
@@ -39,6 +40,8 @@ import {
   type InsertLoyaltyPackage,
   type ClientPackage,
   type InsertClientPackage,
+  type Procedure,
+  type InsertProcedure,
   type Staff,
   type InsertStaff,
   type StaffSchedule,
@@ -717,26 +720,25 @@ export const procedureStorage = {
       .from(procedures)
       .where(and(eq(procedures.id, procedureId), eq(procedures.userId, userId)));
 
-    if (!procedure || !procedure.requiredMaterials) return;
+    if (!procedure || !procedure.materials) return;
 
     // Deduct each material from inventory
-    for (const material of procedure.requiredMaterials as any[]) {
+    for (const material of procedure.materials as any[]) {
       const [currentMaterial] = await db
         .select()
-        .from(materials)
+        .from(inventory)
         .where(and(
-          eq(materials.id, material.materialId),
-          eq(materials.userId, userId)
+          eq(inventory.id, material.materialId),
+          eq(inventory.userId, userId)
         ));
 
       if (currentMaterial && currentMaterial.currentStock >= material.quantity) {
         await db
-          .update(materials)
+          .update(inventory)
           .set({
-            currentStock: currentMaterial.currentStock - material.quantity,
-            updatedAt: new Date()
+            currentStock: currentMaterial.currentStock - material.quantity
           })
-          .where(eq(materials.id, material.materialId));
+          .where(eq(inventory.id, material.materialId));
       }
     }
   }
