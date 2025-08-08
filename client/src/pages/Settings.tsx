@@ -252,23 +252,46 @@ export default function Settings() {
                                   };
                                 }}
                                 onComplete={(result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
-                                  const uploadedFile = result.successful?.[0];
-                                  if (uploadedFile && 'uploadURL' in uploadedFile && uploadedFile.uploadURL) {
+                                  console.log('Upload result:', result);
+                                  if (result.successful && result.successful.length > 0) {
+                                    const uploadedFile = result.successful[0];
+                                    // Get the upload URL from the file's upload response
+                                    const uploadUrl = (uploadedFile as any).uploadURL || 
+                                                     (uploadedFile.response && (uploadedFile.response as any).uploadURL) ||
+                                                     uploadedFile.name; // fallback to file name/path
+                                    
+                                    console.log('Upload URL:', uploadUrl);
+                                    
                                     // Update user profile with new image URL
                                     apiRequest('PUT', '/api/profile-image', {
-                                      profileImageUrl: uploadedFile.uploadURL
+                                      profileImageUrl: uploadUrl
                                     }).then(() => {
                                       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
                                       toast({
                                         title: "Success",
                                         description: "Profile photo updated successfully!",
                                       });
-                                    }).catch(() => {
+                                    }).catch((error) => {
+                                      console.error('Profile image update error:', error);
                                       toast({
                                         title: "Error",
-                                        description: "Failed to update profile photo.",
+                                        description: "Failed to update profile photo: " + (error.message || 'Unknown error'),
                                         variant: "destructive",
                                       });
+                                    });
+                                  } else if (result.failed && result.failed.length > 0) {
+                                    console.error('Upload failed:', result.failed);
+                                    toast({
+                                      title: "Error",
+                                      description: "Failed to upload photo: " + (result.failed[0]?.error?.message || 'Unknown error'),
+                                      variant: "destructive",
+                                    });
+                                  } else {
+                                    console.error('No successful or failed uploads:', result);
+                                    toast({
+                                      title: "Error",
+                                      description: "Failed to upload photo. Please try again.",
+                                      variant: "destructive",
                                     });
                                   }
                                 }}

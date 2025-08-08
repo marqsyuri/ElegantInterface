@@ -79,7 +79,7 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <nav className={cn(
-        "fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-40 flex flex-col transition-all duration-300",
+        "fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl z-40 flex flex-col transition-all duration-300 scrollbar-hide overflow-y-auto",
         // Dynamic width based on expansion state
         isExpanded ? "w-72" : "w-16 lg:w-16",
         // Desktop: always visible, Mobile: slide in/out
