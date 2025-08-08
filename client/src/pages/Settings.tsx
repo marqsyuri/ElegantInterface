@@ -239,83 +239,83 @@ export default function Settings() {
                         Edit
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
+                    <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto p-4">
+                      <DialogHeader className="pb-2">
                         <DialogTitle>Edit Staff Member</DialogTitle>
                       </DialogHeader>
-                      <Form {...editForm}>
-                        <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-                          <FormField
-                            control={editForm.control}
-                            name="name"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Name</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Staff member name" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={editForm.control}
-                            name="role"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Role</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="e.g., Senior Aesthetician" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={editForm.control}
-                            name="email"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Email</FormLabel>
-                                <FormControl>
-                                  <Input type="email" placeholder="email@example.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={editForm.control}
-                            name="phone"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Phone</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="021 123 4567" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={editForm.control}
-                            name="specialties"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Specialties</FormLabel>
-                                <FormControl>
-                                  <Textarea placeholder="List specialties and certifications" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <div className="grid grid-cols-2 gap-4">
+                      <div className="max-h-[60vh] overflow-y-auto pr-2">
+                        <Form {...editForm}>
+                          <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-3">
+                            <FormField
+                              control={editForm.control}
+                              name="name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Staff member name" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={editForm.control}
+                              name="role"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Role</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Senior Aesthetician" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={editForm.control}
+                              name="email"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Email</FormLabel>
+                                  <FormControl>
+                                    <Input type="email" placeholder="email@example.com" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={editForm.control}
+                              name="phone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Phone</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="021 123 4567" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={editForm.control}
+                              name="specialties"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Specialties</FormLabel>
+                                  <FormControl>
+                                    <Textarea placeholder="List specialties and certifications" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
                             <FormField
                               control={editForm.control}
                               name="commissionRate"
@@ -341,7 +341,7 @@ export default function Settings() {
                               control={editForm.control}
                               name="isActive"
                               render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2 pt-6">
+                                <FormItem className="flex items-center space-x-2">
                                   <FormControl>
                                     <input
                                       type="checkbox"
@@ -355,25 +355,25 @@ export default function Settings() {
                                 </FormItem>
                               )}
                             />
-                          </div>
-                          
-                          <div className="flex justify-end space-x-2 pt-4">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => setEditingStaff(null)}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              type="submit"
-                              disabled={updateStaffMutation.isPending}
-                            >
-                              {updateStaffMutation.isPending ? "Saving..." : "Save Changes"}
-                            </Button>
-                          </div>
-                        </form>
-                      </Form>
+                          </form>
+                        </Form>
+                      </div>
+                      <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200 bg-white sticky bottom-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setEditingStaff(null)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={updateStaffMutation.isPending}
+                          onClick={editForm.handleSubmit(onEditSubmit)}
+                        >
+                          {updateStaffMutation.isPending ? "Saving..." : "Save Changes"}
+                        </Button>
+                      </div>
                     </DialogContent>
                   </Dialog>
                   
