@@ -55,6 +55,7 @@ export default function Appointments() {
     resolver: zodResolver(appointmentFormSchema),
     defaultValues: {
       status: "scheduled",
+      serviceType: "service",
       duration: 60,
       beforeImages: [],
       afterImages: [],
@@ -96,8 +97,15 @@ export default function Appointments() {
       setFilteredServices([]);
       setSelectedClient(null);
       setSelectedService(null);
+      form.reset({
+        status: "scheduled",
+        serviceType: "service",
+        duration: 60,
+        beforeImages: [],
+        afterImages: [],
+      });
     }
-  }, [isDialogOpen]);
+  }, [isDialogOpen, form]);
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: AppointmentFormData) => {
@@ -362,6 +370,8 @@ export default function Appointments() {
                                           setServiceSearch(service.name);
                                           setFilteredServices([]);
                                           field.onChange(service.id);
+                                          // Set serviceType in form - if service has category, it's a service; otherwise it's a procedure
+                                          form.setValue('serviceType', service.category ? 'service' : 'procedure');
                                         }}
                                       >
                                         <div className="flex justify-between items-center">

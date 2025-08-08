@@ -80,7 +80,7 @@ export interface IStorage {
   createService(service: InsertService): Promise<Service>;
   
   // Appointment operations
-  getAppointments(userId: string, date?: Date): Promise<(Appointment & { client: Client; service: Service })[]>;
+  getAppointments(userId: string, date?: Date): Promise<(Appointment & { client: Client; service: any })[]>;
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment>;
   
@@ -212,13 +212,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Appointment operations
-  async getAppointments(userId: string, date?: Date): Promise<(Appointment & { client: Client; service: Service })[]> {
-    let query = db
+  async getAppointments(userId: string, date?: Date): Promise<(Appointment & { client: Client; service: any })[]> {
+    // First get appointments with clients
+    let appointmentQuery = db
       .select({
         id: appointments.id,
         userId: appointments.userId,
         clientId: appointments.clientId,
         serviceId: appointments.serviceId,
+        serviceType: appointments.serviceType,
         appointmentDate: appointments.appointmentDate,
         duration: appointments.duration,
         status: appointments.status,
@@ -227,29 +229,62 @@ export class DatabaseStorage implements IStorage {
         afterImages: appointments.afterImages,
         createdAt: appointments.createdAt,
         client: clients,
-        service: services,
       })
       .from(appointments)
-      .innerJoin(clients, eq(appointments.clientId, clients.id))
-      .innerJoin(services, eq(appointments.serviceId, services.id))
-      .where(eq(appointments.userId, userId));
+      .innerJoin(clients, eq(appointments.clientId, clients.id));
 
+    let whereConditions = [eq(appointments.userId, userId)];
+    
     if (date) {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
       
-      query = query.where(
-        and(
-          eq(appointments.userId, userId),
-          gte(appointments.appointmentDate, startOfDay),
-          lte(appointments.appointmentDate, endOfDay)
-        )
+      whereConditions.push(
+        gte(appointments.appointmentDate, startOfDay),
+        lte(appointments.appointmentDate, endOfDay)
       );
     }
 
-    return await query.orderBy(asc(appointments.appointmentDate));
+    appointmentQuery = appointmentQuery.where(and(...whereConditions));
+    const appointmentsWithClients = await appointmentQuery.orderBy(asc(appointments.appointmentDate));
+    
+    // Now fetch services and procedures for each appointment
+    const result = [];
+    for (const appointment of appointmentsWithClients) {
+      let service;
+      
+      if (appointment.serviceType === 'procedure') {
+        // Fetch from procedures table
+        const [procedure] = await db
+          .select()
+          .from(procedures)
+          .where(and(
+            eq(procedures.id, appointment.serviceId),
+            eq(procedures.userId, userId)
+          ));
+        // Add price field to procedure to match service interface
+        service = procedure ? { ...procedure, price: '0' } : null;
+      } else {
+        // Fetch from services table (default)
+        const [serviceRecord] = await db
+          .select()
+          .from(services)
+          .where(and(
+            eq(services.id, appointment.serviceId),
+            eq(services.userId, userId)
+          ));
+        service = serviceRecord;
+      }
+      
+      result.push({
+        ...appointment,
+        service: service || { id: appointment.serviceId, name: 'Unknown Service', category: 'Unknown', price: '0' }
+      });
+    }
+    
+    return result as (Appointment & { client: Client; service: any })[];
   }
 
   async createAppointment(appointment: InsertAppointment): Promise<Appointment> {

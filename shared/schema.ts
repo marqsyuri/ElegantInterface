@@ -109,7 +109,8 @@ export const appointments = pgTable("appointments", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").notNull().references(() => clients.id),
-  serviceId: integer("service_id").notNull().references(() => services.id),
+  serviceId: integer("service_id").notNull(),
+  serviceType: varchar("service_type").notNull().default("service"), // "service" or "procedure"
   appointmentDate: timestamp("appointment_date").notNull(),
   duration: integer("duration").default(60), // in minutes
   status: varchar("status").notNull().default("pending"), // pending, confirmed, scheduled, completed, cancelled
