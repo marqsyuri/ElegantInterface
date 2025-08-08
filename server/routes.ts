@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage, procedureStorage } from "./storage";
+import { storage } from "./storage";
+import { procedureStorage } from "./procedures";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import {
   insertClientSchema,

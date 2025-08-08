@@ -505,6 +505,11 @@ export const insertClientPackageSchema = createInsertSchema(clientPackages).omit
 export const insertProcedureSchema = createInsertSchema(procedures).omit({
   id: true,
   createdAt: true,
+}).extend({
+  price: z.union([z.string(), z.number()]).transform((val) => {
+    if (typeof val === "number") return val.toString();
+    return val;
+  }).optional(),
 });
 
 export const insertStaffSchema = createInsertSchema(staff).omit({
