@@ -505,6 +505,12 @@ export const insertClientPackageSchema = createInsertSchema(clientPackages).omit
 export const insertProcedureSchema = createInsertSchema(procedures).omit({
   id: true,
   createdAt: true,
+}).extend({
+  price: z.preprocess((val) => {
+    if (typeof val === "number") return val.toString();
+    if (val === "" || val === null || val === undefined) return "0";
+    return val;
+  }, z.string()),
 });
 
 export const updateProcedureSchema = z.object({
