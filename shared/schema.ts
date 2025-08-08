@@ -502,11 +502,17 @@ export const insertClientPackageSchema = createInsertSchema(clientPackages).omit
   createdAt: true,
 });
 
-export const insertProcedureSchema = createInsertSchema(procedures).omit({
-  id: true,
-  createdAt: true,
-}).extend({
+export const insertProcedureSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  category: z.string(),
+  duration: z.number(),
   price: z.union([z.string(), z.number()]).optional(),
+  materials: z.array(z.object({
+    materialId: z.number(),
+    quantity: z.number()
+  })).default([]),
+  isActive: z.boolean().default(true),
 });
 
 export const updateProcedureSchema = z.object({
