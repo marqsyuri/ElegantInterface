@@ -512,10 +512,11 @@ export const updateProcedureSchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(),
   duration: z.number().optional(),
-  price: z.union([z.string(), z.number()]).transform((val) => {
+  price: z.preprocess((val) => {
     if (typeof val === "number") return val.toString();
+    if (val === "" || val === null || val === undefined) return "0";
     return val;
-  }).optional(),
+  }, z.string()).optional(),
   materials: z.array(z.object({
     materialId: z.number(),
     quantity: z.number()
