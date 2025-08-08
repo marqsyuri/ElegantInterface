@@ -21,7 +21,10 @@ const procedureFormSchema = z.object({
   description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   duration: z.number().min(15, "Duration must be at least 15 minutes"),
-  price: z.number().min(0, "Price must be positive"),
+  price: z.union([z.number().min(0, "Price must be positive"), z.string()]).transform((val) => {
+    if (typeof val === "string" && val === "") return 0;
+    return typeof val === "number" ? val : parseFloat(val) || 0;
+  }),
   materials: z.array(z.object({
     materialId: z.number(),
     quantity: z.number().min(1, "Quantity must be at least 1"),
@@ -265,8 +268,16 @@ export default function Procedures() {
                               min="0" 
                               step="0.01"
                               placeholder="0.00"
-                              {...field} 
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              value={field.value || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === "") {
+                                  field.onChange("");
+                                } else {
+                                  const numValue = parseFloat(value);
+                                  field.onChange(isNaN(numValue) ? "" : numValue);
+                                }
+                              }}
                             />
                           </FormControl>
                           <FormMessage />
