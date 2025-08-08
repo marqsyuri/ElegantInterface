@@ -39,6 +39,22 @@ interface Service {
 interface CompanyInfo {
   clinicName: string;
   publicLink: string;
+  clinicWhatsapp?: string;
+}
+
+interface BusinessHour {
+  id: number;
+  dayOfWeek: string;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+  lunchStart?: string;
+  lunchEnd?: string;
+}
+
+interface BookedSlot {
+  startTime: string;
+  endTime: string;
 }
 
 export default function ClientBooking() {
@@ -48,22 +64,36 @@ export default function ClientBooking() {
   const [bookingComplete, setBookingComplete] = useState(false);
   const publicLink = params.publicLink;
 
-  const { data: company } = useQuery({
+  const form = useForm<BookingFormData>({
+    resolver: zodResolver(bookingSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      serviceId: "",
+      preferredDate: "",
+      preferredTime: "",
+      notes: "",
+      isNewClient: true,
+    },
+  });
+
+  const { data: company } = useQuery<CompanyInfo>({
     queryKey: [`/api/public/company/${publicLink}`],
     enabled: !!publicLink,
   });
 
-  const { data: services } = useQuery({
+  const { data: services } = useQuery<Service[]>({
     queryKey: [`/api/public/services/${publicLink}`],
     enabled: !!publicLink,
   });
 
-  const { data: businessHours } = useQuery({
+  const { data: businessHours } = useQuery<BusinessHour[]>({
     queryKey: [`/api/public/business-hours/${publicLink}`],
     enabled: !!publicLink,
   });
 
-  const { data: bookedSlots } = useQuery({
+  const { data: bookedSlots } = useQuery<BookedSlot[]>({
     queryKey: [`/api/public/booked-slots/${publicLink}/${form.watch('preferredDate')}`],
     enabled: !!publicLink && !!form.watch('preferredDate'),
   });
@@ -82,7 +112,7 @@ export default function ClientBooking() {
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayName = dayNames[dayOfWeek];
 
-    const todayHours = businessHours?.find((bh: any) => bh.dayOfWeek === dayName);
+    const todayHours = businessHours?.find((bh: BusinessHour) => bh.dayOfWeek === dayName);
     if (!todayHours || !todayHours.isOpen) {
       return [];
     }
@@ -103,7 +133,7 @@ export default function ClientBooking() {
       }
 
       // Check if slot is available (not booked)
-      const isBooked = bookedSlots?.some((slot: any) => {
+      const isBooked = bookedSlots?.some((slot: BookedSlot) => {
         const slotStart = slot.startTime;
         const slotEnd = slot.endTime;
         return currentTime >= slotStart && currentTime < slotEnd;
@@ -144,20 +174,6 @@ export default function ClientBooking() {
   };
 
   const availableTimeSlots = generateAvailableTimeSlots();
-
-  const form = useForm<BookingFormData>({
-    resolver: zodResolver(bookingSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      serviceId: "",
-      preferredDate: "",
-      preferredTime: "",
-      notes: "",
-      isNewClient: true,
-    },
-  });
 
   const bookingMutation = useMutation({
     mutationFn: async (data: BookingFormData) => {
@@ -210,7 +226,7 @@ export default function ClientBooking() {
                     const message = encodeURIComponent(
                       `Hi! I just submitted a booking request through your website. My name is ${form.getValues('name')}.`
                     );
-                    window.open(`https://wa.me/${company.clinicWhatsapp.replace(/\D/g, '')}?text=${message}`, '_blank');
+                    window.open(`https://wa.me/${company?.clinicWhatsapp?.replace(/\D/g, '') || ''}?text=${message}`, '_blank');
                   }}
                   className="w-full bg-green-600 hover:bg-green-700"
                 >
