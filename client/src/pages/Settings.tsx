@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -17,7 +18,7 @@ import Sidebar from "@/components/Sidebar";
 import TopHeader from "@/components/TopHeader";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useAuth } from "@/hooks/useAuth";
-import { insertUserSchema, insertBusinessHoursSchema, type BusinessHours, type Staff } from "@shared/schema";
+import { insertUserSchema, insertBusinessHoursSchema, insertStaffSchema, type BusinessHours, type Staff } from "@shared/schema";
 import { PublicLinkManager } from "@/components/PublicLinkManager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -83,8 +84,54 @@ export default function Settings() {
 
   // Team Members Section Component
   function TeamMembersSection() {
+    const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
     const { data: staff = [], isLoading: staffLoading } = useQuery({
       queryKey: ['/api/staff'],
+    });
+
+    const staffFormSchema = z.object({
+      name: z.string().min(1, "Name is required"),
+      role: z.string().min(1, "Role is required"),
+      email: z.string().optional(),
+      phone: z.string().optional(),
+      specialties: z.string().optional(),
+      commissionRate: z.number().min(0).max(100),
+      isActive: z.boolean(),
+    });
+    type StaffFormData = z.infer<typeof staffFormSchema>;
+
+    const editForm = useForm<StaffFormData>({
+      resolver: zodResolver(staffFormSchema),
+      defaultValues: {
+        name: "",
+        role: "",
+        email: "",
+        phone: "",
+        specialties: "",
+        commissionRate: 0,
+        isActive: true,
+      },
+    });
+
+    const updateStaffMutation = useMutation({
+      mutationFn: async ({ id, data }: { id: number; data: StaffFormData }) => {
+        await apiRequest('PUT', `/api/staff/${id}`, data);
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
+        setEditingStaff(null);
+        toast({
+          title: "Success",
+          description: "Staff member updated successfully",
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error", 
+          description: `Failed to update staff member: ${error.message}`,
+          variant: "destructive",
+        });
+      },
     });
 
     const deleteStaffMutation = useMutation({
@@ -113,6 +160,25 @@ export default function Settings() {
       }
     };
 
+    const handleEditStaff = (staffMember: Staff) => {
+      setEditingStaff(staffMember);
+      editForm.reset({
+        name: staffMember.name,
+        role: staffMember.role,
+        email: staffMember.email || "",
+        phone: staffMember.phone || "",
+        specialties: staffMember.specialties || "",
+        commissionRate: staffMember.commissionRate,
+        isActive: staffMember.isActive ?? true,
+      });
+    };
+
+    const onEditSubmit = (data: StaffFormData) => {
+      if (editingStaff) {
+        updateStaffMutation.mutate({ id: editingStaff.id, data });
+      }
+    };
+
     if (staffLoading) {
       return <div className="p-4 text-center text-slate-500">Loading team members...</div>;
     }
@@ -121,9 +187,9 @@ export default function Settings() {
       <div className="space-y-6">
         <h4 className="font-medium text-slate-900">Team Members Management</h4>
         
-        {staff.length > 0 ? (
+        {(staff as Staff[]).length > 0 ? (
           <div className="space-y-4">
-            {staff.map((member: Staff) => (
+            {(staff as Staff[]).map((member: Staff) => (
               <div key={member.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors">
                 <div className="flex items-center space-x-4">
                   <Avatar className="w-12 h-12">
@@ -161,14 +227,155 @@ export default function Settings() {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-slate-600 hover:text-slate-800"
-                  >
-                    <Edit className="w-4 h-4 mr-1" />
-                    Edit
-                  </Button>
+                  <Dialog open={editingStaff?.id === member.id} onOpenChange={(open) => !open && setEditingStaff(null)}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-slate-600 hover:text-slate-800"
+                        onClick={() => handleEditStaff(member)}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Edit Staff Member</DialogTitle>
+                      </DialogHeader>
+                      <Form {...editForm}>
+                        <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+                          <FormField
+                            control={editForm.control}
+                            name="name"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Staff member name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={editForm.control}
+                            name="role"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Role</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="e.g., Senior Aesthetician" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={editForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input type="email" placeholder="email@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={editForm.control}
+                            name="phone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="021 123 4567" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={editForm.control}
+                            name="specialties"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Specialties</FormLabel>
+                                <FormControl>
+                                  <Textarea placeholder="List specialties and certifications" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={editForm.control}
+                              name="commissionRate"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Commission Rate (%)</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      placeholder="0"
+                                      {...field}
+                                      onChange={(e) => field.onChange(Number(e.target.value))}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={editForm.control}
+                              name="isActive"
+                              render={({ field }) => (
+                                <FormItem className="flex items-center space-x-2 pt-6">
+                                  <FormControl>
+                                    <input
+                                      type="checkbox"
+                                      checked={field.value}
+                                      onChange={(e) => field.onChange(e.target.checked)}
+                                      className="rounded border-slate-300"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm">Active</FormLabel>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div className="flex justify-end space-x-2 pt-4">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setEditingStaff(null)}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="submit"
+                              disabled={updateStaffMutation.isPending}
+                            >
+                              {updateStaffMutation.isPending ? "Saving..." : "Save Changes"}
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
                   
                   <Button
                     variant="outline"

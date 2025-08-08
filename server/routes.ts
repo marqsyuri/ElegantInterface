@@ -497,6 +497,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/staff/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const staffId = parseInt(req.params.id);
+      const staffData = insertStaffSchema.omit({ userId: true }).parse(req.body);
+      const updatedStaff = await storage.updateStaff(staffId, userId, staffData);
+      res.json(updatedStaff);
+    } catch (error) {
+      console.error("Error updating staff:", error);
+      res.status(500).json({ message: "Failed to update staff" });
+    }
+  });
+
   app.delete('/api/staff/:id', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
