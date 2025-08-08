@@ -497,6 +497,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/staff/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const staffId = parseInt(req.params.id);
+      await storage.deleteStaff(staffId, userId);
+      res.json({ message: "Staff member deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting staff:", error);
+      res.status(500).json({ message: "Failed to delete staff" });
+    }
+  });
+
   // Staff schedules routes
   app.get('/api/staff-schedules', isAuthenticated, async (req: any, res) => {
     try {

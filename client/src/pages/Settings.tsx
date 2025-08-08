@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload } from "lucide-react";
+import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import Sidebar from "@/components/Sidebar";
 import TopHeader from "@/components/TopHeader";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useAuth } from "@/hooks/useAuth";
-import { insertUserSchema, insertBusinessHoursSchema, type BusinessHours } from "@shared/schema";
+import { insertUserSchema, insertBusinessHoursSchema, type BusinessHours, type Staff } from "@shared/schema";
 import { PublicLinkManager } from "@/components/PublicLinkManager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -80,6 +80,137 @@ export default function Settings() {
   const { toast } = useToast();
   const { isExpanded } = useSidebar();
   const queryClient = useQueryClient();
+
+  // Team Members Section Component
+  function TeamMembersSection() {
+    const { data: staff = [], isLoading: staffLoading } = useQuery({
+      queryKey: ['/api/staff'],
+    });
+
+    const deleteStaffMutation = useMutation({
+      mutationFn: async (staffId: number) => {
+        await apiRequest('DELETE', `/api/staff/${staffId}`);
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
+        toast({
+          title: "Success",
+          description: "Staff member removed successfully",
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error", 
+          description: `Failed to remove staff member: ${error.message}`,
+          variant: "destructive",
+        });
+      },
+    });
+
+    const handleRemoveStaff = (staffMember: Staff) => {
+      if (confirm(`Are you sure you want to remove ${staffMember.name} from the team?`)) {
+        deleteStaffMutation.mutate(staffMember.id);
+      }
+    };
+
+    if (staffLoading) {
+      return <div className="p-4 text-center text-slate-500">Loading team members...</div>;
+    }
+
+    return (
+      <div className="space-y-6">
+        <h4 className="font-medium text-slate-900">Team Members Management</h4>
+        
+        {staff.length > 0 ? (
+          <div className="space-y-4">
+            {staff.map((member: Staff) => (
+              <div key={member.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors">
+                <div className="flex items-center space-x-4">
+                  <Avatar className="w-12 h-12">
+                    <AvatarFallback className="bg-green-100 text-green-800">
+                      {member.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3">
+                      <h5 className="font-medium text-slate-900">{member.name}</h5>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        member.isActive 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {member.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    
+                    <div className="text-sm text-slate-500 mt-1">
+                      <div className="flex flex-wrap items-center gap-4">
+                        <span>{member.role}</span>
+                        {member.email && <span>• {member.email}</span>}
+                        {member.phone && <span>• {member.phone}</span>}
+                        <span>• {member.commissionRate}% commission</span>
+                      </div>
+                      {member.specialties && (
+                        <div className="mt-1 text-slate-400">
+                          Specialties: {member.specialties}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-slate-600 hover:text-slate-800"
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                    onClick={() => handleRemoveStaff(member)}
+                    disabled={deleteStaffMutation.isPending}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-slate-50 rounded-lg">
+            <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <h5 className="font-medium text-slate-900 mb-2">No team members yet</h5>
+            <p className="text-slate-500 mb-4">Add staff members to manage your team and schedules</p>
+            <Button variant="outline" onClick={() => window.location.href = '/staff'}>
+              <Users className="w-4 h-4 mr-2" />
+              Go to Staff Management
+            </Button>
+          </div>
+        )}
+
+        <div className="p-4 border border-slate-200 rounded-lg bg-blue-50 border-blue-200">
+          <div className="flex items-start space-x-3">
+            <Users className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h5 className="font-medium text-blue-900">Team Management</h5>
+              <p className="text-sm text-blue-700 mt-1">
+                Manage your team members here. You can edit their information, schedules, and remove them from the team. 
+                For full staff management including adding new members, use the Staff page from the main menu.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
@@ -209,7 +340,7 @@ export default function Settings() {
 
             <CardContent>
               <Tabs defaultValue="profile" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="profile" className="flex items-center gap-2">
                     <User className="w-4 h-4" />
                     Profile
@@ -217,6 +348,10 @@ export default function Settings() {
                   <TabsTrigger value="hours" className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     Operating Hours
+                  </TabsTrigger>
+                  <TabsTrigger value="team" className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Team Members
                   </TabsTrigger>
                   <TabsTrigger value="link" className="flex items-center gap-2">
                     <MessageCircle className="w-4 h-4" />
@@ -271,11 +406,11 @@ export default function Settings() {
                                     
                                     try {
                                       // Get upload URL
-                                      const uploadResponse = await apiRequest('POST', '/api/objects/upload', {});
+                                      const uploadResponse = await apiRequest('POST', '/api/objects/upload');
                                       console.log('Upload response:', uploadResponse);
                                       
-                                      if (!uploadResponse.uploadURL) {
-                                        throw new Error('No upload URL received');
+                                      if (!uploadResponse || !uploadResponse.uploadURL) {
+                                        throw new Error('No upload URL received from server');
                                       }
                                       
                                       // Upload file directly to the signed URL
@@ -747,6 +882,10 @@ export default function Settings() {
                       </div>
                     </div>
                   </div>
+                </TabsContent>
+
+                <TabsContent value="team" className="mt-6">
+                  <TeamMembersSection />
                 </TabsContent>
               </Tabs>
             </CardContent>

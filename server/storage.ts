@@ -635,6 +635,10 @@ export class DatabaseStorage implements IStorage {
     return newStaff;
   }
 
+  async deleteStaff(staffId: number, userId: string): Promise<void> {
+    await db.delete(staff).where(and(eq(staff.id, staffId), eq(staff.userId, userId)));
+  }
+
   async getStaffSchedules(userId: string): Promise<StaffSchedule[]> {
     const results = await db
       .select({
