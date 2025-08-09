@@ -59,6 +59,10 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
         description: "Payment recorded successfully!",
       });
       setPaidAmount('');
+      // Close the dialog after successful payment
+      setTimeout(() => {
+        onClose();
+      }, 1000); // Wait 1 second to show the success message
     },
     onError: (error: any) => {
       const errorMessage = error?.message || "Failed to record payment";
