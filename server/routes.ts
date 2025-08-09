@@ -599,8 +599,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/business-hours', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const hoursArray = req.body.map((hours: any) => ({
-        ...hours,
+      const { hours } = req.body;
+      
+      if (!Array.isArray(hours)) {
+        return res.status(400).json({ message: "Hours must be an array" });
+      }
+      
+      const hoursArray = hours.map((hour: any) => ({
+        ...hour,
         userId,
       }));
       const savedHours = await storage.upsertBusinessHours(hoursArray);
