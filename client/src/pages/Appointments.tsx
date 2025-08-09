@@ -28,6 +28,8 @@ const appointmentFormSchema = insertAppointmentSchema.extend({
   appointmentDate: z.string().min(1, "Date is required"),
   appointmentTime: z.string().min(1, "Time is required"),
   duration: z.number().min(15, "Duration must be at least 15 minutes").default(60),
+  totalAmount: z.string().optional(),
+  paidAmount: z.string().optional(),
   beforeImages: z.array(z.string()).optional(),
   afterImages: z.array(z.string()).optional(),
 }).omit({ userId: true });
@@ -57,6 +59,8 @@ export default function Appointments() {
       status: "scheduled",
       serviceType: "service",
       duration: 60,
+      totalAmount: "",
+      paidAmount: "",
       beforeImages: [],
       afterImages: [],
     },
@@ -114,6 +118,8 @@ export default function Appointments() {
         status: "scheduled",
         serviceType: "service",
         duration: 60,
+        totalAmount: "",
+        paidAmount: "",
         beforeImages: [],
         afterImages: [],
       });
@@ -129,6 +135,8 @@ export default function Appointments() {
         ...appointmentData,
         appointmentDate: appointmentDateTime.toISOString(),
         duration: data.duration || 60,
+        totalAmount: data.totalAmount || "0",
+        paidAmount: data.paidAmount || "0",
         beforeImages: beforeImages,
         afterImages: afterImages,
       });
@@ -393,13 +401,25 @@ export default function Appointments() {
                                             field.onChange(realId);
                                             form.setValue('serviceType', 'service');
                                           }
+                                          
+                                          // Set the price automatically
+                                          if (service.price) {
+                                            form.setValue('totalAmount', service.price.toString());
+                                          }
                                         }}
                                       >
                                         <div className="flex justify-between items-center">
-                                          <span>{service.name}</span>
-                                          <span className="text-xs text-gray-500">
-                                            {service.category || 'Procedure'}
-                                          </span>
+                                          <div>
+                                            <span className="font-medium">{service.name}</span>
+                                            <div className="text-xs text-gray-500">
+                                              {service.category || 'Procedure'}
+                                            </div>
+                                          </div>
+                                          <div className="text-right">
+                                            <div className="font-semibold text-green-600">
+                                              {service.price ? `NZ$${parseFloat(service.price).toFixed(2)}` : 'No price set'}
+                                            </div>
+                                          </div>
                                         </div>
                                       </div>
                                     ))}
@@ -495,6 +515,46 @@ export default function Appointments() {
                                 <SelectItem value="cancelled">Cancelled</SelectItem>
                               </SelectContent>
                             </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="totalAmount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Total Amount (NZ$)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                placeholder="0.00" 
+                                {...field} 
+                                value={field.value || ""} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="paidAmount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Paid Amount (NZ$)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                placeholder="0.00" 
+                                {...field} 
+                                value={field.value || ""} 
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -617,10 +677,16 @@ export default function Appointments() {
                             </div>
                           </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
                             <div>
                               <p className="text-sm text-muted-foreground">Service</p>
                               <p className="font-medium">{appointment.service.name}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Total Amount</p>
+                              <p className="font-semibold text-green-600">
+                                {appointment.totalAmount ? `NZ$${parseFloat(appointment.totalAmount).toFixed(2)}` : 'No amount set'}
+                              </p>
                             </div>
                             {appointment.client.phone && (
                               <div>
@@ -629,6 +695,20 @@ export default function Appointments() {
                               </div>
                             )}
                           </div>
+                          
+                          {(appointment.paidAmount && parseFloat(appointment.paidAmount) > 0) && (
+                            <div className="mt-2">
+                              <p className="text-sm text-muted-foreground">Payment Status</p>
+                              <p className="text-sm">
+                                Paid: <span className="font-semibold text-blue-600">NZ$${parseFloat(appointment.paidAmount).toFixed(2)}</span>
+                                {appointment.totalAmount && parseFloat(appointment.totalAmount) > parseFloat(appointment.paidAmount) && (
+                                  <span className="text-red-600 ml-2">
+                                    (Outstanding: NZ$${(parseFloat(appointment.totalAmount) - parseFloat(appointment.paidAmount)).toFixed(2)})
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          )}
                           
                           {appointment.notes && (
                             <div className="mt-3">
