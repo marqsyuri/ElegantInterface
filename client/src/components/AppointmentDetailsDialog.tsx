@@ -71,11 +71,6 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
 
   if (!appointment) return null;
 
-  // Debug log to check appointment data
-  console.log('Appointment data:', appointment);
-  console.log('Total Amount:', appointment.totalAmount);
-  console.log('Paid Amount:', appointment.paidAmount);
-
   const handleStatusChange = (newStatus: string) => {
     const updatedStatus = newStatus || status;
     setStatus(updatedStatus);
