@@ -172,35 +172,41 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
     return (
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
             <CardTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5" />
               Daily Schedule
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDateChange(subDays(selectedDate, 1))}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="min-w-[200px] text-center font-medium">
-                {formatNZDate(selectedDate)}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDateChange(addDays(selectedDate, 1))}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onDateChange(subDays(selectedDate, 1))}
+                  className="flex-shrink-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="flex-1 sm:min-w-[200px] text-center font-medium text-sm sm:text-base px-2">
+                  {formatNZDate(selectedDate)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onDateChange(addDays(selectedDate, 1))}
+                  className="flex-shrink-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setViewMode('week')}
+                className="w-full sm:w-auto"
               >
-                Week View
+                <span className="xs:hidden">Week</span>
+                <span className="hidden xs:inline">Week View</span>
               </Button>
             </div>
           </div>
@@ -213,8 +219,8 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
               const appointmentsAtTime = getAppointmentsForTimeSlot(selectedDate, hour, minute);
 
               return (
-                <div key={`${hour}-${minute}`} className="flex items-start gap-4 py-2 border-b border-slate-100">
-                  <div className="w-20 text-sm font-medium text-slate-600">
+                <div key={`${hour}-${minute}`} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4 py-2 border-b border-slate-100">
+                  <div className="w-full sm:w-20 text-sm font-medium text-slate-600">
                     {formatNZTime(timeSlotDate)}
                   </div>
                   <div className="flex-1">
@@ -223,7 +229,7 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
                         const endTime = calculateEndTime(appointment.appointmentDate, appointment.duration);
                         return (
                           <div key={appointment.id} className="p-3 bg-slate-50 rounded-lg border">
-                            <div className="flex items-center justify-between mb-2">
+                            <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 mb-2">
                               <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-slate-600" />
                                 <span className="font-medium">{appointment.client.name}</span>
@@ -233,18 +239,18 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
                               </Badge>
                             </div>
                             <div className="text-sm text-slate-600 space-y-1">
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2">
                                 <Clock className="w-3 h-3" />
-                                <span>
+                                <span className="text-xs xs:text-sm">
                                   {formatNZTime(parseISO(appointment.appointmentDate))} - {formatNZTime(endTime)}
-                                  ({appointment.duration || 60} mins)
+                                  <span className="block xs:inline"> ({appointment.duration || 60} mins)</span>
                                 </span>
                               </div>
-                              <div>{appointment.service.name}</div>
+                              <div className="font-medium text-xs xs:text-sm">{appointment.service.name}</div>
                               {appointment.client.phone && (
                                 <div className="flex items-center gap-2">
                                   <Phone className="w-3 h-3" />
-                                  <span>{appointment.client.phone}</span>
+                                  <span className="text-xs xs:text-sm">{appointment.client.phone}</span>
                                 </div>
                               )}
                               {appointment.notes && (
@@ -275,45 +281,52 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
             Weekly Schedule
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onDateChange(subDays(selectedDate, 7))}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="min-w-[200px] text-center font-medium">
-              {format(weekDays[0], "d MMM", { locale: enNZ })} - {format(weekDays[6], "d MMM yyyy", { locale: enNZ })}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onDateChange(addDays(selectedDate, 7))}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDateChange(subDays(selectedDate, 7))}
+                className="flex-shrink-0"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="flex-1 sm:min-w-[200px] text-center font-medium text-sm sm:text-base px-2">
+                {format(weekDays[0], "d MMM", { locale: enNZ })} - {format(weekDays[6], "d MMM yyyy", { locale: enNZ })}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDateChange(addDays(selectedDate, 7))}
+                className="flex-shrink-0"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setViewMode('day')}
+              className="w-full sm:w-auto"
             >
-              Day View
+              <span className="xs:hidden">Day</span>
+              <span className="hidden xs:inline">Day View</span>
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-8 gap-0 border border-slate-200 rounded-lg overflow-hidden">
-          {/* Time column header */}
-          <div className="text-sm font-medium text-slate-700 p-3 bg-slate-100 border-r border-slate-200">
-            Time
-          </div>
+        <div className="overflow-x-auto">
+          <div className="grid grid-cols-8 gap-0 border border-slate-200 rounded-lg overflow-hidden min-w-[800px]">
+            {/* Time column header */}
+            <div className="text-xs sm:text-sm font-medium text-slate-700 p-2 sm:p-3 bg-slate-100 border-r border-slate-200">
+              Time
+            </div>
           
           {/* Day headers */}
           {weekDays.map(day => {
@@ -398,6 +411,7 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
               })
             ];
           })}
+          </div>
         </div>
       </CardContent>
     </Card>

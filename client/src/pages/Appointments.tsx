@@ -311,43 +311,48 @@ export default function Appointments() {
             <p className="text-muted-foreground">Manage your client appointments with New Zealand time format</p>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === 'calendar' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('calendar')}
-              className="flex items-center gap-2"
-            >
-              <Calendar className="w-4 h-4" />
-              Calendar
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              className="flex items-center gap-2"
-            >
-              <List className="w-4 h-4" />
-              List
-            </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="flex rounded-lg border p-1 bg-background">
+              <Button
+                variant={viewMode === 'calendar' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('calendar')}
+                className="flex items-center gap-1 flex-1 sm:flex-none text-xs sm:text-sm"
+              >
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Calendar</span>
+                <span className="xs:hidden">Cal</span>
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="flex items-center gap-1 flex-1 sm:flex-none text-xs sm:text-sm"
+              >
+                <List className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">List</span>
+                <span className="xs:hidden">List</span>
+              </Button>
+            </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-green-700 hover:bg-green-800 text-white flex items-center gap-2">
+                <Button className="bg-green-700 hover:bg-green-800 text-white flex items-center justify-center gap-2 w-full sm:w-auto">
                   <Plus className="w-4 h-4" />
-                  New Appointment
+                  <span className="hidden xs:inline">New Appointment</span>
+                  <span className="xs:hidden">New</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
+                  <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
                     <Camera className="w-5 h-5" />
                     Create New Appointment
                   </DialogTitle>
                 </DialogHeader>
                 
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <FormField
                         control={form.control}
                         name="clientId"
@@ -615,9 +620,15 @@ export default function Appointments() {
                     />
 
                     <Tabs defaultValue="before" className="w-full">
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="before">Before Photos</TabsTrigger>
-                        <TabsTrigger value="after">After Photos</TabsTrigger>
+                      <TabsList className="grid w-full grid-cols-2 h-auto">
+                        <TabsTrigger value="before" className="text-xs sm:text-sm py-2">
+                          <span className="hidden xs:inline">Before Photos</span>
+                          <span className="xs:hidden">Before</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="after" className="text-xs sm:text-sm py-2">
+                          <span className="hidden xs:inline">After Photos</span>
+                          <span className="xs:hidden">After</span>
+                        </TabsTrigger>
                       </TabsList>
                       <TabsContent value="before" className="space-y-4">
                         <FileUpload
@@ -662,8 +673,8 @@ export default function Appointments() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
+                <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                     <List className="w-5 h-5" />
                     Appointments List
                   </CardTitle>
@@ -672,7 +683,7 @@ export default function Appointments() {
                       type="date"
                       value={selectedDate.toISOString().split('T')[0]}
                       onChange={(e) => setSelectedDate(new Date(e.target.value))}
-                      className="w-auto"
+                      className="w-full xs:w-auto text-sm"
                     />
                   </div>
                 </div>
@@ -694,52 +705,57 @@ export default function Appointments() {
                       return (
                         <div 
                           key={appointment.id} 
-                          className="p-4 border rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
+                          className="p-3 sm:p-4 border rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
                           onClick={() => {
                             setSelectedAppointment(appointment);
                             setIsDetailsDialogOpen(true);
                           }}
                         >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2">
-                                {getStatusIcon(appointment.status)}
-                                <Badge className={getStatusColor(appointment.status)}>
-                                  {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                                </Badge>
-                                {(() => {
-                                  const paymentBadge = getPaymentBadge(appointment);
-                                  return (
-                                    <Badge className={`${paymentBadge.variant} flex items-center gap-1`}>
-                                      <span>{paymentBadge.icon}</span>
-                                      {paymentBadge.label}
-                                    </Badge>
-                                  );
-                                })()}
+                          <div className="flex flex-col gap-3">
+                            {/* Top section with client name and time */}
+                            <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2">
+                              <h3 className="font-semibold text-base sm:text-lg">{appointment.client.name}</h3>
+                              <div className="text-sm text-muted-foreground">
+                                <div className="xs:text-right">
+                                  <div className="font-medium">{formatNZTime(appointment.appointmentDate)} - {formatNZTime(endTime.toISOString())}</div>
+                                  <div className="text-xs">({appointment.duration || 60} mins)</div>
+                                </div>
                               </div>
-                              <h3 className="font-semibold text-lg">{appointment.client.name}</h3>
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              {formatNZTime(appointment.appointmentDate)} - {formatNZTime(endTime.toISOString())}
-                              ({appointment.duration || 60} mins)
+                            
+                            {/* Status badges */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              {getStatusIcon(appointment.status)}
+                              <Badge className={getStatusColor(appointment.status)}>
+                                {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                              </Badge>
+                              {(() => {
+                                const paymentBadge = getPaymentBadge(appointment);
+                                return (
+                                  <Badge className={`${paymentBadge.variant} flex items-center gap-1`}>
+                                    <span>{paymentBadge.icon}</span>
+                                    <span className="hidden xs:inline">{paymentBadge.label}</span>
+                                  </Badge>
+                                );
+                              })()}
                             </div>
                           </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-3">
                             <div>
-                              <p className="text-sm text-muted-foreground">Service</p>
-                              <p className="font-medium">{appointment.service.name}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">Service</p>
+                              <p className="font-medium text-sm sm:text-base">{appointment.service.name}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-muted-foreground">Total Amount</p>
-                              <p className="font-semibold text-green-600">
+                              <p className="text-xs sm:text-sm text-muted-foreground">Total Amount</p>
+                              <p className="font-semibold text-green-600 text-sm sm:text-base">
                                 {appointment.totalAmount ? `NZ$${parseFloat(appointment.totalAmount).toFixed(2)}` : 'No amount set'}
                               </p>
                             </div>
                             {appointment.client.phone && (
-                              <div>
-                                <p className="text-sm text-muted-foreground">Phone</p>
-                                <p className="font-medium">{appointment.client.phone}</p>
+                              <div className="xs:col-span-2 sm:col-span-1">
+                                <p className="text-xs sm:text-sm text-muted-foreground">Phone</p>
+                                <p className="font-medium text-sm sm:text-base">{appointment.client.phone}</p>
                               </div>
                             )}
                           </div>
@@ -778,16 +794,17 @@ export default function Appointments() {
 
                           {/* Approval buttons for pending bookings */}
                           {appointment.status === 'pending' && (
-                            <div className="mt-4 flex space-x-2 pt-3 border-t">
+                            <div className="mt-4 flex flex-col xs:flex-row gap-2 xs:gap-2 pt-3 border-t">
                               <Button
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleApproveBooking(appointment.id);
                                 }}
-                                className="bg-green-600 hover:bg-green-700"
+                                className="bg-green-600 hover:bg-green-700 w-full xs:w-auto text-xs sm:text-sm"
                               >
-                                Approve Booking
+                                <span className="hidden xs:inline">Approve Booking</span>
+                                <span className="xs:hidden">Approve</span>
                               </Button>
                               <Button
                                 size="sm"
@@ -796,8 +813,10 @@ export default function Appointments() {
                                   e.stopPropagation();
                                   handleRejectBooking(appointment.id);
                                 }}
+                                className="w-full xs:w-auto text-xs sm:text-sm"
                               >
-                                Reject
+                                <span className="hidden xs:inline">Reject Booking</span>
+                                <span className="xs:hidden">Reject</span>
                               </Button>
                             </div>
                           )}
