@@ -72,6 +72,7 @@ export interface IStorage {
   // Client operations
   getClients(userId: string): Promise<Client[]>;
   getClient(id: number, userId: string): Promise<Client | undefined>;
+  getClientAppointments(userId: string, clientId: number): Promise<Appointment[]>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client>;
   
@@ -208,6 +209,17 @@ export class DatabaseStorage implements IStorage {
       .where(eq(clients.id, id))
       .returning();
     return updatedClient;
+  }
+
+  async getClientAppointments(userId: string, clientId: number): Promise<Appointment[]> {
+    return await db
+      .select()
+      .from(appointments)
+      .where(and(
+        eq(appointments.userId, userId),
+        eq(appointments.clientId, clientId)
+      ))
+      .orderBy(desc(appointments.appointmentDate));
   }
 
   // Service operations
