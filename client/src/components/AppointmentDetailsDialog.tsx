@@ -60,10 +60,22 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
       });
       setPaidAmount('');
     },
-    onError: () => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to record payment";
+      let description = errorMessage;
+      
+      // Handle specific error cases
+      if (errorMessage.includes("already fully paid")) {
+        description = "This appointment is already fully paid.";
+      } else if (errorMessage.includes("exceeds outstanding balance")) {
+        description = "Payment amount exceeds the outstanding balance.";
+      } else if (errorMessage.includes("must be greater than zero")) {
+        description = "Payment amount must be greater than zero.";
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to record payment",
+        title: "Payment Error",
+        description,
         variant: "destructive",
       });
     },
@@ -79,11 +91,45 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
 
   const handleFullPayment = () => {
     const totalAmount = parseFloat(appointment.totalAmount || '0');
-    recordPaymentMutation.mutate({ amount: totalAmount, fullPayment: true });
+    const currentPaid = parseFloat(appointment.paidAmount || '0');
+    const outstandingBalance = totalAmount - currentPaid;
+    
+    if (outstandingBalance <= 0) {
+      toast({
+        title: "Payment Already Complete",
+        description: "This appointment is already fully paid.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    recordPaymentMutation.mutate({ amount: outstandingBalance, fullPayment: true });
   };
 
   const handlePartialPayment = () => {
     const amount = parseFloat(paidAmount);
+    const totalAmount = parseFloat(appointment.totalAmount || '0');
+    const currentPaid = parseFloat(appointment.paidAmount || '0');
+    const outstandingBalance = totalAmount - currentPaid;
+    
+    if (outstandingBalance <= 0) {
+      toast({
+        title: "Payment Already Complete",
+        description: "This appointment is already fully paid.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (amount > outstandingBalance) {
+      toast({
+        title: "Amount Too High",
+        description: `Payment amount cannot exceed outstanding balance of NZ$${outstandingBalance.toFixed(2)}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (amount > 0) {
       recordPaymentMutation.mutate({ amount, fullPayment: false });
     }
@@ -275,7 +321,7 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
                   {getPaymentBadge()}
                 </div>
 
-                {getPaymentStatus() !== 'paid' && (
+                {getPaymentStatus() !== 'paid' && Math.max(0, parseFloat(appointment.totalAmount || '0') - parseFloat(appointment.paidAmount || '0')) > 0 && (
                   <div className="space-y-3 border-t pt-4">
                     <h4 className="font-medium">Record Payment</h4>
                     

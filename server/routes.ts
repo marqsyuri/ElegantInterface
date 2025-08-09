@@ -280,7 +280,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const totalAmount = parseFloat(appointment.totalAmount || '0');
       const currentPaid = parseFloat(appointment.paidAmount || '0');
+      
+      // Check if appointment is already fully paid
+      if (currentPaid >= totalAmount && totalAmount > 0) {
+        return res.status(400).json({ 
+          message: 'Appointment is already fully paid',
+          currentPaid,
+          totalAmount 
+        });
+      }
+      
       const paymentAmount = fullPayment ? (totalAmount - currentPaid) : parseFloat(amount);
+      
+      // Validate payment amount
+      if (paymentAmount <= 0) {
+        return res.status(400).json({ message: 'Payment amount must be greater than zero' });
+      }
+      
+      // Check if payment exceeds outstanding balance
+      const outstandingBalance = totalAmount - currentPaid;
+      if (paymentAmount > outstandingBalance) {
+        return res.status(400).json({ 
+          message: `Payment amount (${paymentAmount}) exceeds outstanding balance (${outstandingBalance})`,
+          outstandingBalance,
+          paymentAmount 
+        });
+      }
+      
       const newPaidAmount = currentPaid + paymentAmount;
       
       // Update appointment payment status
