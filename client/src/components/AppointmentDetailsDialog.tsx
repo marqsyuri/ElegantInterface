@@ -254,13 +254,13 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
                   <div>
                     <label className="text-sm text-slate-600">Total Amount</label>
                     <div className="text-lg font-semibold">
-                      ${parseFloat(appointment.totalAmount || '0').toFixed(2)}
+                      NZ${parseFloat(appointment.totalAmount || '0').toFixed(2)}
                     </div>
                   </div>
                   <div>
                     <label className="text-sm text-slate-600">Amount Paid</label>
                     <div className="text-lg font-semibold text-green-600">
-                      ${parseFloat(appointment.paidAmount || '0').toFixed(2)}
+                      NZ${parseFloat(appointment.paidAmount || '0').toFixed(2)}
                     </div>
                   </div>
                 </div>
@@ -269,7 +269,7 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
                   <div>
                     <label className="text-sm text-slate-600">Outstanding Balance</label>
                     <div className="text-lg font-semibold text-red-600">
-                      ${Math.max(0, parseFloat(appointment.totalAmount || '0') - parseFloat(appointment.paidAmount || '0')).toFixed(2)}
+                      NZ${Math.max(0, parseFloat(appointment.totalAmount || '0') - parseFloat(appointment.paidAmount || '0')).toFixed(2)}
                     </div>
                   </div>
                   {getPaymentBadge()}
