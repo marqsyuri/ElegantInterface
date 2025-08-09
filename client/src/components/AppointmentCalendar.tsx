@@ -15,6 +15,8 @@ interface Appointment {
   duration: number;
   status: string;
   notes?: string;
+  totalAmount?: string;
+  paidAmount?: string;
   client: {
     id: number;
     name: string;
@@ -53,6 +55,45 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
   const formatNZDate = (date: Date) => {
     const nzDate = dateFnsTz.toZonedTime(date, NZ_TIMEZONE);
     return format(nzDate, "EEEE, d MMMM yyyy", { locale: enNZ });
+  };
+
+  const getPaymentStatus = (appointment: Appointment) => {
+    const total = parseFloat(appointment.totalAmount || '0');
+    const paid = parseFloat(appointment.paidAmount || '0');
+    
+    if (total === 0) return 'no-amount';
+    if (paid === 0) return 'unpaid';
+    if (paid >= total) return 'paid';
+    return 'partial';
+  };
+
+  const getPaymentBadge = (appointment: Appointment) => {
+    const status = getPaymentStatus(appointment);
+    const config = {
+      'no-amount': { 
+        variant: 'bg-gray-100 text-gray-600', 
+        label: 'No Amount', 
+        icon: '💰' 
+      },
+      'unpaid': { 
+        variant: 'bg-red-100 text-red-700', 
+        label: 'Unpaid', 
+        icon: '❌' 
+      },
+      'partial': { 
+        variant: 'bg-orange-100 text-orange-700', 
+        label: 'Partial', 
+        icon: '⚠️' 
+      },
+      'paid': { 
+        variant: 'bg-green-100 text-green-700', 
+        label: 'Paid', 
+        icon: '✅' 
+      },
+    };
+    
+    const { variant, label, icon } = config[status as keyof typeof config];
+    return { variant, label, icon };
   };
 
   const getWeekDays = (date: Date) => {
@@ -331,8 +372,9 @@ export default function AppointmentCalendar({ selectedDate, onDateChange, appoin
                             className={`text-xs p-1 rounded border shadow-sm ${statusColorClass} w-full`}
                             title={`${appointment.client?.name} - ${appointment.service?.name} (${duration}min)`}
                           >
-                            <div className="font-semibold truncate">
-                              {appointment.client?.name || 'No Client'}
+                            <div className="font-semibold truncate flex items-center justify-between">
+                              <span>{appointment.client?.name || 'No Client'}</span>
+                              <span>{getPaymentBadge(appointment).icon}</span>
                             </div>
                             <div className="truncate text-xs opacity-90">
                               {appointment.service?.name || 'No Service'}  

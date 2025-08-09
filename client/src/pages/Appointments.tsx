@@ -224,6 +224,45 @@ export default function Appointments() {
     return format(nzDate, "EEEE, d MMMM yyyy 'at' h:mm a", { locale: enNZ });
   };
 
+  const getPaymentStatus = (appointment: any) => {
+    const total = parseFloat(appointment.totalAmount || '0');
+    const paid = parseFloat(appointment.paidAmount || '0');
+    
+    if (total === 0) return 'no-amount';
+    if (paid === 0) return 'unpaid';
+    if (paid >= total) return 'paid';
+    return 'partial';
+  };
+
+  const getPaymentBadge = (appointment: any) => {
+    const status = getPaymentStatus(appointment);
+    const config = {
+      'no-amount': { 
+        variant: 'bg-gray-100 text-gray-600 hover:bg-gray-200', 
+        label: 'No Amount', 
+        icon: '💰' 
+      },
+      'unpaid': { 
+        variant: 'bg-red-100 text-red-700 hover:bg-red-200', 
+        label: 'Unpaid', 
+        icon: '❌' 
+      },
+      'partial': { 
+        variant: 'bg-orange-100 text-orange-700 hover:bg-orange-200', 
+        label: 'Partial', 
+        icon: '⚠️' 
+      },
+      'paid': { 
+        variant: 'bg-green-100 text-green-700 hover:bg-green-200', 
+        label: 'Paid', 
+        icon: '✅' 
+      },
+    };
+    
+    const { variant, label, icon } = config[status as keyof typeof config];
+    return { variant, label, icon };
+  };
+
   const NZ_TIMEZONE = 'Pacific/Auckland';
 
   const formatNZTime = (dateString: string) => {
@@ -668,6 +707,15 @@ export default function Appointments() {
                                 <Badge className={getStatusColor(appointment.status)}>
                                   {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                                 </Badge>
+                                {(() => {
+                                  const paymentBadge = getPaymentBadge(appointment);
+                                  return (
+                                    <Badge className={`${paymentBadge.variant} flex items-center gap-1`}>
+                                      <span>{paymentBadge.icon}</span>
+                                      {paymentBadge.label}
+                                    </Badge>
+                                  );
+                                })()}
                               </div>
                               <h3 className="font-semibold text-lg">{appointment.client.name}</h3>
                             </div>
