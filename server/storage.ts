@@ -287,7 +287,11 @@ export class DatabaseStorage implements IStorage {
       );
     }
 
-    appointmentQuery = appointmentQuery.where(and(...whereConditions));
+    if (whereConditions.length > 1) {
+      appointmentQuery = appointmentQuery.where(and(...whereConditions));
+    } else {
+      appointmentQuery = appointmentQuery.where(whereConditions[0]);
+    }
     const appointmentsWithClients = await appointmentQuery.orderBy(asc(appointments.appointmentDate));
     
     // Now fetch services and procedures for each appointment
@@ -364,12 +368,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(clinicalRecords.userId, userId));
 
     if (clientId) {
-      query = query.where(
-        and(
-          eq(clinicalRecords.userId, userId),
-          eq(clinicalRecords.clientId, clientId)
-        )
-      );
+      query = db
+        .select({
+          id: clinicalRecords.id,
+          userId: clinicalRecords.userId,
+          clientId: clinicalRecords.clientId,
+          appointmentId: clinicalRecords.appointmentId,
+          procedureDate: clinicalRecords.procedureDate,
+          procedure: clinicalRecords.procedure,
+          observations: clinicalRecords.observations,
+          resultRating: clinicalRecords.resultRating,
+          beforeImages: clinicalRecords.beforeImages,
+          afterImages: clinicalRecords.afterImages,
+          nextAppointment: clinicalRecords.nextAppointment,
+          createdAt: clinicalRecords.createdAt,
+          client: clients,
+        })
+        .from(clinicalRecords)
+        .innerJoin(clients, eq(clinicalRecords.clientId, clients.id))
+        .where(
+          and(
+            eq(clinicalRecords.userId, userId),
+            eq(clinicalRecords.clientId, clientId)
+          )
+        );
     }
 
     return await query.orderBy(desc(clinicalRecords.procedureDate));
@@ -403,13 +425,31 @@ export class DatabaseStorage implements IStorage {
       .where(eq(transactions.userId, userId));
 
     if (startDate && endDate) {
-      query = query.where(
-        and(
-          eq(transactions.userId, userId),
-          gte(transactions.transactionDate, startDate.toISOString().split('T')[0]),
-          lte(transactions.transactionDate, endDate.toISOString().split('T')[0])
-        )
-      );
+      query = db
+        .select({
+          id: transactions.id,
+          userId: transactions.userId,
+          clientId: transactions.clientId,
+          appointmentId: transactions.appointmentId,
+          type: transactions.type,
+          description: transactions.description,
+          amount: transactions.amount,
+          transactionDate: transactions.transactionDate,
+          category: transactions.category,
+          isPaid: transactions.isPaid,
+          dueDate: transactions.dueDate,
+          createdAt: transactions.createdAt,
+          client: clients,
+        })
+        .from(transactions)
+        .leftJoin(clients, eq(transactions.clientId, clients.id))
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            gte(transactions.transactionDate, startDate.toISOString().split('T')[0]),
+            lte(transactions.transactionDate, endDate.toISOString().split('T')[0])
+          )
+        );
     }
 
     return await query.orderBy(desc(transactions.transactionDate));
@@ -820,7 +860,7 @@ export const procedureStorage = {
           eq(inventory.userId, userId)
         ));
 
-      if (currentMaterial && currentMaterial.currentStock >= material.quantity) {
+      if (currentMaterial && currentMaterial.currentStock && currentMaterial.currentStock >= material.quantity) {
         await db
           .update(inventory)
           .set({
