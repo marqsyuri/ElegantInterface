@@ -658,12 +658,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Object storage routes for photo upload
   app.post('/api/objects/upload', isAuthenticated, async (req, res) => {
     try {
+      console.log('Getting upload URL for user:', req.user?.claims?.sub);
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      console.log('Generated upload URL:', uploadURL);
       res.json({ uploadURL });
     } catch (error) {
       console.error('Error getting upload URL:', error);
-      res.status(500).json({ message: 'Failed to get upload URL' });
+      res.status(500).json({ message: 'Failed to get upload URL', error: error.message });
     }
   });
 
@@ -700,6 +702,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { heroImageUrl } = req.body;
       
+      console.log('Updating hero image for user:', userId, 'with URL:', heroImageUrl);
+      
       if (!heroImageUrl) {
         return res.status(400).json({ message: 'Hero image URL is required' });
       }
@@ -713,13 +717,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       );
 
+      console.log('Object path after ACL policy:', objectPath);
+
       // Update user profile with new hero image URL
       await storage.updateUserHeroImage(userId, objectPath);
       
+      console.log('Hero image updated successfully in database');
       res.json({ message: 'Hero image updated successfully', objectPath });
     } catch (error) {
       console.error('Error updating hero image:', error);
-      res.status(500).json({ message: 'Failed to update hero image' });
+      res.status(500).json({ message: 'Failed to update hero image', error: error.message });
     }
   });
 

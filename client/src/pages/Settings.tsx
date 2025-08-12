@@ -512,53 +512,85 @@ export default function Settings() {
 
   const handleHeroImageUpload = async (file: File) => {
     try {
+      console.log('Starting hero image upload for file:', file.name);
+      
       // Resize and compress image
       const resizedFile = await resizeAndCompressImage(file, 1200, 0.7);
+      console.log('Image resized successfully:', resizedFile.size, 'bytes');
       
       // Get upload URL
       const uploadURL = await getUploadUrlMutation.mutateAsync();
+      console.log('Got upload URL:', uploadURL);
       
       // Upload to object storage
       const uploadResponse = await fetch(uploadURL, {
         method: 'PUT',
         body: resizedFile,
         headers: {
-          'Content-Type': file.type
+          'Content-Type': 'image/jpeg'
         }
       });
 
+      console.log('Upload response status:', uploadResponse.status);
+
       if (!uploadResponse.ok) {
-        throw new Error('Failed to upload image');
+        const errorText = await uploadResponse.text();
+        console.error('Upload failed with response:', errorText);
+        throw new Error(`Failed to upload image: ${uploadResponse.status} ${errorText}`);
       }
 
       // Update hero image in database
       await heroImageUploadMutation.mutateAsync(uploadURL);
       setHeroImageUrl(uploadURL);
+      
+      toast({
+        title: "Success",
+        description: "Hero image uploaded successfully!",
+      });
     } catch (error) {
       console.error('Upload error:', error);
       toast({
         title: "Upload Failed",
-        description: "There was a problem uploading your hero image. Please try again.",
+        description: error instanceof Error ? error.message : "There was a problem uploading your hero image. Please try again.",
         variant: "destructive",
       });
     }
   };
 
   const resizeAndCompressImage = (file: File, maxWidth: number, quality: number): Promise<File> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
 
       img.onload = () => {
-        // Calculate new dimensions
-        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-        canvas.width = img.width * ratio;
-        canvas.height = img.height * ratio;
+        try {
+          // Calculate new dimensions
+          const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+          canvas.width = img.width * ratio;
+          canvas.height = img.height * ratio;
 
-        // Draw and compress
-        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(resolve as any, 'image/jpeg', quality);
+          // Draw and compress
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              // Convert blob to File with proper filename and type
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Failed to compress image'));
+            }
+          }, 'image/jpeg', quality);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
       };
 
       img.src = URL.createObjectURL(file);
