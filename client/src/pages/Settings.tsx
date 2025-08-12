@@ -485,7 +485,8 @@ export default function Settings() {
 
   const heroImageUploadMutation = useMutation({
     mutationFn: async (heroImageUrl: string) => {
-      await apiRequest('PUT', '/api/hero-image', { heroImageUrl });
+      const response = await apiRequest('PUT', '/api/hero-image', { heroImageUrl });
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -494,7 +495,8 @@ export default function Settings() {
         description: "Hero image updated successfully!",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Hero image update error:', error);
       toast({
         title: "Error", 
         description: "Failed to update hero image. Please try again.",
@@ -506,7 +508,7 @@ export default function Settings() {
   const getUploadUrlMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/objects/upload', {});
-      return response.uploadURL;
+      return response.uploadURL as string;
     },
   });
 
@@ -561,7 +563,7 @@ export default function Settings() {
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const img = new Image();
+      const img = document.createElement('img') as HTMLImageElement;
 
       img.onload = () => {
         try {
