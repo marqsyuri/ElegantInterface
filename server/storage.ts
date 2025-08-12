@@ -68,6 +68,8 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByPublicLink(publicLink: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser & { id: string }): Promise<User>;
+  updateUserProfileImage(userId: string, profileImageUrl: string): Promise<void>;
+  updateUserHeroImage(userId: string, heroImageUrl: string): Promise<void>;
   
   // Client operations
   getClients(userId: string): Promise<Client[]>;
@@ -175,6 +177,16 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({
         profileImageUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserHeroImage(userId: string, heroImageUrl: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        heroImageUrl,
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));

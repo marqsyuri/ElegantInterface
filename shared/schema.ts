@@ -35,6 +35,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  heroImageUrl: varchar("hero_image_url"), // Hero image for client booking page
   professionalRegistration: varchar("professional_registration"),
   specialties: text("specialties"),
   clinicName: varchar("clinic_name"),

@@ -695,6 +695,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/hero-image', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { heroImageUrl } = req.body;
+      
+      if (!heroImageUrl) {
+        return res.status(400).json({ message: 'Hero image URL is required' });
+      }
+
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        heroImageUrl,
+        {
+          owner: userId,
+          visibility: "public",
+        },
+      );
+
+      // Update user profile with new hero image URL
+      await storage.updateUserHeroImage(userId, objectPath);
+      
+      res.json({ message: 'Hero image updated successfully', objectPath });
+    } catch (error) {
+      console.error('Error updating hero image:', error);
+      res.status(500).json({ message: 'Failed to update hero image' });
+    }
+  });
+
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
     const userId = req.user?.claims?.sub;
     const objectStorageService = new ObjectStorageService();

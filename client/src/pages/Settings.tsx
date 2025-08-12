@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit } from "lucide-react";
+import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit, Image, Monitor, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,7 +77,15 @@ export default function Settings() {
     sms: false,
     push: true,
   });
+  const [heroImageUrl, setHeroImageUrl] = useState<string>("");
+
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.heroImageUrl) {
+      setHeroImageUrl(user.heroImageUrl);
+    }
+  }, [user?.heroImageUrl]);
   const { toast } = useToast();
   const { isExpanded } = useSidebar();
   const queryClient = useQueryClient();
@@ -474,6 +482,88 @@ export default function Settings() {
       });
     },
   });
+
+  const heroImageUploadMutation = useMutation({
+    mutationFn: async (heroImageUrl: string) => {
+      await apiRequest('PUT', '/api/hero-image', { heroImageUrl });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Success",
+        description: "Hero image updated successfully!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error", 
+        description: "Failed to update hero image. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getUploadUrlMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/objects/upload', {});
+      return response.uploadURL;
+    },
+  });
+
+  const handleHeroImageUpload = async (file: File) => {
+    try {
+      // Resize and compress image
+      const resizedFile = await resizeAndCompressImage(file, 1200, 0.7);
+      
+      // Get upload URL
+      const uploadURL = await getUploadUrlMutation.mutateAsync();
+      
+      // Upload to object storage
+      const uploadResponse = await fetch(uploadURL, {
+        method: 'PUT',
+        body: resizedFile,
+        headers: {
+          'Content-Type': file.type
+        }
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      // Update hero image in database
+      await heroImageUploadMutation.mutateAsync(uploadURL);
+      setHeroImageUrl(uploadURL);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: "There was a problem uploading your hero image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resizeAndCompressImage = (file: File, maxWidth: number, quality: number): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        // Calculate new dimensions
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(resolve as any, 'image/jpeg', quality);
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: UserFormData) => {
@@ -1005,6 +1095,84 @@ export default function Settings() {
                 </TabsContent>
 
                 <TabsContent value="link" className="space-y-6">
+                  {/* Hero Image Upload Section */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Image className="h-5 w-5" />
+                        Hero Image
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Upload a hero image for your client booking page. This image will be displayed at the top of your public booking page.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Hero Image Preview */}
+                      {(user?.heroImageUrl || heroImageUrl) && (
+                        <div className="mb-4">
+                          <img
+                            src={user?.heroImageUrl || heroImageUrl}
+                            alt="Hero image preview"
+                            className="w-full max-w-md h-48 object-cover rounded-lg border border-slate-200"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Upload Area - Matching provided design */}
+                      <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-slate-400 transition-colors">
+                        <input
+                          type="file"
+                          id="hero-upload"
+                          className="hidden"
+                          accept="image/jpeg,image/jpg,image/png"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleHeroImageUpload(file);
+                          }}
+                        />
+                        <label htmlFor="hero-upload" className="cursor-pointer">
+                          <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-slate-900 mb-2">
+                            Upload Hero Image
+                          </h3>
+                          <p className="text-sm text-slate-600 mb-4">
+                            Drop your image here or click to browse
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            JPG, PNG up to 10MB
+                          </p>
+                        </label>
+                      </div>
+
+                      {/* Resolution Recommendations */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                          <Monitor className="h-5 w-5 text-slate-600" />
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">Desktop</p>
+                            <p className="text-xs text-slate-600">Recommended: 1920x600px</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                          <Smartphone className="h-5 w-5 text-slate-600" />
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">Mobile</p>
+                            <p className="text-xs text-slate-600">Optimised automatically</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Loading indicator */}
+                      {(heroImageUploadMutation.isPending || getUploadUrlMutation.isPending) && (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                          <span className="ml-2 text-sm text-slate-600">Uploading...</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Public Link Manager */}
                   {user && <PublicLinkManager user={user} />}
                 </TabsContent>
 
