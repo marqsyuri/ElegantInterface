@@ -541,9 +541,13 @@ export default function Settings() {
         throw new Error(`Failed to upload image: ${uploadResponse.status} ${errorText}`);
       }
 
+      // Convert upload URL to object path for saving
+      const objectPath = uploadURL.split('?')[0]; // Remove query params
+      console.log('Object path for hero image:', objectPath);
+      
       // Update hero image in database
-      await heroImageUploadMutation.mutateAsync(uploadURL);
-      setHeroImageUrl(uploadURL);
+      await heroImageUploadMutation.mutateAsync(objectPath);
+      setHeroImageUrl(objectPath);
       
       toast({
         title: "Success",
