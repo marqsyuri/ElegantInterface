@@ -199,6 +199,7 @@ export default function ClientBooking() {
   };
 
   const handleProfessionalSelected = () => {
+    console.log("handleProfessionalSelected called, selectedProfessional:", selectedProfessional);
     if (!selectedProfessional) {
       toast({
         title: "No Professional Selected",
@@ -208,6 +209,7 @@ export default function ClientBooking() {
       return;
     }
     form.setValue('selectedProfessional', selectedProfessional);
+    console.log("Setting showCalendar to true");
     setShowCalendar(true);
   };
 
@@ -243,7 +245,7 @@ export default function ClientBooking() {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       
-      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'lowercase' });
+      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       const businessDay = businessHours?.find(bh => bh.dayOfWeek === dayOfWeek);
       
       if (businessDay?.isOpen) {
@@ -267,7 +269,7 @@ export default function ClientBooking() {
     if (!businessHours || !date) return [];
     
     const selectedDateObj = new Date(date);
-    const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'lowercase' });
+    const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
     const businessDay = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
     
     if (!businessDay?.isOpen) return [];
@@ -422,13 +424,23 @@ export default function ClientBooking() {
           {selectedProfessional && (
             <div className="mt-6">
               <Button 
-                onClick={handleProfessionalSelected}
+                onClick={() => {
+                  console.log("Button clicked!");
+                  handleProfessionalSelected();
+                }}
                 className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
               >
                 Continue to Date & Time
               </Button>
             </div>
           )}
+          
+          {/* Debug info */}
+          <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
+            <p>Debug: selectedProfessional = {selectedProfessional || "null"}</p>
+            <p>Debug: showCalendar = {showCalendar.toString()}</p>
+            <p>Debug: businessHours = {businessHours ? businessHours.length : "null"}</p>
+          </div>
         </div>
       </div>
     );
