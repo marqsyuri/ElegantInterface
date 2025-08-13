@@ -96,7 +96,7 @@ export default function ClientAccess() {
   };
 
   const openWhatsApp = () => {
-    if (company.clinicWhatsapp) {
+    if (company?.clinicWhatsapp) {
       const message = encodeURIComponent(
         `Hi! I found your clinic online and would like to know more about your services.`
       );
@@ -105,7 +105,7 @@ export default function ClientAccess() {
     }
   };
 
-  const groupedServices = services?.reduce((acc: any, service: Service) => {
+  const groupedServices = (services as Service[])?.reduce((acc: any, service: Service) => {
     if (!acc[service.category]) {
       acc[service.category] = [];
     }
@@ -118,15 +118,16 @@ export default function ClientAccess() {
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between space-x-4">
+          {/* Desktop Layout */}
+          <div className="hidden md:flex items-center justify-between space-x-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage src={company.profileImageUrl || ''} />
+              <AvatarImage src={company?.profileImageUrl || ''} />
               <AvatarFallback className="bg-green-100 text-green-700 text-xl font-bold">
-                {company.clinicName ? company.clinicName.charAt(0).toUpperCase() : 'C'}
+                {company?.clinicName ? company.clinicName.charAt(0).toUpperCase() : 'C'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-slate-900">{company.clinicName}</h1>
+              <h1 className="text-3xl font-bold text-slate-900">{company?.clinicName}</h1>
               <p className="text-slate-600 mt-1">Professional Beauty & Wellness</p>
             </div>
             <Link href={`/client/${publicLink}/booking`}>
@@ -134,6 +135,29 @@ export default function ClientAccess() {
                 Book Now
               </Button>
             </Link>
+          </div>
+
+          {/* Mobile Layout */}
+          <div className="md:hidden">
+            <div className="flex items-start space-x-4 mb-4">
+              <Avatar className="h-16 w-16 flex-shrink-0">
+                <AvatarImage src={company?.profileImageUrl || ''} />
+                <AvatarFallback className="bg-green-100 text-green-700 text-xl font-bold">
+                  {company?.clinicName ? company.clinicName.charAt(0).toUpperCase() : 'C'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl font-bold text-slate-900 break-words">{company?.clinicName}</h1>
+                <p className="text-slate-600 mt-1">Professional Beauty & Wellness</p>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <Link href={`/client/${publicLink}/booking`} className="w-full">
+                <Button className="w-full bg-green-600 hover:bg-green-700 py-3 text-lg font-medium">
+                  Book Now
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -149,7 +173,7 @@ export default function ClientAccess() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {company.clinicAddress && (
+              {company?.clinicAddress && (
                 <div className="flex items-start space-x-3">
                   <MapPin className="w-5 h-5 text-slate-400 mt-0.5" />
                   <div>
@@ -159,7 +183,7 @@ export default function ClientAccess() {
                 </div>
               )}
 
-              {company.clinicPhone && (
+              {company?.clinicPhone && (
                 <div className="flex items-start space-x-3">
                   <Phone className="w-5 h-5 text-slate-400 mt-0.5" />
                   <div>
@@ -172,7 +196,7 @@ export default function ClientAccess() {
               )}
             </div>
 
-            {company.clinicWhatsapp && (
+            {company?.clinicWhatsapp && (
               <div className="pt-4 border-t border-slate-200">
                 <Button 
                   onClick={openWhatsApp}
@@ -222,7 +246,7 @@ export default function ClientAccess() {
         )}
 
         {/* Services */}
-        {services && services.length > 0 && (
+        {services && Array.isArray(services) && services.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Our Services</CardTitle>
