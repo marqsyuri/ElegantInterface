@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Calendar, User, Phone, Mail, MessageSquare, CheckCircle, MapPin, ChevronDown, ChevronRight } from "lucide-react";
+import AppointmentCalendar from "@/components/AppointmentCalendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -608,62 +609,48 @@ export default function ClientBooking() {
                   )}
                 </div>
 
-                {/* Preferred Date & Time */}
+                {/* Calendar & Time Selection */}
                 <div className="space-y-4" data-section="appointment-details">
-                  <h3 className="font-semibold text-slate-900">Preferred Date & Time</h3>
+                  <h3 className="font-semibold text-slate-900">Select Date & Time</h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="preferredDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Preferred Date *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="date" 
-                              min={new Date().toISOString().split('T')[0]}
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="preferredTime"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Preferred Time *</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select time" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {availableTimeSlots.length > 0 ? (
-                                availableTimeSlots.map((slot) => (
-                                  <SelectItem key={slot.value} value={slot.value}>
-                                    {slot.label}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="no-times-available" disabled>
-                                  {!form.watch('preferredDate') ? 'Please select a date first' :
-                                   selectedServices.length === 0 ? 'Please select services first' :
-                                   'No available times for selected date'}
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <AppointmentCalendar
+                    businessHours={businessHours || []}
+                    selectedServices={selectedServices}
+                    procedures={procedures || []}
+                    onDateTimeSelect={(date, time) => {
+                      form.setValue('preferredDate', date);
+                      form.setValue('preferredTime', time);
+                    }}
+                    selectedDate={form.watch('preferredDate')}
+                    selectedTime={form.watch('preferredTime')}
+                  />
+                  
+                  {/* Hidden form fields to store selected values */}
+                  <FormField
+                    control={form.control}
+                    name="preferredDate"
+                    render={({ field }) => (
+                      <FormItem className="hidden">
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="preferredTime"
+                    render={({ field }) => (
+                      <FormItem className="hidden">
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 {/* Additional Notes */}

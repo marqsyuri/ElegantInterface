@@ -1,419 +1,298 @@
-import { useState } from "react";
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Calendar, ChevronLeft, ChevronRight, Clock, User, Phone } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
-import { enNZ } from "date-fns/locale";
-import * as dateFnsTz from "date-fns-tz";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
-interface Appointment {
+interface BusinessHour {
+  dayOfWeek: string;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+  breakStartTime?: string;
+  breakEndTime?: string;
+}
+
+interface Procedure {
   id: number;
-  appointmentDate: string;
+  name: string;
   duration: number;
-  status: string;
-  notes?: string;
-  totalAmount?: string;
-  paidAmount?: string;
-  client: {
-    id: number;
-    name: string;
-    phone?: string;
-  };
-  service: {
-    id: number;
-    name: string;
-  };
+  price: string;
 }
 
 interface AppointmentCalendarProps {
-  selectedDate: Date;
-  onDateChange: (date: Date) => void;
-  appointments: Appointment[];
+  businessHours: BusinessHour[];
+  selectedServices: string[];
+  procedures: Procedure[];
+  onDateTimeSelect: (date: string, time: string) => void;
+  selectedDate?: string;
+  selectedTime?: string;
 }
 
-export default function AppointmentCalendar({ selectedDate, onDateChange, appointments }: AppointmentCalendarProps) {
-  const [viewMode, setViewMode] = useState<'day' | 'week'>('week');
-  
-  // New Zealand timezone
-  const NZ_TIMEZONE = 'Pacific/Auckland';
-  
-  // Generate time slots for the calendar (8 AM to 8 PM in 30-minute intervals)
-  const timeSlots = Array.from({ length: 24 }, (_, i) => {
-    const hour = 8 + Math.floor(i / 2);
-    const minute = i % 2 === 0 ? 0 : 30;
-    return { hour, minute };
-  });
+const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const dayMap = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6
+};
 
-  const formatNZTime = (date: Date) => {
-    const nzDate = dateFnsTz.toZonedTime(date, NZ_TIMEZONE);
-    return format(nzDate, "h:mm a", { locale: enNZ });
+export default function AppointmentCalendar({
+  businessHours,
+  selectedServices,
+  procedures,
+  onDateTimeSelect,
+  selectedDate,
+  selectedTime
+}: AppointmentCalendarProps) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
+
+  // Calculate total duration of selected services
+  const totalDuration = useMemo(() => {
+    return selectedServices.reduce((total, serviceId) => {
+      const procedure = procedures.find(p => p.id.toString() === serviceId);
+      return total + (procedure?.duration || 0);
+    }, 0);
+  }, [selectedServices, procedures]);
+
+  // Get business hours for a specific day
+  const getBusinessHoursForDay = (date: Date) => {
+    const dayName = dayNames[date.getDay()].toLowerCase();
+    return businessHours.find(bh => bh.dayOfWeek === dayName);
   };
 
-  const formatNZDate = (date: Date) => {
-    const nzDate = dateFnsTz.toZonedTime(date, NZ_TIMEZONE);
-    return format(nzDate, "EEEE, d MMMM yyyy", { locale: enNZ });
+  // Check if a date is available for booking
+  const isDateAvailable = (date: Date) => {
+    if (date < new Date(new Date().setHours(0, 0, 0, 0))) return false;
+    const businessHour = getBusinessHoursForDay(date);
+    return businessHour?.isOpen || false;
   };
 
-  const getPaymentStatus = (appointment: Appointment) => {
-    const total = parseFloat(appointment.totalAmount || '0');
-    const paid = parseFloat(appointment.paidAmount || '0');
-    
-    if (total === 0) return 'no-amount';
-    if (paid === 0) return 'unpaid';
-    if (paid >= total) return 'paid';
-    return 'partial';
-  };
+  // Generate available time slots for a specific date
+  const getAvailableTimeSlots = (date: Date) => {
+    const businessHour = getBusinessHoursForDay(date);
+    if (!businessHour?.isOpen) return [];
 
-  const getPaymentBadge = (appointment: Appointment) => {
-    const status = getPaymentStatus(appointment);
-    const config = {
-      'no-amount': { 
-        variant: 'bg-gray-100 text-gray-600', 
-        label: 'No Amount', 
-        icon: '💰' 
-      },
-      'unpaid': { 
-        variant: 'bg-red-100 text-red-700', 
-        label: 'Unpaid', 
-        icon: '❌' 
-      },
-      'partial': { 
-        variant: 'bg-orange-100 text-orange-700', 
-        label: 'Partial', 
-        icon: '⚠️' 
-      },
-      'paid': { 
-        variant: 'bg-green-100 text-green-700', 
-        label: 'Paid', 
-        icon: '✅' 
-      },
-    };
-    
-    const { variant, label, icon } = config[status as keyof typeof config];
-    return { variant, label, icon };
-  };
+    const slots = [];
+    const openTime = parseTime(businessHour.openTime);
+    const closeTime = parseTime(businessHour.closeTime);
+    const breakStart = businessHour.breakStartTime ? parseTime(businessHour.breakStartTime) : null;
+    const breakEnd = businessHour.breakEndTime ? parseTime(businessHour.breakEndTime) : null;
 
-  const getWeekDays = (date: Date) => {
-    const start = startOfWeek(date, { weekStartsOn: 1 }); // Monday start
-    const end = endOfWeek(date, { weekStartsOn: 1 });
-    return eachDayOfInterval({ start, end });
-  };
-
-  const getAppointmentsForTimeSlot = (day: Date, hour: number, minute: number) => {
-    if (!Array.isArray(appointments)) return [];
-    const filtered = appointments.filter(appointment => {
-      const appointmentDate = parseISO(appointment.appointmentDate);
-      const nzAppointmentDate = dateFnsTz.toZonedTime(appointmentDate, NZ_TIMEZONE);
-      const nzDay = dateFnsTz.toZonedTime(day, NZ_TIMEZONE);
+    // Generate 30-minute slots
+    for (let time = openTime; time < closeTime; time += 30) {
+      // Skip lunch break times
+      if (breakStart && breakEnd && time >= breakStart && time < breakEnd) continue;
       
-      const appointmentHour = nzAppointmentDate.getHours();
-      const appointmentMinute = nzAppointmentDate.getMinutes();
+      // Check if there's enough time for the appointment before lunch break
+      if (breakStart && time < breakStart && time + totalDuration > breakStart) continue;
       
-      // Check if appointment starts at this time slot or overlaps with it
-      const slotStartTime = hour * 60 + minute;
-      const appointmentStartTime = appointmentHour * 60 + appointmentMinute;
-      
-      const isMatch = isSameDay(nzAppointmentDate, nzDay) && 
-             appointmentStartTime === slotStartTime; // Only show at start time to avoid duplicates
-             
+      // Check if there's enough time before closing
+      if (time + totalDuration > closeTime) continue;
 
-      
-      return isMatch;
-    });
-    
-    return filtered;
+      const timeString = formatTimeSlot(time);
+      slots.push({
+        value: timeString,
+        label: timeString,
+        available: true
+      });
+    }
+
+    return slots;
   };
 
-  const getAppointmentsForDay = (day: Date) => {
-    return appointments.filter(appointment => {
-      const appointmentDate = parseISO(appointment.appointmentDate);
-      const nzAppointmentDate = dateFnsTz.toZonedTime(appointmentDate, NZ_TIMEZONE);
-      const nzDay = dateFnsTz.toZonedTime(day, NZ_TIMEZONE);
-      return isSameDay(nzAppointmentDate, nzDay);
-    });
+  // Parse time string to minutes since midnight
+  const parseTime = (timeStr: string) => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+  // Format time slot from minutes to display string
+  const formatTimeSlot = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    const period = hours < 12 ? 'AM' : 'PM';
+    return `${displayHour}:${mins.toString().padStart(2, '0')} ${period}`;
+  };
+
+  // Generate calendar days for current month
+  const generateCalendarDays = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+
+    // Add empty slots for days before the month starts
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      days.push(date);
+    }
+
+    return days;
+  };
+
+  const calendarDays = generateCalendarDays();
+  const availableTimeSlots = selectedCalendarDate ? getAvailableTimeSlots(selectedCalendarDate) : [];
+
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+  };
+
+  const handleDateSelect = (date: Date) => {
+    if (!isDateAvailable(date)) return;
+    setSelectedCalendarDate(date);
+    // Clear selected time when date changes
+    onDateTimeSelect(date.toISOString().split('T')[0], '');
+  };
+
+  const handleTimeSelect = (time: string) => {
+    if (selectedCalendarDate) {
+      onDateTimeSelect(selectedCalendarDate.toISOString().split('T')[0], time);
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'Confirmed';
-      case 'completed':
-        return 'Completed';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return 'Scheduled';
-    }
-  };
-
-  const calculateEndTime = (startDate: string, duration: number) => {
-    const start = parseISO(startDate);
-    const end = new Date(start.getTime() + (duration || 60) * 60000);
-    return end;
-  };
-
-  if (viewMode === 'day') {
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              Daily Schedule
-            </CardTitle>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDateChange(subDays(selectedDate, 1))}
-                  className="flex-shrink-0"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="flex-1 sm:min-w-[200px] text-center font-medium text-sm sm:text-base px-2">
-                  {formatNZDate(selectedDate)}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDateChange(addDays(selectedDate, 1))}
-                  className="flex-shrink-0"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setViewMode('week')}
-                className="w-full sm:w-auto"
-              >
-                <span className="xs:hidden">Week</span>
-                <span className="hidden xs:inline">Week View</span>
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {timeSlots.map(({ hour, minute }) => {
-              const timeSlotDate = new Date(selectedDate);
-              timeSlotDate.setHours(hour, minute, 0, 0);
-              const appointmentsAtTime = getAppointmentsForTimeSlot(selectedDate, hour, minute);
-
-              return (
-                <div key={`${hour}-${minute}`} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4 py-2 border-b border-slate-100">
-                  <div className="w-full sm:w-20 text-sm font-medium text-slate-600">
-                    {formatNZTime(timeSlotDate)}
-                  </div>
-                  <div className="flex-1">
-                    {appointmentsAtTime.length > 0 ? (
-                      appointmentsAtTime.map(appointment => {
-                        const endTime = calculateEndTime(appointment.appointmentDate, appointment.duration);
-                        return (
-                          <div key={appointment.id} className="p-3 bg-slate-50 rounded-lg border">
-                            <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 mb-2">
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-slate-600" />
-                                <span className="font-medium">{appointment.client.name}</span>
-                              </div>
-                              <Badge className={getStatusColor(appointment.status)}>
-                                {getStatusText(appointment.status)}
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-slate-600 space-y-1">
-                              <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2">
-                                <Clock className="w-3 h-3" />
-                                <span className="text-xs xs:text-sm">
-                                  {formatNZTime(parseISO(appointment.appointmentDate))} - {formatNZTime(endTime)}
-                                  <span className="block xs:inline"> ({appointment.duration || 60} mins)</span>
-                                </span>
-                              </div>
-                              <div className="font-medium text-xs xs:text-sm">{appointment.service.name}</div>
-                              {appointment.client.phone && (
-                                <div className="flex items-center gap-2">
-                                  <Phone className="w-3 h-3" />
-                                  <span className="text-xs xs:text-sm">{appointment.client.phone}</span>
-                                </div>
-                              )}
-                              {appointment.notes && (
-                                <div className="text-xs text-slate-500 mt-2">
-                                  {appointment.notes}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="text-sm text-slate-400 italic">Available</div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Week view
-  const weekDays = getWeekDays(selectedDate);
+  const monthYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Weekly Schedule
-          </CardTitle>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDateChange(subDays(selectedDate, 7))}
-                className="flex-shrink-0"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="flex-1 sm:min-w-[200px] text-center font-medium text-sm sm:text-base px-2">
-                {format(weekDays[0], "d MMM", { locale: enNZ })} - {format(weekDays[6], "d MMM yyyy", { locale: enNZ })}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDateChange(addDays(selectedDate, 7))}
-                className="flex-shrink-0"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+    <div className="space-y-4">
+      {selectedServices.length === 0 && (
+        <div className="text-center p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-amber-700">Please select services first to see available appointment times.</p>
+        </div>
+      )}
+
+      {selectedServices.length > 0 && (
+        <>
+          {/* Calendar Header */}
+          <div className="flex items-center justify-between">
             <Button
               variant="outline"
-              size="sm"
-              onClick={() => setViewMode('day')}
-              className="w-full sm:w-auto"
+              size="icon"
+              onClick={goToPreviousMonth}
             >
-              <span className="xs:hidden">Day</span>
-              <span className="hidden xs:inline">Day View</span>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <h3 className="text-lg font-semibold">{monthYear}</h3>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToNextMonth}
+            >
+              <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <div className="grid grid-cols-8 gap-0 border border-slate-200 rounded-lg overflow-hidden min-w-[800px]">
-            {/* Time column header */}
-            <div className="text-xs sm:text-sm font-medium text-slate-700 p-2 sm:p-3 bg-slate-100 border-r border-slate-200">
-              Time
-            </div>
-          
-          {/* Day headers */}
-          {weekDays.map(day => {
-            const dayAppointments = getAppointmentsForDay(day);
-            const isToday = isSameDay(day, new Date());
-            
-            return (
-              <div 
-                key={day.toISOString()} 
-                className={`text-sm font-medium text-center p-3 border-r border-slate-200 ${
-                  isToday ? 'bg-primary/10 text-primary' : 'bg-slate-100'
-                }`}
-              >
-                <div className="font-semibold">{format(day, "EEE", { locale: enNZ })}</div>
-                <div className="text-xs text-slate-600">{format(day, "d", { locale: enNZ })}</div>
-                {dayAppointments.length > 0 && (
-                  <div className="text-xs mt-1 px-1 py-0.5 bg-primary/20 rounded text-primary">
-                    {dayAppointments.length}
+
+          {/* Calendar Grid */}
+          <Card>
+            <CardContent className="p-4">
+              {/* Day headers */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {dayNames.map(day => (
+                  <div key={day} className="text-center text-sm font-medium text-gray-500 p-2">
+                    {day.slice(0, 3)}
                   </div>
-                )}
+                ))}
               </div>
-            );
-          })}
 
-          {/* Time slots */}
-          {timeSlots.map(({ hour, minute }) => {
-            const timeSlotDate = new Date();
-            timeSlotDate.setHours(hour, minute, 0, 0);
-
-            return [
-              // Time label
-              <div key={`time-${hour}-${minute}`} className="text-xs text-slate-600 p-2 border-r border-slate-200 bg-slate-50 font-medium">
-                {formatNZTime(timeSlotDate)}
-              </div>,
-              
-              // Day columns
-              ...weekDays.map(day => {
-                const appointmentsAtTime = getAppointmentsForTimeSlot(day, hour, minute);
-                const dayAppointments = getAppointmentsForDay(day);
-                
-                return (
-                  <div 
-                    key={`${format(day, 'yyyy-MM-dd')}-${hour}-${minute}`}
-                    className="min-h-[50px] border border-slate-200 p-1 cursor-pointer hover:bg-slate-50 relative"
-                    onClick={() => onDateChange(day)}
-                    title={`${format(day, 'EEE d MMM')} at ${formatNZTime(timeSlotDate)}`}
-                  >
-                    {appointmentsAtTime.length > 0 ? (
-                      appointmentsAtTime.map(appointment => {
-                        const statusColorClass = getStatusColor(appointment.status);
-                        const duration = appointment.duration || 60;
-                        
-                        return (
-                          <div 
-                            key={appointment.id} 
-                            className={`text-xs p-1 rounded border shadow-sm ${statusColorClass} w-full`}
-                            title={`${appointment.client?.name} - ${appointment.service?.name} (${duration}min)`}
-                          >
-                            <div className="font-semibold truncate flex items-center justify-between">
-                              <span>{appointment.client?.name || 'No Client'}</span>
-                              <span>{getPaymentBadge(appointment).icon}</span>
-                            </div>
-                            <div className="truncate text-xs opacity-90">
-                              {appointment.service?.name || 'No Service'}  
-                            </div>
-                            <div className="text-xs opacity-75">
-                              {duration}min
-                            </div>
-                          </div>
-                        );
-                      })
+              {/* Calendar days */}
+              <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map((date, index) => (
+                  <div key={index} className="aspect-square">
+                    {date ? (
+                      <button
+                        onClick={() => handleDateSelect(date)}
+                        disabled={!isDateAvailable(date)}
+                        className={cn(
+                          "w-full h-full p-1 text-sm rounded-lg transition-colors",
+                          isDateAvailable(date) 
+                            ? "hover:bg-green-50 cursor-pointer" 
+                            : "text-gray-300 cursor-not-allowed",
+                          selectedCalendarDate?.toDateString() === date.toDateString()
+                            ? "bg-green-600 text-white hover:bg-green-700"
+                            : "",
+                          date.toDateString() === new Date().toDateString()
+                            ? "bg-blue-50 border border-blue-200"
+                            : ""
+                        )}
+                      >
+                        {date.getDate()}
+                      </button>
                     ) : (
-                      // Show day total if no appointment at this specific time
-                      hour === 8 && minute === 0 && dayAppointments.length > 0 ? (
-                        <div className="text-xs text-slate-400 p-1">
-                          {dayAppointments.length} appointment{dayAppointments.length > 1 ? 's' : ''} today
-                        </div>
-                      ) : null
+                      <div></div>
                     )}
                   </div>
-                );
-              })
-            ];
-          })}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Time Slots */}
+          {selectedCalendarDate && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center mb-3">
+                  <Clock className="w-4 h-4 mr-2 text-green-600" />
+                  <h4 className="font-medium">
+                    Available times for {selectedCalendarDate.toLocaleDateString('en-NZ', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </h4>
+                </div>
+
+                {availableTimeSlots.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                    {availableTimeSlots.map((slot) => (
+                      <button
+                        key={slot.value}
+                        onClick={() => handleTimeSelect(slot.value)}
+                        className={cn(
+                          "p-2 text-sm rounded-lg border transition-colors",
+                          selectedTime === slot.value
+                            ? "bg-green-600 text-white border-green-600"
+                            : "bg-white border-gray-200 hover:border-green-300 hover:bg-green-50"
+                        )}
+                      >
+                        {slot.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">
+                    No available time slots for this date
+                  </p>
+                )}
+
+                {totalDuration > 0 && (
+                  <div className="mt-3 text-xs text-gray-500">
+                    Appointment duration: {totalDuration} minutes
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+    </div>
   );
 }

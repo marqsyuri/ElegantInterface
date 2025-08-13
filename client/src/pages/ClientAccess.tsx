@@ -118,17 +118,22 @@ export default function ClientAccess() {
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between space-x-4">
             <Avatar className="h-16 w-16">
               <AvatarImage src={company.profileImageUrl || ''} />
               <AvatarFallback className="bg-green-100 text-green-700 text-xl font-bold">
                 {company.clinicName ? company.clinicName.charAt(0).toUpperCase() : 'C'}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl font-bold text-slate-900">{company.clinicName}</h1>
               <p className="text-slate-600 mt-1">Professional Beauty & Wellness</p>
             </div>
+            <Link href={`/client/${publicLink}/booking`}>
+              <Button className="bg-green-600 hover:bg-green-700 px-6 py-2">
+                Book Now
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -253,22 +258,7 @@ export default function ClientAccess() {
           </Card>
         )}
 
-        {/* Book Appointment CTA */}
-        <Card className="bg-green-50 border-green-200">
-          <CardContent className="p-6 text-center">
-            <h3 className="text-xl font-bold text-green-900 mb-2">Ready to Book?</h3>
-            <p className="text-green-700 mb-4">
-              Schedule your appointment online and we'll get back to you shortly.
-            </p>
-            <Link href={`/client/${publicLink}/book`}>
-              <Button className="bg-green-600 hover:bg-green-700">
-                <Calendar className="w-4 h-4 mr-2" />
-                Book Appointment
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+
       </div>
     </div>
   );
