@@ -20,7 +20,7 @@ export function PublicLinkManager({ user }: PublicLinkManagerProps) {
   const queryClient = useQueryClient();
 
   const publicUrl = user.publicLink ? 
-    `https://${window.location.host}/client/${user.publicLink}` : null;
+    `https://${window.location.host}/client/${user.publicLink}/booking` : null;
 
   const generateLinkMutation = useMutation({
     mutationFn: async () => {
@@ -88,7 +88,7 @@ export function PublicLinkManager({ user }: PublicLinkManagerProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-slate-600">
-          Share this link with your clients so they can book appointments and contact you directly.
+          Share this link with your clients so they can book appointments directly with the new service selection interface.
         </div>
 
         {publicUrl ? (
@@ -122,7 +122,7 @@ export function PublicLinkManager({ user }: PublicLinkManagerProps) {
                 className="flex items-center"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Preview Page
+                Preview Booking Page
               </Button>
 
               {user.clinicWhatsapp && (
@@ -157,11 +157,11 @@ export function PublicLinkManager({ user }: PublicLinkManagerProps) {
                 <div className="text-sm text-green-700">
                   <div className="font-medium mb-1">Your clients can:</div>
                   <ul className="list-disc list-inside space-y-0.5 text-green-600">
-                    <li>View your clinic information and opening hours</li>
-                    <li>See your services and pricing</li>
-                    <li>Contact you directly via WhatsApp</li>
-                    <li>Book appointments online with automatic form submission</li>
-                    <li>Register as new clients or return as existing clients</li>
+                    <li>Select multiple services from organized categories</li>
+                    <li>View pricing and duration for each service</li>
+                    <li>See total price calculation automatically</li>
+                    <li>Book appointments with their selected service bundle</li>
+                    <li>Experience the new streamlined booking interface</li>
                   </ul>
                 </div>
               </div>
