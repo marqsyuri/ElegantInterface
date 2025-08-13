@@ -33,7 +33,7 @@ function Router() {
     <Switch>
       {/* Public client access routes - no authentication required */}
       <Route path="/client/:publicLink" component={ClientAccess} />
-      <Route path="/client/:publicLink/book" component={ClientBooking} />
+      <Route path="/client/:publicLink/booking" component={ClientBooking} />
       
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
