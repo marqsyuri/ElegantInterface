@@ -22,6 +22,7 @@ interface Service {
   price: string;
   description?: string;
   category: string;
+  isActive: boolean;
 }
 
 interface CompanyInfo {
@@ -61,7 +62,7 @@ export default function ClientBooking() {
   });
 
   const { data: services, isLoading: servicesLoading } = useQuery<Service[]>({
-    queryKey: [`/api/public/services/${publicLink}`],
+    queryKey: [`/api/public/procedures/${publicLink}`],
     enabled: !!publicLink,
   });
 
@@ -72,10 +73,7 @@ export default function ClientBooking() {
 
   const bookingMutation = useMutation({
     mutationFn: (data: BookingForm) =>
-      apiRequest(`/api/public/appointments/${publicLink}`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest(`/api/public/appointments/${publicLink}`, "POST", data),
     onSuccess: () => {
       toast({
         title: "Appointment Requested",
@@ -115,14 +113,16 @@ export default function ClientBooking() {
     );
   }
 
-  // Group services by category
-  const servicesByCategory = services.reduce((acc: Record<string, Service[]>, service) => {
-    if (!acc[service.category]) {
-      acc[service.category] = [];
-    }
-    acc[service.category].push(service);
-    return acc;
-  }, {});
+  // Group services by category (only active ones)
+  const servicesByCategory = services
+    .filter(service => service.isActive)
+    .reduce((acc: Record<string, Service[]>, service) => {
+      if (!acc[service.category]) {
+        acc[service.category] = [];
+      }
+      acc[service.category].push(service);
+      return acc;
+    }, {});
 
   const handleServiceToggle = (serviceId: string) => {
     const newSelection = selectedServices.includes(serviceId)
@@ -149,7 +149,7 @@ export default function ClientBooking() {
     return selectedServices.reduce((total, serviceId) => {
       const service = services.find(s => s.id.toString() === serviceId);
       if (service) {
-        const price = parseFloat(service.price.replace(/[^0-9.]/g, ''));
+        const price = parseFloat(service.price);
         return total + price;
       }
       return total;
@@ -212,7 +212,7 @@ export default function ClientBooking() {
                         {formatDuration(service.duration)}
                       </span>
                     </div>
-                    <span className="text-slate-900 font-medium">{service.price}</span>
+                    <span className="text-slate-900 font-medium">${parseFloat(service.price).toFixed(2)}</span>
                   </div>
                 ))}
                 <div className="border-t pt-2 flex justify-between items-center font-medium">
@@ -373,7 +373,7 @@ export default function ClientBooking() {
                             <div className="flex items-center text-slate-600 text-sm mt-1 space-x-3">
                               <span>{formatDuration(service.duration)}</span>
                               <span>•</span>
-                              <span className="font-medium">{service.price}</span>
+                              <span className="font-medium">${parseFloat(service.price).toFixed(2)}</span>
                             </div>
                             {service.description && (
                               <p className="text-slate-600 text-sm mt-1 line-clamp-2">
