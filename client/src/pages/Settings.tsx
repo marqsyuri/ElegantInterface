@@ -507,13 +507,32 @@ export default function Settings() {
 
   const getUploadUrlMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/objects/upload', {});
-      const data = await response.json();
-      console.log('Full upload response data:', data);
-      if (!data || !data.uploadURL) {
-        throw new Error('No upload URL received from server');
+      try {
+        console.log('Making API request to /api/objects/upload');
+        const response = await apiRequest('POST', '/api/objects/upload', {});
+        console.log('API response status:', response.status);
+        console.log('API response headers:', Object.fromEntries(response.headers.entries()));
+        
+        const responseText = await response.text();
+        console.log('Raw response text:', responseText);
+        
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          throw new Error(`Invalid JSON response: ${responseText}`);
+        }
+        
+        console.log('Parsed upload response data:', data);
+        if (!data || !data.uploadURL) {
+          throw new Error(`No upload URL in response: ${JSON.stringify(data)}`);
+        }
+        return data.uploadURL as string;
+      } catch (error) {
+        console.error('getUploadUrlMutation error:', error);
+        throw error;
       }
-      return data.uploadURL as string;
     },
   });
 
