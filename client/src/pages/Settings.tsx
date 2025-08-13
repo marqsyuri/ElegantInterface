@@ -486,7 +486,7 @@ export default function Settings() {
   const heroImageUploadMutation = useMutation({
     mutationFn: async (heroImageUrl: string) => {
       const response = await apiRequest('PUT', '/api/hero-image', { heroImageUrl });
-      return response;
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -508,7 +508,12 @@ export default function Settings() {
   const getUploadUrlMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/objects/upload', {});
-      return response.uploadURL as string;
+      const data = await response.json();
+      console.log('Full upload response data:', data);
+      if (!data || !data.uploadURL) {
+        throw new Error('No upload URL received from server');
+      }
+      return data.uploadURL as string;
     },
   });
 
@@ -605,7 +610,8 @@ export default function Settings() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: UserFormData) => {
-      await apiRequest('PUT', '/api/auth/user', data);
+      const response = await apiRequest('PUT', '/api/auth/user', data);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
