@@ -877,6 +877,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clinicWhatsapp: company.clinicWhatsapp,
         email: company.email,
         profileImageUrl: company.profileImageUrl,
+        heroImageUrl: company.heroImageUrl,
         publicLink: company.publicLink
       });
     } catch (error) {

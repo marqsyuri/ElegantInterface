@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, Calendar, User, Phone, Mail, MessageSquare, CheckCircle } from "lucide-react";
+import { ArrowLeft, Calendar, User, Phone, Mail, MessageSquare, CheckCircle, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,9 @@ interface CompanyInfo {
   clinicName: string;
   publicLink: string;
   clinicWhatsapp?: string;
+  clinicPhone?: string;
+  clinicAddress?: string;
+  heroImageUrl?: string;
 }
 
 interface BusinessHour {
@@ -244,6 +247,91 @@ export default function ClientBooking() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Hero Banner Section */}
+      <div className="relative h-64 md:h-80 overflow-hidden">
+        {/* Background Image */}
+        {company?.heroImageUrl ? (
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            style={{ backgroundImage: `url(${company.heroImageUrl})` }}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-green-50 to-amber-100" />
+        )}
+        
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent"></div>
+        
+        {/* Content */}
+        <div className="relative h-full flex items-center">
+          <div className="max-w-4xl mx-auto px-6 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              {/* Text Content */}
+              <div className="text-white space-y-3">
+                <div className="text-sm font-medium text-amber-200 tracking-wide uppercase">
+                  FROM THE INSIDE OUT
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold leading-tight">
+                  {company?.clinicName || "Beauty From Brazil"}
+                </h1>
+                <p className="text-lg text-gray-200">Brazilian Beauty Services</p>
+                <p className="text-base text-gray-300">HAIR, NAIL, BEAUTY</p>
+                
+                {/* Contact Info */}
+                <div className="pt-4 space-y-2">
+                  {company?.clinicPhone && (
+                    <div className="flex items-center text-sm text-gray-200">
+                      <Phone className="w-4 h-4 mr-2" />
+                      {company.clinicPhone}
+                    </div>
+                  )}
+                  {company?.clinicAddress && (
+                    <div className="flex items-center text-sm text-gray-200">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      {company.clinicAddress}
+                    </div>
+                  )}
+                </div>
+                
+                {/* CTA Button */}
+                <div className="pt-4">
+                  <Button 
+                    className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8 py-3 rounded-full"
+                    onClick={() => {
+                      const formElement = document.querySelector('form');
+                      formElement?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    BOOK NOW
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Professional Image Placeholder */}
+              <div className="hidden md:flex justify-end">
+                <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl bg-white/10 backdrop-blur-sm">
+                  <div className="w-full h-full bg-gradient-to-br from-amber-100 to-green-100 flex items-center justify-center">
+                    <User className="w-24 h-24 text-amber-600 opacity-60" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Social Media Links */}
+        <div className="absolute bottom-4 left-6 flex space-x-4">
+          <div className="flex items-center space-x-2 text-white/80 text-sm">
+            <MessageSquare className="w-4 h-4" />
+            <span>Instagram</span>
+          </div>
+          <div className="flex items-center space-x-2 text-white/80 text-sm">
+            <MessageSquare className="w-4 h-4" />
+            <span>Facebook</span>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="mb-6">
           <Button 
