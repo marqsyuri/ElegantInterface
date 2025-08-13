@@ -1,235 +1,59 @@
 # Estética Pro - Sistema de Gestão para Esteticistas
 
 ## Overview
-
-This is a modern full-stack web application designed specifically for beauty professionals (aestheticians) to manage their business operations. The system provides comprehensive tools for appointment scheduling, client management, clinical records, financial tracking, inventory management, customer communication, and loyalty programs.
+Estética Pro is a full-stack web application designed for beauty professionals to manage their business operations. It provides tools for appointment scheduling, client management, clinical records, financial tracking, inventory, communication, and loyalty programs. The project aims to offer a comprehensive, modern solution for aestheticians, enhancing efficiency and client engagement.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### Frontend
 - **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite for fast development and optimized builds
-- **Styling**: TailwindCSS with shadcn/ui component library
-- **Routing**: Wouter for lightweight client-side routing
-- **State Management**: TanStack Query (React Query) for server state management
+- **Build Tool**: Vite
+- **Styling**: TailwindCSS with shadcn/ui and Radix UI primitives
+- **Routing**: Wouter
+- **State Management**: TanStack Query (React Query)
 - **Form Handling**: React Hook Form with Zod validation
-- **UI Components**: Radix UI primitives with custom styling
 
-### Backend Architecture
-- **Runtime**: Node.js with Express.js framework
-- **Language**: TypeScript for type safety
-- **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Replit Auth (OIDC-based authentication)
-- **Session Management**: Express sessions stored in PostgreSQL
+### Backend
+- **Runtime**: Node.js with Express.js
+- **Language**: TypeScript
+- **Database**: PostgreSQL with Drizzle ORM (using Neon serverless PostgreSQL)
+- **Authentication**: Replit Auth (OIDC-based) with Express sessions
+- **Validation**: Shared Zod schemas for full-stack type safety
 
-### Key Technology Choices
-- **Database Provider**: Neon serverless PostgreSQL for scalability
-- **Type Safety**: Full-stack TypeScript with shared schema definitions
-- **Validation**: Zod schemas for both client and server validation
-- **Component Design**: Atomic design principles with reusable UI components
+### Key Features
+- **Authentication System**: Replit OIDC integration with session management.
+- **Comprehensive Database Schema**: Includes Users, Clients, Services, Appointments, Clinical Records, Transactions, Messages, Feedback, Inventory, and Loyalty Programs.
+- **Core Business Management**: Dashboard, Appointment, Client, Clinical Record, Financial, Communication, Inventory, and Loyalty management.
+- **UI/UX Decisions**: Mobile-first responsive design, consistent layout patterns using a `PageLayout` component, expandable sidebar, and a clean, professional aesthetic with a Brazilian color theme (green/yellow) and no gradients.
+- **Appointment System**: Calendar and list views, duration handling, New Zealand time formatting, and configurable business hours.
+- **Image Upload System**: Compressed photo uploads with before/after support, stored as base64.
 
-## Key Components
-
-### Authentication System
-- Uses Replit's OIDC authentication system
-- Session-based authentication with PostgreSQL session storage
-- User profile management with professional credentials
-- Automatic redirect handling for unauthorized access
-
-### Database Schema
-The application uses a comprehensive database schema with the following main entities:
-- **Users**: Professional profile with clinic information
-- **Clients**: Customer records with contact and health information
-- **Services**: Treatment offerings with pricing
-- **Appointments**: Scheduling system with status tracking
-- **Clinical Records**: Treatment history and outcomes
-- **Transactions**: Financial records for income/expenses
-- **Messages**: Communication tracking
-- **Feedback**: Customer satisfaction data
-- **Inventory**: Materials and equipment management
-- **Loyalty Programs**: Customer retention features
-
-### Core Features
-1. **Dashboard**: Real-time business metrics and daily overview
-2. **Appointment Management**: Calendar-based scheduling system
-3. **Client Management**: Comprehensive customer database
-4. **Clinical Records**: Digital treatment documentation
-5. **Financial Tracking**: Income/expense management with reporting
-6. **Communication Hub**: Multi-channel customer communication
-7. **Inventory Management**: Materials and equipment tracking
-8. **Loyalty Programs**: Customer retention and rewards system
-
-## Data Flow
-
-### Client-Server Communication
-- RESTful API design with consistent error handling
-- TanStack Query for optimistic updates and caching
-- Form submissions use React Hook Form with Zod validation
-- Real-time data updates through query invalidation
-
-### Authentication Flow
-1. User accesses protected route
-2. System checks for valid session
-3. Redirects to Replit OAuth if unauthenticated
-4. Creates/updates user profile on successful authentication
-5. Establishes server session with PostgreSQL storage
-
-### Data Validation
-- Shared Zod schemas between client and server
-- Client-side validation for immediate feedback
-- Server-side validation for security
-- Type-safe database operations with Drizzle
+### Design Principles
+- **Type Safety**: End-to-end TypeScript with shared Zod schemas.
+- **Component Design**: Atomic design principles for reusable UI components.
+- **Data Flow**: RESTful API, TanStack Query for optimistic updates/caching, and client/server validation.
 
 ## External Dependencies
 
 ### Core Dependencies
-- **@neondatabase/serverless**: Serverless PostgreSQL connection
-- **drizzle-orm**: Type-safe database operations
-- **@tanstack/react-query**: Server state management
-- **@radix-ui/***: Accessible UI primitives
-- **tailwindcss**: Utility-first CSS framework
-- **wouter**: Lightweight React router
+- `@neondatabase/serverless`: Serverless PostgreSQL connection
+- `drizzle-orm`: Type-safe database operations
+- `@tanstack/react-query`: Server state management
+- `@radix-ui/*`: Accessible UI primitives
+- `tailwindcss`: Utility-first CSS framework
+- `wouter`: Lightweight React router
 
 ### Authentication
-- **openid-client**: OIDC authentication client
-- **passport**: Authentication middleware
-- **express-session**: Session management
-- **connect-pg-simple**: PostgreSQL session store
+- `openid-client`: OIDC authentication client
+- `passport`: Authentication middleware
+- `express-session`: Session management
+- `connect-pg-simple`: PostgreSQL session store
 
 ### Development Tools
-- **vite**: Fast build tool and dev server
-- **typescript**: Static type checking
-- **tsx**: TypeScript execution for Node.js
-- **esbuild**: Fast JavaScript bundler
-
-## Deployment Strategy
-
-### Build Process
-- Frontend built with Vite to `dist/public`
-- Backend bundled with esbuild to `dist/index.js`
-- Single deployment artifact containing both frontend and backend
-
-### Environment Configuration
-- Database connection via `DATABASE_URL` environment variable
-- Session security via `SESSION_SECRET`
-- Replit-specific configuration for OIDC authentication
-- Development vs production environment detection
-
-### Database Management
-- Drizzle migrations for schema versioning
-- Connection pooling for scalability
-- Serverless-compatible database operations
-
-### Production Considerations
-- Static file serving for frontend assets
-- Express error handling middleware
-- Request logging and monitoring
-- Session persistence across deployments
-
-## Testing and Production Readiness
-- **COMPLETED: Comprehensive Testing Checklist Created** (January 30, 2025)
-  - Created complete 14-section testing checklist covering all system modules
-  - Includes authentication, client management, public booking system, financial tracking
-  - Covers mobile responsiveness, WhatsApp integration, and n8n database connectivity
-  - Provides critical issue identification and resolution workflow
-  - System ready for production use with comprehensive quality assurance protocol
-
-## Recent Changes
-- **COMPLETED: Analytics Button Alignment and Page Layout Consistency** (January 29, 2025)
-  - Aligned "Last 30 Days" selector with Overview tabs in Analytics page for consistent UI
-  - Converted Sustainability, Marketing, and Staff pages to use PageLayout component
-  - Ensured all pages expand properly when sidebar is collapsed, matching Dashboard behavior
-  - Aligned all "Add Log" and action buttons with tab navigation across all pages
-  - Created consistent layout pattern with buttons positioned inline with TabsList
-  - All pages now use PageLayout for unified sidebar expansion behavior
-- **COMPLETED: Add Log Button Alignment** (January 29, 2025)
-  - Aligned "Add Log Entry" button in Sustainability page with Overview tabs
-  - Aligned "Create Campaign" button in Marketing page with Overview tabs
-  - Aligned "Add Staff Member" button in Staff page with Overview tabs
-  - All action buttons now appear on same line as tab navigation for consistent layout
-- **COMPLETED: Appointment Calendar with New Zealand Time Format** (January 29, 2025)
-  - Implemented comprehensive appointment calendar with New Zealand time format using date-fns/enNZ locale
-  - Added duration field to appointments schema to handle same start/end time appointments
-  - Created AppointmentCalendar component with weekly and daily views
-  - Integrated calendar and list view modes with toggle functionality
-  - Enhanced appointment form with duration selection (30 mins to 2 hours)
-  - Added New Zealand time formatting throughout: "h:mm a" format with proper locale
-  - Calendar displays appointments with calculated end times based on duration
-  - Handles same start/end time appointments by using duration field for proper display
-  - Updated database schema with duration column for appointments
-  - Both calendar and list views show NZ-formatted times and dates
-- **COMPLETED: Business Hours Configuration Tab** (January 29, 2025)
-  - Added comprehensive business hours management with tabbed Settings interface
-  - Created three-tab system: Profile, Operating Hours, and Notifications
-  - Implemented full business hours CRUD operations with PostgreSQL storage
-  - Added day-by-day configuration with open/closed status toggles
-  - Included opening/closing times and lunch break scheduling
-  - Used New Zealand English terminology throughout (Operating Hours, Lunch breaks)
-  - Added informational help text explaining how hours affect appointment scheduling
-  - Created responsive time slot selection with 30-minute intervals
-  - Database schema includes business_hours table with user relations
-  - API endpoints for GET and POST business hours operations
-- **COMPLETED: Photo Upload System with Compression** (January 28, 2025)
-  - Implemented complete appointment photo upload system with before/after image support
-  - Added automatic image compression (600px max width, 60% JPEG quality) to prevent payload size errors
-  - Created drag-and-drop interface with PNG/JPG validation only
-  - Increased Express payload limits to 50MB for image handling
-  - Images stored as compressed base64 data in PostgreSQL JSONB fields
-  - Visual feedback with thumbnail previews and remove functionality
-  - Separate tabs for "before" and "after" photos in appointment form
-- **COMPLETED: Complete Gradient Removal** (January 28, 2025)
-  - Removed ALL gradients from pages, dashboard, menus, and components
-  - Replaced all gradient backgrounds with clean solid colors and borders
-  - Updated header, buttons, sidebar, stats cards, service categories, and performance metrics
-  - Maintained Brazilian color theme (green/yellow) while eliminating "brega" gradient effects
-  - Created cleaner, more professional appearance with solid colors and subtle borders
-- **COMPLETED: Expandable Sidebar Implementation** (January 28, 2025)
-  - Added expandable/collapsible sidebar functionality with smooth transitions
-  - Created toggle button that dynamically positions based on sidebar state
-  - Implemented responsive design: expanded (288px) and collapsed (64px) states
-  - Added SidebarContext for global state management across all pages
-  - Created PageLayout component for consistent layout adaptation
-  - Maintained Brazilian color theme (green and yellow) in sidebar design
-- **COMPLETED: Brazilian Color Theme Implementation** (January 28, 2025)
-  - Updated color scheme to Brazilian green and yellow gradient theme throughout system
-  - Modified CSS variables to use authentic Brazilian flag colors: deep green (#145, 80%, 30%) and bright yellow (#45, 95%, 55%)
-  - Transformed dashboard header gradient from sage/peach to vibrant green-to-yellow Brazilian theme
-  - Updated all UI elements including stats cards, buttons, icons, and service categories to use Brazilian color palette
-  - Maintained professional aesthetic while incorporating national Brazilian color identity
-  - Enhanced Quick Action buttons with alternating green and yellow color scheme
-  - Applied Brazilian theme to service category icons and backgrounds
-  - Preserved responsive design and accessibility while updating visual identity
-- **COMPLETED: Full Responsive Design System** (January 27, 2025)
-  - Implemented complete mobile-first responsive design across all pages
-  - Added mobile hamburger menu with smooth slide-out sidebar functionality
-  - Created adaptive layout system: 1 column (mobile), 2 columns (tablet), 4 columns (desktop)
-  - Enhanced touch-friendly navigation with 44px minimum touch targets
-  - Applied responsive typography and spacing throughout system
-  - Optimized all components for seamless cross-device experience
-- **COMPLETED: Modern Beauty Salon Dashboard Design** (January 25, 2025)
-  - Implemented elegant beauty salon dashboard with "Estética Pro" branding
-  - Created soft color palette design using sage green, mint green, soft orange, and peach tones
-  - Added beautiful gradient header with glassmorphism effects and backdrop blur styling
-  - Designed elegant stats cards with rounded borders, hover effects, and modern typography
-  - Implemented comprehensive service categories: Hair Cut (Men & Women), Hair Colour & Dye, Hair Treatment & Care, Blow Dry & Styling, Extensions (Hair & Lash), Nail Care (Mani & Pedi)
-  - Enhanced responsive sidebar with dynamic layout adjustment for all modules
-  - Applied Inter font family for professional typography throughout system
-  - Created professional quick action buttons with rounded design and smooth transitions
-  - Maintained complete New Zealand English localisation with modern beauty industry terminology
-- **COMPLETED: Total Portuguese Elimination** (January 24, 2025)
-  - Systematically removed ALL remaining Portuguese words from the entire system
-  - Translated final Portuguese phrases in Clinical, Appointments, Dashboard, Loyalty, and Materials modules
-  - Fixed date localisation from 'pt-BR' to 'en-NZ' format throughout system
-  - Converted status terminology: "Confirmado/Agendado/Pendente" → "Confirmed/Scheduled/Pending"
-  - Translated procedure and clinical assessment terminology to professional English
-  - Updated loyalty programme terminology: "Níveis VIP" → "VIP Levels"
-  - Completed currency conversion from R$ to NZD $ throughout
-  - Achieved 100% New Zealand English localisation with zero Portuguese text remaining
-- Fully translated Settings page with NZ-specific business terminology (Business Number, postcode format)
-- Updated all phone number placeholders to New Zealand format
-- Localised all professional registration references for NZ beauty therapy industry
-- Maintained consistent New Zealand English spelling conventions throughout
+- `vite`: Fast build tool and dev server
+- `typescript`: Static type checking
+- `tsx`: TypeScript execution for Node.js
+- `esbuild`: Fast JavaScript bundler

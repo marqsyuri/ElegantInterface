@@ -1,89 +1,68 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams, useLocation } from "wouter";
-import { ArrowLeft, Calendar, User, Phone, Mail, MessageSquare, CheckCircle, MapPin, ChevronDown, ChevronRight } from "lucide-react";
-import AppointmentCalendar from "@/components/AppointmentCalendar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useParams } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { ChevronUp, ChevronDown, Info, X, MapPin } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-const bookingSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(10, "Please enter a valid phone number"),
-  selectedServices: z.array(z.string()).min(1, "Please select at least one service"),
-  preferredDate: z.string().min(1, "Please select a preferred date"),
-  preferredTime: z.string().min(1, "Please select a preferred time"),
-  notes: z.string().optional(),
-  isNewClient: z.boolean().default(true),
-});
-
-type BookingFormData = z.infer<typeof bookingSchema>;
-
-interface Procedure {
+interface Service {
   id: number;
   name: string;
-  description: string;
   duration: number;
   price: string;
+  description?: string;
   category: string;
-  materials?: any[];
 }
 
 interface CompanyInfo {
   clinicName: string;
-  publicLink: string;
-  clinicWhatsapp?: string;
+  clinicAddress: string;
   clinicPhone?: string;
-  clinicAddress?: string;
-  heroImageUrl?: string;
+  clinicWhatsapp?: string;
 }
 
-interface BusinessHour {
-  id: number;
-  dayOfWeek: string;
-  isOpen: boolean;
-  openTime: string;
-  closeTime: string;
-  lunchStart?: string;
-  lunchEnd?: string;
-}
+const bookingSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  phone: z.string().min(10, "Phone number is required"),
+  email: z.string().email("Valid email is required"),
+  notes: z.string().optional(),
+  selectedServices: z.array(z.string()).min(1, "Please select at least one service"),
+});
 
-interface BookedSlot {
-  startTime: string;
-  endTime: string;
-}
+type BookingForm = z.infer<typeof bookingSchema>;
 
 export default function ClientBooking() {
-  const params = useParams();
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const [bookingComplete, setBookingComplete] = useState(false);
+  const { publicLink } = useParams<{ publicLink: string }>();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
-  const publicLink = params.publicLink;
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const form = useForm<BookingFormData>({
+  const form = useForm<BookingForm>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
       name: "",
-      email: "",
       phone: "",
-      selectedServices: [],
-      preferredDate: "",
-      preferredTime: "",
+      email: "",
       notes: "",
-      isNewClient: true,
+      selectedServices: [],
     },
+  });
+
+  const { data: services, isLoading: servicesLoading } = useQuery<Service[]>({
+    queryKey: [`/api/public/services/${publicLink}`],
+    enabled: !!publicLink,
   });
 
   const { data: company } = useQuery<CompanyInfo>({
@@ -91,608 +70,347 @@ export default function ClientBooking() {
     enabled: !!publicLink,
   });
 
-  const { data: procedures } = useQuery<Procedure[]>({
-    queryKey: [`/api/public/services/${publicLink}`],
-    enabled: !!publicLink,
-  });
-
-  const { data: businessHours } = useQuery<BusinessHour[]>({
-    queryKey: [`/api/public/business-hours/${publicLink}`],
-    enabled: !!publicLink,
-  });
-
-  const { data: bookedSlots } = useQuery<BookedSlot[]>({
-    queryKey: [`/api/public/booked-slots/${publicLink}/${form.watch('preferredDate')}`],
-    enabled: !!publicLink && !!form.watch('preferredDate'),
-  });
-
-  // Group services by category
-  const groupedServices = procedures?.reduce((acc: any, service: Procedure) => {
-    if (!acc[service.category]) {
-      acc[service.category] = [];
-    }
-    acc[service.category].push(service);
-    return acc;
-  }, {}) || {};
-
-  // Calculate total price of selected services
-  const calculateTotalPrice = () => {
-    return selectedServices.reduce((total, serviceId) => {
-      const service = procedures?.find((p: Procedure) => p.id.toString() === serviceId);
-      return total + parseFloat(service?.price || '0');
-    }, 0);
-  };
-
-  // Handle service selection
-  const handleServiceToggle = (serviceId: string, checked: boolean) => {
-    let newSelection = [...selectedServices];
-    if (checked) {
-      newSelection.push(serviceId);
-    } else {
-      newSelection = newSelection.filter(id => id !== serviceId);
-    }
-    setSelectedServices(newSelection);
-    form.setValue('selectedServices', newSelection);
-  };
-
-  // Handle category expansion
-  const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => 
-      prev.includes(category) 
-        ? prev.filter(cat => cat !== category)
-        : [...prev, category]
-    );
-  };
-
-  // Calculate total duration for selected services
-  const calculateTotalDuration = () => {
-    return selectedServices.reduce((total, serviceId) => {
-      const service = procedures?.find((p: Procedure) => p.id.toString() === serviceId);
-      return total + (service?.duration || 0);
-    }, 0);
-  };
-
-  // Generate available time slots based on business hours and booked appointments
-  const generateAvailableTimeSlots = () => {
-    if (!businessHours || !form.watch('preferredDate') || selectedServices.length === 0) {
-      return [];
-    }
-
-    const totalDuration = calculateTotalDuration();
-    if (totalDuration === 0) return [];
-
-    const selectedDate = form.watch('preferredDate');
-    const dayOfWeek = new Date(selectedDate).getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayName = dayNames[dayOfWeek];
-
-    const todayHours = businessHours?.find((bh: BusinessHour) => bh.dayOfWeek === dayName);
-    if (!todayHours || !todayHours.isOpen) {
-      return [];
-    }
-
-    const slots = [];
-    const startTime = todayHours.openTime;
-    const endTime = todayHours.closeTime;
-    const lunchStart = todayHours.lunchStart;
-    const lunchEnd = todayHours.lunchEnd;
-
-    // Generate 30-minute slots
-    let currentTime = startTime;
-    while (currentTime < endTime) {
-      // Skip lunch break
-      if (lunchStart && lunchEnd && currentTime >= lunchStart && currentTime < lunchEnd) {
-        currentTime = addMinutes(currentTime, 30);
-        continue;
-      }
-
-      // Check if slot is available (not booked)
-      const isBooked = bookedSlots?.some((slot: BookedSlot) => {
-        const slotStart = slot.startTime;
-        const slotEnd = slot.endTime;
-        return currentTime >= slotStart && currentTime < slotEnd;
-      });
-
-      // Check if there's enough time for all selected procedures
-      const procedureEndTime = addMinutes(currentTime, totalDuration);
-      if (procedureEndTime <= endTime && !isBooked) {
-        slots.push({
-          value: currentTime,
-          label: formatTime(currentTime),
-        });
-      }
-
-      currentTime = addMinutes(currentTime, 30);
-    }
-
-    return slots;
-  };
-
-  // Helper functions
-  const addMinutes = (timeString: string, minutes: number): string => {
-    const [hours, mins] = timeString.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours, mins + minutes, 0, 0);
-    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-  };
-
-  const formatTime = (timeString: string): string => {
-    const [hours, mins] = timeString.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours, mins, 0, 0);
-    return date.toLocaleTimeString('en-NZ', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
-    });
-  };
-
-  const availableTimeSlots = generateAvailableTimeSlots();
-
   const bookingMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest('POST', `/api/public/company/${publicLink}/booking`, data);
-    },
+    mutationFn: (data: BookingForm) =>
+      apiRequest(`/api/public/appointments/${publicLink}`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
     onSuccess: () => {
-      setBookingComplete(true);
       toast({
-        title: "Booking Request Submitted",
-        description: "We'll contact you shortly to confirm your appointment.",
+        title: "Appointment Requested",
+        description: "We'll contact you soon to confirm your booking.",
       });
+      form.reset();
+      setSelectedServices([]);
+      setShowBookingForm(false);
     },
-    onError: (error) => {
+    onError: () => {
       toast({
-        title: "Booking Failed",
-        description: "Please try again or contact us directly.",
+        title: "Error",
+        description: "Failed to submit booking. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: BookingFormData) => {
-    // Add selected services to the form data
-    const submissionData = {
-      ...data,
-      selectedServices,
-      totalPrice: calculateTotalPrice(),
-      totalDuration: calculateTotalDuration()
-    };
-    bookingMutation.mutate(submissionData);
-  };
-
-
-
-  if (bookingComplete) {
+  if (servicesLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8 text-center">
-            <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Booking Submitted!</h2>
-            <p className="text-slate-600 mb-6">
-              Thank you for your booking request. We'll contact you within 24 hours to confirm your appointment details.
-            </p>
-            <div className="space-y-3">
-              <Button 
-                onClick={() => setLocation(`/client/${publicLink}`)}
-                variant="outline" 
-                className="w-full"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Clinic Info
-              </Button>
-              {company?.clinicWhatsapp && (
-                <Button 
-                  onClick={() => {
-                    const message = encodeURIComponent(
-                      `Hi! I just submitted a booking request through your website. My name is ${form.getValues('name')}.`
-                    );
-                    window.open(`https://wa.me/${company?.clinicWhatsapp?.replace(/\D/g, '') || ''}?text=${message}`, '_blank');
-                  }}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Contact via WhatsApp
-                </Button>
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-slate-800 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading services...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!services || services.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center p-6">
+          <p className="text-slate-600">No services available at the moment.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Group services by category
+  const servicesByCategory = services.reduce((acc: Record<string, Service[]>, service) => {
+    if (!acc[service.category]) {
+      acc[service.category] = [];
+    }
+    acc[service.category].push(service);
+    return acc;
+  }, {});
+
+  const handleServiceToggle = (serviceId: string) => {
+    const newSelection = selectedServices.includes(serviceId)
+      ? selectedServices.filter(id => id !== serviceId)
+      : [...selectedServices, serviceId];
+    
+    setSelectedServices(newSelection);
+    form.setValue('selectedServices', newSelection);
+  };
+
+  const handleContinue = () => {
+    if (selectedServices.length === 0) {
+      toast({
+        title: "No Services Selected",
+        description: "Please select at least one service to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowBookingForm(true);
+  };
+
+  const calculateTotal = () => {
+    return selectedServices.reduce((total, serviceId) => {
+      const service = services.find(s => s.id.toString() === serviceId);
+      if (service) {
+        const price = parseFloat(service.price.replace(/[^0-9.]/g, ''));
+        return total + price;
+      }
+      return total;
+    }, 0);
+  };
+
+  const formatDuration = (minutes: number) => {
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      if (remainingMinutes === 0) {
+        return `${hours} hour${hours > 1 ? 's' : ''}`;
+      }
+      return `${hours} hour${hours > 1 ? 's' : ''} ${remainingMinutes} mins`;
+    }
+    return `${minutes} mins`;
+  };
+
+  if (showBookingForm) {
+    const selectedServiceDetails = services.filter(s => 
+      selectedServices.includes(s.id.toString())
+    );
+
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {/* Header */}
+        <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
+          <div className="max-w-lg mx-auto px-4 py-4 flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowBookingForm(false)}
+              className="mr-3"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-lg font-medium text-slate-900">Book Appointment</h1>
+              {company?.clinicAddress && (
+                <div className="flex items-center text-slate-600 text-sm mt-1">
+                  <MapPin className="h-3 w-3 mr-1" />
+                  <span>{company.clinicAddress}</span>
+                </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        <div className="max-w-lg mx-auto px-4 py-6">
+          {/* Selected Services Summary */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <h3 className="font-medium text-slate-900 mb-3">Selected Services</h3>
+              <div className="space-y-2">
+                {selectedServiceDetails.map((service) => (
+                  <div key={service.id} className="flex justify-between items-center text-sm">
+                    <div>
+                      <span className="text-slate-900">{service.name}</span>
+                      <span className="text-slate-600 ml-2">
+                        {formatDuration(service.duration)}
+                      </span>
+                    </div>
+                    <span className="text-slate-900 font-medium">{service.price}</span>
+                  </div>
+                ))}
+                <div className="border-t pt-2 flex justify-between items-center font-medium">
+                  <span>Total</span>
+                  <span>${calculateTotal().toFixed(2)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Booking Form */}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit((data) => bookingMutation.mutate(data))} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your full name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your phone number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your email address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Additional Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Any special requests or notes..."
+                        className="min-h-[80px]"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button 
+                type="submit" 
+                className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
+                disabled={bookingMutation.isPending}
+              >
+                {bookingMutation.isPending ? "Submitting..." : "Request Appointment"}
+              </Button>
+            </form>
+          </Form>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Hero Banner Section */}
-      <div className="relative h-64 md:h-80 overflow-hidden">
-        {/* Background Image */}
-        {company?.heroImageUrl ? (
-          <div 
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: `url(${company.heroImageUrl})` }}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-green-50 to-amber-100" />
-        )}
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-lg font-medium text-slate-900">Select services</h1>
+          <Button variant="ghost" size="sm" className="text-slate-600">
+            Log in
+          </Button>
+        </div>
         
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent"></div>
-        
-        {/* Content */}
-        <div className="relative h-full flex items-center">
-          <div className="max-w-4xl mx-auto px-6 w-full">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              {/* Text Content */}
-              <div className="text-white space-y-3">
-                <div className="text-sm font-medium text-amber-200 tracking-wide uppercase">
-                  FROM THE INSIDE OUT
-                </div>
-                <h1 className="text-3xl md:text-4xl font-bold leading-tight">
-                  {company?.clinicName || "Beauty From Brazil"}
-                </h1>
-                <p className="text-lg text-gray-200">Brazilian Beauty Services</p>
-                <p className="text-base text-gray-300">HAIR, NAIL, BEAUTY</p>
-                
-                {/* Contact Info */}
-                <div className="pt-4 space-y-2">
-                  {company?.clinicPhone && (
-                    <div className="flex items-center text-sm text-gray-200">
-                      <Phone className="w-4 h-4 mr-2" />
-                      {company.clinicPhone}
-                    </div>
-                  )}
-                  {company?.clinicAddress && (
-                    <div className="flex items-center text-sm text-gray-200">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      {company.clinicAddress}
-                    </div>
-                  )}
-                </div>
-                
-                {/* CTA Button */}
-                <div className="pt-4">
-                  <Button 
-                    className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8 py-3 rounded-full"
-                    onClick={() => {
-                      const formElement = document.querySelector('form');
-                      formElement?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                  >
-                    BOOK NOW
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Professional Image Placeholder */}
-              <div className="hidden md:flex justify-end">
-                <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl bg-white/10 backdrop-blur-sm">
-                  <div className="w-full h-full bg-gradient-to-br from-amber-100 to-green-100 flex items-center justify-center">
-                    <User className="w-24 h-24 text-amber-600 opacity-60" />
-                  </div>
-                </div>
+        {/* Company Info */}
+        {company && (
+          <div className="max-w-lg mx-auto px-4 pb-4">
+            <div className="bg-slate-100 rounded-lg p-3 flex items-start">
+              <MapPin className="h-4 w-4 text-slate-600 mr-2 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <h2 className="font-medium text-slate-900 text-sm">
+                  {company.clinicName || 'Beauty Salon'}
+                </h2>
+                {company.clinicAddress && (
+                  <p className="text-slate-600 text-xs mt-0.5">
+                    {company.clinicAddress}
+                  </p>
+                )}
               </div>
             </div>
           </div>
-        </div>
-        
-        {/* Social Media Links */}
-        <div className="absolute bottom-4 left-6 flex space-x-4">
-          <div className="flex items-center space-x-2 text-white/80 text-sm">
-            <MessageSquare className="w-4 h-4" />
-            <span>Instagram</span>
-          </div>
-          <div className="flex items-center space-x-2 text-white/80 text-sm">
-            <MessageSquare className="w-4 h-4" />
-            <span>Facebook</span>
-          </div>
-        </div>
+        )}
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <Button 
-            variant="ghost" 
-            onClick={() => setLocation(`/client/${publicLink}`)}
-            className="mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to {company?.clinicName || 'Clinic Info'}
-          </Button>
-          
-          <h1 className="text-3xl font-bold text-slate-900">Book Appointment</h1>
-          <p className="text-slate-600 mt-2">
-            Fill out the form below and we'll get back to you to confirm your appointment.
-          </p>
-        </div>
+      <div className="max-w-lg mx-auto">
+        {/* Services List */}
+        <div className="space-y-2">
+          {Object.entries(servicesByCategory).map(([category, categoryServices]) => (
+            <div key={category}>
+              {/* Category Header */}
+              <button
+                onClick={() => setSelectedCategory(
+                  selectedCategory === category ? null : category
+                )}
+                className="w-full px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between hover:bg-slate-50"
+              >
+                <span className="text-lg font-medium text-slate-900">{category}</span>
+                {selectedCategory === category ? (
+                  <ChevronUp className="h-5 w-5 text-slate-600" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-slate-600" />
+                )}
+              </button>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="w-5 h-5 mr-2 text-green-600" />
-              Appointment Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Personal Information */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-slate-900 flex items-center">
-                    <User className="w-4 h-4 mr-2" />
-                    Personal Information
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Your full name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone Number *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="021 123 4567" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email Address *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="your.email@example.com" type="email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Service Selection */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-900">Select services</h3>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-500">
-                        {selectedServices.length > 0 && (
-                          <>Total: ${calculateTotalPrice().toFixed(2)}</>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Been here before section */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">Been here before?</p>
-                        <p className="text-xs text-blue-600">Quickly rebook your previous appointments</p>
-                      </div>
-                      <Button variant="outline" size="sm" className="text-blue-700 border-blue-300">
-                        <User className="w-4 h-4 mr-1" />
-                        Log in
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Service Categories */}
-                  <FormField
-                    control={form.control}
-                    name="selectedServices"
-                    render={() => (
-                      <FormItem>
-                        <div className="space-y-2">
-                          {Object.entries(groupedServices).map(([category, services]) => (
-                            <div key={category} className="border border-gray-200 rounded-lg overflow-hidden">
-                              {/* Category Header */}
-                              <button
-                                type="button"
-                                onClick={() => toggleCategory(category)}
-                                className="w-full px-4 py-3 text-left flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
-                              >
-                                <span className="font-medium text-gray-900">{category}</span>
-                                {expandedCategories.includes(category) ? (
-                                  <ChevronDown className="w-4 h-4 text-gray-500" />
-                                ) : (
-                                  <ChevronRight className="w-4 h-4 text-gray-500" />
-                                )}
-                              </button>
-                              
-                              {/* Category Services */}
-                              {expandedCategories.includes(category) && (
-                                <div className="border-t border-gray-200">
-                                  {(services as Procedure[]).map((service) => (
-                                    <div
-                                      key={service.id}
-                                      className="flex items-center justify-between p-4 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                                    >
-                                      <div className="flex items-center space-x-3">
-                                        <Checkbox
-                                          id={`service-${service.id}`}
-                                          checked={selectedServices.includes(service.id.toString())}
-                                          onCheckedChange={(checked) => 
-                                            handleServiceToggle(service.id.toString(), !!checked)
-                                          }
-                                        />
-                                        <label
-                                          htmlFor={`service-${service.id}`}
-                                          className="flex-1 cursor-pointer"
-                                        >
-                                          <div>
-                                            <p className="font-medium text-gray-900">{service.name}</p>
-                                            {service.description && (
-                                              <p className="text-sm text-gray-500 mt-1">{service.description}</p>
-                                            )}
-                                            <p className="text-xs text-gray-400 mt-1">
-                                              {service.duration} minutes
-                                            </p>
-                                          </div>
-                                        </label>
-                                      </div>
-                                      <div className="text-right">
-                                        <p className="font-semibold text-gray-900">${service.price}</p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {/* Selected Services Summary */}
-                  {selectedServices.length > 0 && (
-                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <h4 className="font-medium text-green-800 mb-2">Selected Services</h4>
-                      <div className="space-y-2">
-                        {selectedServices.map(serviceId => {
-                          const service = procedures?.find(p => p.id.toString() === serviceId);
-                          return service ? (
-                            <div key={serviceId} className="flex justify-between items-center text-sm">
-                              <span className="text-green-700">{service.name}</span>
-                              <span className="font-medium text-green-800">${service.price}</span>
-                            </div>
-                          ) : null;
-                        })}
-                        <div className="border-t border-green-200 pt-2 mt-2">
-                          <div className="flex justify-between items-center font-semibold text-green-800">
-                            <span>Total</span>
-                            <span>${calculateTotalPrice().toFixed(2)}</span>
-                          </div>
-                          <div className="text-xs text-green-600 mt-1">
-                            Duration: {calculateTotalDuration()} minutes
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Continue Button */}
-                  {selectedServices.length > 0 && (
-                    <div className="pt-4">
-                      <Button 
-                        type="button"
-                        className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 font-medium"
-                        onClick={() => {
-                          // Scroll to appointment details section
-                          const appointmentSection = document.querySelector('[data-section="appointment-details"]');
-                          appointmentSection?.scrollIntoView({ behavior: 'smooth' });
-                        }}
+              {/* Category Services */}
+              {(selectedCategory === category || selectedCategory === null) && (
+                <div className="bg-white">
+                  {categoryServices.map((service) => {
+                    const isSelected = selectedServices.includes(service.id.toString());
+                    
+                    return (
+                      <div
+                        key={service.id}
+                        className="border-b border-slate-100 last:border-b-0"
                       >
-                        Continue
-                      </Button>
-                    </div>
-                  )}
+                        <div className="px-4 py-4 flex items-start space-x-3">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleServiceToggle(service.id.toString())}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-slate-900 font-medium">{service.name}</h3>
+                            <div className="flex items-center text-slate-600 text-sm mt-1 space-x-3">
+                              <span>{formatDuration(service.duration)}</span>
+                              <span>•</span>
+                              <span className="font-medium">{service.price}</span>
+                            </div>
+                            {service.description && (
+                              <p className="text-slate-600 text-sm mt-1 line-clamp-2">
+                                {service.description}
+                              </p>
+                            )}
+                          </div>
+                          <Button variant="ghost" size="sm" className="text-slate-400 p-1">
+                            <Info className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
+              )}
+            </div>
+          ))}
+        </div>
 
-                {/* Calendar & Time Selection */}
-                <div className="space-y-4" data-section="appointment-details">
-                  <h3 className="font-semibold text-slate-900">Select Date & Time</h3>
-                  
-                  <AppointmentCalendar
-                    businessHours={businessHours || []}
-                    selectedServices={selectedServices}
-                    procedures={procedures || []}
-                    onDateTimeSelect={(date, time) => {
-                      form.setValue('preferredDate', date);
-                      form.setValue('preferredTime', time);
-                    }}
-                    selectedDate={form.watch('preferredDate')}
-                    selectedTime={form.watch('preferredTime')}
-                  />
-                  
-                  {/* Hidden form fields to store selected values */}
-                  <FormField
-                    control={form.control}
-                    name="preferredDate"
-                    render={({ field }) => (
-                      <FormItem className="hidden">
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="preferredTime"
-                    render={({ field }) => (
-                      <FormItem className="hidden">
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Additional Notes */}
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Additional Notes</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Any special requests or information we should know..."
-                          className="h-20"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="pt-4 border-t border-slate-200">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-blue-700">
-                      <strong>Please note:</strong> This is a booking request. We'll contact you within 24 hours 
-                      to confirm your appointment and discuss any specific requirements.
-                    </p>
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-green-600 hover:bg-green-700" 
-                    disabled={bookingMutation.isPending}
-                  >
-                    {bookingMutation.isPending ? "Submitting..." : "Submit Booking Request"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+        {/* Continue Button - Fixed at bottom */}
+        {selectedServices.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4">
+            <div className="max-w-lg mx-auto">
+              <Button 
+                onClick={handleContinue}
+                className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Bottom padding to account for fixed button */}
+      {selectedServices.length > 0 && <div className="h-20" />}
     </div>
   );
 }
