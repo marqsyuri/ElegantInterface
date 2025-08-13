@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, Calendar, User, Phone, Mail, MessageSquare, CheckCircle, MapPin } from "lucide-react";
+import { ArrowLeft, Calendar, User, Phone, Mail, MessageSquare, CheckCircle, MapPin, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -18,7 +19,7 @@ const bookingSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   phone: z.string().min(10, "Please enter a valid phone number"),
-  serviceId: z.string().min(1, "Please select a service"),
+  selectedServices: z.array(z.string()).min(1, "Please select at least one service"),
   preferredDate: z.string().min(1, "Please select a preferred date"),
   preferredTime: z.string().min(1, "Please select a preferred time"),
   notes: z.string().optional(),
@@ -66,6 +67,8 @@ export default function ClientBooking() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [bookingComplete, setBookingComplete] = useState(false);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const publicLink = params.publicLink;
 
   const form = useForm<BookingFormData>({
@@ -74,7 +77,7 @@ export default function ClientBooking() {
       name: "",
       email: "",
       phone: "",
-      serviceId: "",
+      selectedServices: [],
       preferredDate: "",
       preferredTime: "",
       notes: "",
@@ -88,7 +91,7 @@ export default function ClientBooking() {
   });
 
   const { data: procedures } = useQuery<Procedure[]>({
-    queryKey: [`/api/public/procedures/${publicLink}`],
+    queryKey: [`/api/public/services/${publicLink}`],
     enabled: !!publicLink,
   });
 
@@ -102,14 +105,60 @@ export default function ClientBooking() {
     enabled: !!publicLink && !!form.watch('preferredDate'),
   });
 
+  // Group services by category
+  const groupedServices = procedures?.reduce((acc: any, service: Procedure) => {
+    if (!acc[service.category]) {
+      acc[service.category] = [];
+    }
+    acc[service.category].push(service);
+    return acc;
+  }, {}) || {};
+
+  // Calculate total price of selected services
+  const calculateTotalPrice = () => {
+    return selectedServices.reduce((total, serviceId) => {
+      const service = procedures?.find((p: Procedure) => p.id.toString() === serviceId);
+      return total + parseFloat(service?.price || '0');
+    }, 0);
+  };
+
+  // Handle service selection
+  const handleServiceToggle = (serviceId: string, checked: boolean) => {
+    let newSelection = [...selectedServices];
+    if (checked) {
+      newSelection.push(serviceId);
+    } else {
+      newSelection = newSelection.filter(id => id !== serviceId);
+    }
+    setSelectedServices(newSelection);
+    form.setValue('selectedServices', newSelection);
+  };
+
+  // Handle category expansion
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(cat => cat !== category)
+        : [...prev, category]
+    );
+  };
+
+  // Calculate total duration for selected services
+  const calculateTotalDuration = () => {
+    return selectedServices.reduce((total, serviceId) => {
+      const service = procedures?.find((p: Procedure) => p.id.toString() === serviceId);
+      return total + (service?.duration || 0);
+    }, 0);
+  };
+
   // Generate available time slots based on business hours and booked appointments
   const generateAvailableTimeSlots = () => {
-    if (!businessHours || !form.watch('preferredDate') || !form.watch('serviceId')) {
+    if (!businessHours || !form.watch('preferredDate') || selectedServices.length === 0) {
       return [];
     }
 
-    const selectedProcedure = procedures?.find((p: Procedure) => p.id === parseInt(form.watch('serviceId')));
-    if (!selectedProcedure) return [];
+    const totalDuration = calculateTotalDuration();
+    if (totalDuration === 0) return [];
 
     const selectedDate = form.watch('preferredDate');
     const dayOfWeek = new Date(selectedDate).getDay(); // 0 = Sunday, 1 = Monday, etc.
@@ -143,8 +192,8 @@ export default function ClientBooking() {
         return currentTime >= slotStart && currentTime < slotEnd;
       });
 
-      // Check if there's enough time for the procedure
-      const procedureEndTime = addMinutes(currentTime, selectedProcedure.duration);
+      // Check if there's enough time for all selected procedures
+      const procedureEndTime = addMinutes(currentTime, totalDuration);
       if (procedureEndTime <= endTime && !isBooked) {
         slots.push({
           value: currentTime,
@@ -180,7 +229,7 @@ export default function ClientBooking() {
   const availableTimeSlots = generateAvailableTimeSlots();
 
   const bookingMutation = useMutation({
-    mutationFn: async (data: BookingFormData) => {
+    mutationFn: async (data: any) => {
       return await apiRequest('POST', `/api/public/company/${publicLink}/booking`, data);
     },
     onSuccess: () => {
@@ -200,7 +249,14 @@ export default function ClientBooking() {
   });
 
   const onSubmit = (data: BookingFormData) => {
-    bookingMutation.mutate(data);
+    // Add selected services to the form data
+    const submissionData = {
+      ...data,
+      selectedServices,
+      totalPrice: calculateTotalPrice(),
+      totalDuration: calculateTotalDuration()
+    };
+    bookingMutation.mutate(submissionData);
   };
 
 
@@ -411,38 +467,149 @@ export default function ClientBooking() {
                   />
                 </div>
 
-                {/* Procedure Selection */}
+                {/* Service Selection */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-slate-900">Procedure Selection</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-900">Select services</h3>
+                    <div className="text-right">
+                      <div className="text-sm text-gray-500">
+                        {selectedServices.length > 0 && (
+                          <>Total: ${calculateTotalPrice().toFixed(2)}</>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   
+                  {/* Been here before section */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">Been here before?</p>
+                        <p className="text-xs text-blue-600">Quickly rebook your previous appointments</p>
+                      </div>
+                      <Button variant="outline" size="sm" className="text-blue-700 border-blue-300">
+                        <User className="w-4 h-4 mr-1" />
+                        Log in
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Service Categories */}
                   <FormField
                     control={form.control}
-                    name="serviceId"
-                    render={({ field }) => (
+                    name="selectedServices"
+                    render={() => (
                       <FormItem>
-                        <FormLabel>Choose Procedure *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a procedure" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {procedures?.map((procedure: Procedure) => (
-                              <SelectItem key={procedure.id} value={procedure.id.toString()}>
-                                {procedure.name} - ${procedure.price} ({procedure.duration} min)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                          {Object.entries(groupedServices).map(([category, services]) => (
+                            <div key={category} className="border border-gray-200 rounded-lg overflow-hidden">
+                              {/* Category Header */}
+                              <button
+                                type="button"
+                                onClick={() => toggleCategory(category)}
+                                className="w-full px-4 py-3 text-left flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+                              >
+                                <span className="font-medium text-gray-900">{category}</span>
+                                {expandedCategories.includes(category) ? (
+                                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                                )}
+                              </button>
+                              
+                              {/* Category Services */}
+                              {expandedCategories.includes(category) && (
+                                <div className="border-t border-gray-200">
+                                  {(services as Procedure[]).map((service) => (
+                                    <div
+                                      key={service.id}
+                                      className="flex items-center justify-between p-4 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                    >
+                                      <div className="flex items-center space-x-3">
+                                        <Checkbox
+                                          id={`service-${service.id}`}
+                                          checked={selectedServices.includes(service.id.toString())}
+                                          onCheckedChange={(checked) => 
+                                            handleServiceToggle(service.id.toString(), !!checked)
+                                          }
+                                        />
+                                        <label
+                                          htmlFor={`service-${service.id}`}
+                                          className="flex-1 cursor-pointer"
+                                        >
+                                          <div>
+                                            <p className="font-medium text-gray-900">{service.name}</p>
+                                            {service.description && (
+                                              <p className="text-sm text-gray-500 mt-1">{service.description}</p>
+                                            )}
+                                            <p className="text-xs text-gray-400 mt-1">
+                                              {service.duration} minutes
+                                            </p>
+                                          </div>
+                                        </label>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="font-semibold text-gray-900">${service.price}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  
+                  {/* Selected Services Summary */}
+                  {selectedServices.length > 0 && (
+                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <h4 className="font-medium text-green-800 mb-2">Selected Services</h4>
+                      <div className="space-y-2">
+                        {selectedServices.map(serviceId => {
+                          const service = procedures?.find(p => p.id.toString() === serviceId);
+                          return service ? (
+                            <div key={serviceId} className="flex justify-between items-center text-sm">
+                              <span className="text-green-700">{service.name}</span>
+                              <span className="font-medium text-green-800">${service.price}</span>
+                            </div>
+                          ) : null;
+                        })}
+                        <div className="border-t border-green-200 pt-2 mt-2">
+                          <div className="flex justify-between items-center font-semibold text-green-800">
+                            <span>Total</span>
+                            <span>${calculateTotalPrice().toFixed(2)}</span>
+                          </div>
+                          <div className="text-xs text-green-600 mt-1">
+                            Duration: {calculateTotalDuration()} minutes
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Continue Button */}
+                  {selectedServices.length > 0 && (
+                    <div className="pt-4">
+                      <Button 
+                        type="button"
+                        className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 font-medium"
+                        onClick={() => {
+                          // Scroll to appointment details section
+                          const appointmentSection = document.querySelector('[data-section="appointment-details"]');
+                          appointmentSection?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                      >
+                        Continue
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Preferred Date & Time */}
-                <div className="space-y-4">
+                <div className="space-y-4" data-section="appointment-details">
                   <h3 className="font-semibold text-slate-900">Preferred Date & Time</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -486,7 +653,7 @@ export default function ClientBooking() {
                               ) : (
                                 <SelectItem value="no-times-available" disabled>
                                   {!form.watch('preferredDate') ? 'Please select a date first' :
-                                   !form.watch('serviceId') ? 'Please select a procedure first' :
+                                   selectedServices.length === 0 ? 'Please select services first' :
                                    'No available times for selected date'}
                                 </SelectItem>
                               )}
