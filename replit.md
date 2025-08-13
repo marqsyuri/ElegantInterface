@@ -1,7 +1,7 @@
 # Estética Pro - Sistema de Gestão para Esteticistas
 
 ## Overview
-Estética Pro is a full-stack web application designed for beauty professionals to manage their business operations. It provides tools for appointment scheduling, client management, clinical records, financial tracking, inventory, communication, and loyalty programs. The project aims to offer a comprehensive, modern solution for aestheticians, enhancing efficiency and client engagement.
+Estética Pro is a full-stack web application designed for beauty professionals to manage their business operations. It provides tools for appointment scheduling, client management, clinical records, financial tracking, inventory, communication, and loyalty programs. The project features a complete client booking system with 4-step workflow and comprehensive administrative tools for salon management.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -27,8 +27,10 @@ Preferred communication style: Simple, everyday language.
 - **Authentication System**: Replit OIDC integration with session management.
 - **Comprehensive Database Schema**: Includes Users, Clients, Services, Appointments, Clinical Records, Transactions, Messages, Feedback, Inventory, and Loyalty Programs.
 - **Core Business Management**: Dashboard, Appointment, Client, Clinical Record, Financial, Communication, Inventory, and Loyalty management.
+- **Client Booking System**: 4-step public booking flow (Service Selection → Professional Selection → Date/Time Selection → Confirmation) with intelligent calendar integration.
+- **Professional Management**: Staff profiles with specialties, scheduling availability, and service assignments.
+- **Smart Scheduling**: Business hours integration, 30-minute time slots, break time handling, and 14-day availability window.
 - **UI/UX Decisions**: Mobile-first responsive design, consistent layout patterns using a `PageLayout` component, expandable sidebar, and a clean, professional aesthetic with a Brazilian color theme (green/yellow) and no gradients.
-- **Appointment System**: Calendar and list views, duration handling, New Zealand time formatting, and configurable business hours.
 - **Image Upload System**: Compressed photo uploads with before/after support, stored as base64.
 
 ### Design Principles
@@ -57,3 +59,19 @@ Preferred communication style: Simple, everyday language.
 - `typescript`: Static type checking
 - `tsx`: TypeScript execution for Node.js
 - `esbuild`: Fast JavaScript bundler
+
+## Recent Changes (August 2025)
+
+### Client Booking System Implementation
+- **Complete 4-step booking workflow**: Service selection, professional selection, calendar scheduling, and confirmation
+- **10+ service categories**: Hair treatments (Hair Colour Dye $150, Foils/Balayage $220, Brazilian Keratin $200, Hair Botox $120, Hair Extension $300), nail services, and consultations
+- **Professional management**: 3 specialists (Maria Silva, Ana Costa, Jessica Brown) with defined specialties
+- **Smart calendar system**: 14-day availability window, business hours integration, 30-minute time slots
+- **Public API endpoints**: `/api/public/procedures`, `/api/public/staff`, `/api/public/business-hours`, `/api/public/appointments`
+- **Confirmation system**: Complete booking summary with contact information and WhatsApp integration
+
+### Technical Improvements
+- **Enhanced routing**: Proper navigation flow between booking steps with back button functionality
+- **Real-time validation**: Form validation at each step with user-friendly error messages
+- **Mobile optimization**: Responsive design optimized for mobile booking experience
+- **Database integration**: Automatic client creation and appointment management
