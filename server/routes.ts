@@ -954,6 +954,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public appointment booking endpoint
+  app.post('/api/public/appointments/:publicLink', async (req, res) => {
+    try {
+      const { publicLink } = req.params;
+      const {
+        name,
+        phone,
+        email,
+        notes,
+        selectedServices,
+        selectedProfessional,
+        selectedDate,
+        selectedTime
+      } = req.body;
+      
+      // Find company by public link
+      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
+      
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Create client if not exists
+      let client = await db.select().from(clients).where(
+        and(
+          eq(clients.userId, company.id),
+          eq(clients.email, email)
+        )
+      ).limit(1);
+
+      if (client.length === 0) {
+        const [newClient] = await db.insert(clients).values({
+          userId: company.id,
+          name,
+          phone,
+          email
+        }).returning();
+        client = [newClient];
+      }
+
+      // Create appointment request
+      const appointmentData = {
+        userId: company.id,
+        clientId: client[0].id,
+        staffId: parseInt(selectedProfessional),
+        procedureIds: selectedServices.map((id: string) => parseInt(id)),
+        date: selectedDate,
+        time: selectedTime,
+        status: 'pending',
+        notes: notes || '',
+        totalDuration: 60, // Calculate based on selected services
+        totalPrice: '0.00' // Calculate based on selected services
+      };
+
+      const appointment = await storage.createAppointment(appointmentData);
+      
+      res.json({ 
+        success: true, 
+        appointmentId: appointment.id,
+        message: "Appointment request submitted successfully" 
+      });
+    } catch (error) {
+      console.error("Error creating appointment:", error);
+      res.status(500).json({ message: "Failed to create appointment" });
+    }
+  });
+
   // Procedures routes
   app.get('/api/procedures', isAuthenticated, async (req: any, res) => {
     try {

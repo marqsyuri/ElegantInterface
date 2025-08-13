@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ChevronUp, ChevronDown, Info, X, MapPin, ArrowLeft } from "lucide-react";
+import { ChevronUp, ChevronDown, Info, X, MapPin, ArrowLeft, Calendar, Clock, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +40,20 @@ interface Professional {
   profileImage?: string;
 }
 
+interface TimeSlot {
+  time: string;
+  available: boolean;
+}
+
+interface BusinessHours {
+  dayOfWeek: string;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+  breakStartTime?: string;
+  breakEndTime?: string;
+}
+
 const bookingSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().min(10, "Phone number is required"),
@@ -47,6 +61,8 @@ const bookingSchema = z.object({
   notes: z.string().optional(),
   selectedServices: z.array(z.string()).min(1, "Please select at least one service"),
   selectedProfessional: z.string().min(1, "Please select a professional"),
+  selectedDate: z.string().min(1, "Please select a date"),
+  selectedTime: z.string().min(1, "Please select a time"),
 });
 
 type BookingForm = z.infer<typeof bookingSchema>;
@@ -56,8 +72,12 @@ export default function ClientBooking() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [showProfessionalSelection, setShowProfessionalSelection] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -70,6 +90,8 @@ export default function ClientBooking() {
       notes: "",
       selectedServices: [],
       selectedProfessional: "",
+      selectedDate: "",
+      selectedTime: "",
     },
   });
 
@@ -88,18 +110,30 @@ export default function ClientBooking() {
     enabled: !!publicLink,
   });
 
+  const { data: businessHours } = useQuery<BusinessHours[]>({
+    queryKey: [`/api/public/business-hours/${publicLink}`],
+    enabled: !!publicLink,
+  });
+
+  const handleDateTimeSelected = () => {
+    if (!selectedDate || !selectedTime) {
+      toast({
+        title: "Date/Time Required",
+        description: "Please select both date and time to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+    form.setValue('selectedDate', selectedDate);
+    form.setValue('selectedTime', selectedTime);
+    setShowBookingForm(true);
+  };
+
   const bookingMutation = useMutation({
     mutationFn: (data: BookingForm) =>
       apiRequest(`/api/public/appointments/${publicLink}`, "POST", data),
     onSuccess: () => {
-      toast({
-        title: "Appointment Requested",
-        description: "We'll contact you soon to confirm your booking.",
-      });
-      form.reset();
-      setSelectedServices([]);
-      setSelectedProfessional("");
-      setShowProfessionalSelection(false);
+      setShowConfirmation(true);
       setShowBookingForm(false);
     },
     onError: () => {
@@ -174,7 +208,7 @@ export default function ClientBooking() {
       return;
     }
     form.setValue('selectedProfessional', selectedProfessional);
-    setShowBookingForm(true);
+    setShowCalendar(true);
   };
 
   const calculateTotal = () => {
@@ -198,6 +232,80 @@ export default function ClientBooking() {
       return `${hours} hour${hours > 1 ? 's' : ''} ${remainingMinutes} mins`;
     }
     return `${minutes} mins`;
+  };
+
+  // Generate available dates (next 14 days)
+  const getAvailableDates = () => {
+    const dates = [];
+    const today = new Date();
+    
+    for (let i = 1; i <= 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'lowercase' });
+      const businessDay = businessHours?.find(bh => bh.dayOfWeek === dayOfWeek);
+      
+      if (businessDay?.isOpen) {
+        dates.push({
+          date: date.toISOString().split('T')[0],
+          display: date.toLocaleDateString('en-NZ', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric' 
+          }),
+          dayOfWeek
+        });
+      }
+    }
+    
+    return dates;
+  };
+
+  // Generate time slots for selected date
+  const getTimeSlots = (date: string) => {
+    if (!businessHours || !date) return [];
+    
+    const selectedDateObj = new Date(date);
+    const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'lowercase' });
+    const businessDay = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
+    
+    if (!businessDay?.isOpen) return [];
+    
+    const slots: TimeSlot[] = [];
+    const openTime = businessDay.openTime;
+    const closeTime = businessDay.closeTime;
+    
+    // Parse time strings (assumes HH:MM format)
+    const [openHour, openMin] = openTime.split(':').map(Number);
+    const [closeHour, closeMin] = closeTime.split(':').map(Number);
+    
+    let currentHour = openHour;
+    let currentMin = openMin;
+    
+    while (currentHour < closeHour || (currentHour === closeHour && currentMin < closeMin)) {
+      const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
+      
+      // Skip break times if they exist
+      const isBreakTime = businessDay.breakStartTime && businessDay.breakEndTime &&
+        timeString >= businessDay.breakStartTime && timeString < businessDay.breakEndTime;
+      
+      if (!isBreakTime) {
+        slots.push({
+          time: timeString,
+          available: true // In a real app, you'd check against existing bookings
+        });
+      }
+      
+      // Increment by 30 minutes
+      currentMin += 30;
+      if (currentMin >= 60) {
+        currentMin = 0;
+        currentHour++;
+      }
+    }
+    
+    return slots;
   };
 
   // Professional Selection Screen
@@ -317,9 +425,144 @@ export default function ClientBooking() {
                 onClick={handleProfessionalSelected}
                 className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
               >
-                Continue to Booking
+                Continue to Date & Time
               </Button>
             </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Calendar/DateTime Selection Screen
+  if (showCalendar) {
+    const selectedServiceDetails = services.filter(s => 
+      selectedServices.includes(s.id.toString())
+    );
+    const availableDates = getAvailableDates();
+    const timeSlots = selectedDate ? getTimeSlots(selectedDate) : [];
+
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {/* Header */}
+        <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
+          <div className="max-w-lg mx-auto px-4 py-4 flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCalendar(false)}
+              className="mr-3"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-lg font-medium text-slate-900">Select Date & Time</h1>
+              {company?.clinicAddress && (
+                <div className="flex items-center text-slate-600 text-sm mt-1">
+                  <MapPin className="h-3 w-3 mr-1" />
+                  <span>{company.clinicAddress}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-lg mx-auto px-4 py-6">
+          {/* Booking Summary */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <h3 className="font-medium text-slate-900 mb-3">Booking Summary</h3>
+              <div className="space-y-2 text-sm">
+                {selectedServiceDetails.map((service) => (
+                  <div key={service.id} className="flex justify-between items-center">
+                    <span className="text-slate-900">{service.name}</span>
+                    <span className="text-slate-900">${parseFloat(service.price).toFixed(2)}</span>
+                  </div>
+                ))}
+                {selectedProfessional && professionals && (
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Professional:</span>
+                    <span>{professionals.find(p => p.id.toString() === selectedProfessional)?.name}</span>
+                  </div>
+                )}
+                <div className="border-t pt-2 flex justify-between items-center font-medium">
+                  <span>Total</span>
+                  <span>${calculateTotal().toFixed(2)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Date Selection */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-slate-900 mb-4 flex items-center">
+              <Calendar className="h-5 w-5 mr-2" />
+              Select Date
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {availableDates.map((dateOption) => (
+                <Card
+                  key={dateOption.date}
+                  className={`cursor-pointer transition-all ${
+                    selectedDate === dateOption.date
+                      ? 'ring-2 ring-slate-800 bg-slate-50'
+                      : 'hover:bg-slate-50'
+                  }`}
+                  onClick={() => {
+                    setSelectedDate(dateOption.date);
+                    setSelectedTime(""); // Reset time when date changes
+                  }}
+                >
+                  <CardContent className="p-3 text-center">
+                    <div className="text-sm font-medium text-slate-900">
+                      {dateOption.display}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Time Selection */}
+          {selectedDate && (
+            <div className="mb-6">
+              <h3 className="text-lg font-medium text-slate-900 mb-4 flex items-center">
+                <Clock className="h-5 w-5 mr-2" />
+                Select Time
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                {timeSlots.map((slot) => (
+                  <Button
+                    key={slot.time}
+                    variant={selectedTime === slot.time ? "default" : "outline"}
+                    className={`h-12 ${
+                      selectedTime === slot.time 
+                        ? 'bg-slate-800 hover:bg-slate-900' 
+                        : 'hover:bg-slate-50'
+                    } ${!slot.available ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => slot.available && setSelectedTime(slot.time)}
+                    disabled={!slot.available}
+                  >
+                    {slot.time}
+                  </Button>
+                ))}
+              </div>
+              {timeSlots.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-slate-600">No available times for this date.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Continue Button */}
+          {selectedDate && selectedTime && (
+            <Button 
+              onClick={handleDateTimeSelected}
+              className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
+            >
+              Continue to Booking Details
+            </Button>
           )}
         </div>
       </div>
@@ -381,6 +624,22 @@ export default function ClientBooking() {
                       <span className="text-slate-600">Professional:</span>
                       <span className="text-slate-900 font-medium">
                         {professionals.find(p => p.id.toString() === selectedProfessional)?.name}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Selected Date & Time */}
+                {selectedDate && selectedTime && (
+                  <div className="border-t pt-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">Date & Time:</span>
+                      <span className="text-slate-900 font-medium">
+                        {new Date(selectedDate).toLocaleDateString('en-NZ', { 
+                          weekday: 'short', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })} at {selectedTime}
                       </span>
                     </div>
                   </div>
@@ -466,6 +725,102 @@ export default function ClientBooking() {
               </Button>
             </form>
           </Form>
+        </div>
+      </div>
+    );
+  }
+
+  // Confirmation Screen
+  if (showConfirmation) {
+    const selectedServiceDetails = services.filter(s => 
+      selectedServices.includes(s.id.toString())
+    );
+
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="max-w-lg mx-auto px-4 py-8">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              
+              <h2 className="text-2xl font-semibold text-slate-900 mb-2">
+                Booking Request Sent!
+              </h2>
+              
+              <p className="text-slate-600 mb-6">
+                We've received your appointment request and will contact you soon to confirm your booking.
+              </p>
+
+              {/* Booking Summary */}
+              <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left">
+                <h3 className="font-medium text-slate-900 mb-3">Your Booking Details</h3>
+                <div className="space-y-2 text-sm">
+                  {selectedServiceDetails.map((service) => (
+                    <div key={service.id} className="flex justify-between">
+                      <span>{service.name}</span>
+                      <span>${parseFloat(service.price).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  
+                  {selectedProfessional && professionals && (
+                    <div className="flex justify-between text-slate-600">
+                      <span>Professional:</span>
+                      <span>{professionals.find(p => p.id.toString() === selectedProfessional)?.name}</span>
+                    </div>
+                  )}
+                  
+                  {selectedDate && selectedTime && (
+                    <div className="flex justify-between text-slate-600">
+                      <span>Date & Time:</span>
+                      <span>
+                        {new Date(selectedDate).toLocaleDateString('en-NZ', { 
+                          weekday: 'short', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })} at {selectedTime}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="border-t pt-2 flex justify-between font-medium">
+                    <span>Total:</span>
+                    <span>${calculateTotal().toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              {(company?.clinicPhone || company?.clinicWhatsapp) && (
+                <div className="border-t pt-4">
+                  <p className="text-sm text-slate-600 mb-3">
+                    Questions? Contact us:
+                  </p>
+                  <div className="flex justify-center space-x-4">
+                    {company.clinicPhone && (
+                      <a 
+                        href={`tel:${company.clinicPhone}`}
+                        className="text-slate-600 hover:text-slate-900"
+                      >
+                        📞 {company.clinicPhone}
+                      </a>
+                    )}
+                    {company.clinicWhatsapp && (
+                      <a 
+                        href={`https://wa.me/${company.clinicWhatsapp.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-slate-600 hover:text-slate-900"
+                      >
+                        💬 WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
