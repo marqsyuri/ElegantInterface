@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,8 @@ interface BusinessHour {
   closeTime: string;
   breakStartTime?: string;
   breakEndTime?: string;
+  lunchStart?: string;
+  lunchEnd?: string;
 }
 
 interface Procedure {
@@ -67,15 +69,26 @@ export default function AppointmentCalendar({
 
   // Check if a date is available for booking
   const isDateAvailable = (date: Date) => {
-    if (date < new Date(new Date().setHours(0, 0, 0, 0))) return false;
+    // Don't allow past dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) return false;
+    
     const businessHour = getBusinessHoursForDay(date);
-    return businessHour?.isOpen || false;
+    const available = businessHour?.isOpen || false;
+    console.log('Date availability check:', date, 'available:', available, 'business hour:', businessHour);
+    return available;
   };
 
   // Generate available time slots for a specific date
   const getAvailableTimeSlots = (date: Date) => {
     const businessHour = getBusinessHoursForDay(date);
-    if (!businessHour?.isOpen) return [];
+    console.log('Getting slots for date:', date, 'Business hour:', businessHour);
+    
+    if (!businessHour?.isOpen) {
+      console.log('No business hours or closed');
+      return [];
+    }
 
     const slots = [];
     const openTime = parseTime(businessHour.openTime);
@@ -83,16 +96,27 @@ export default function AppointmentCalendar({
     const breakStart = businessHour.breakStartTime ? parseTime(businessHour.breakStartTime) : null;
     const breakEnd = businessHour.breakEndTime ? parseTime(businessHour.breakEndTime) : null;
 
+    console.log('Times - Open:', openTime, 'Close:', closeTime, 'Break:', breakStart, '-', breakEnd, 'Duration needed:', totalDuration);
+
     // Generate 30-minute slots
     for (let time = openTime; time < closeTime; time += 30) {
       // Skip lunch break times
-      if (breakStart && breakEnd && time >= breakStart && time < breakEnd) continue;
+      if (breakStart && breakEnd && time >= breakStart && time < breakEnd) {
+        console.log('Skipping lunch time:', time);
+        continue;
+      }
       
       // Check if there's enough time for the appointment before lunch break
-      if (breakStart && time < breakStart && time + totalDuration > breakStart) continue;
+      if (breakStart && time < breakStart && time + totalDuration > breakStart) {
+        console.log('Not enough time before lunch:', time, 'need', totalDuration);
+        continue;
+      }
       
       // Check if there's enough time before closing
-      if (time + totalDuration > closeTime) continue;
+      if (time + totalDuration > closeTime) {
+        console.log('Not enough time before closing:', time, 'need', totalDuration);
+        continue;
+      }
 
       const timeString = formatTimeSlot(time);
       slots.push({
@@ -102,6 +126,7 @@ export default function AppointmentCalendar({
       });
     }
 
+    console.log('Generated', slots.length, 'slots for', date);
     return slots;
   };
 
