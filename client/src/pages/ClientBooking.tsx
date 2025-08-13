@@ -199,7 +199,6 @@ export default function ClientBooking() {
   };
 
   const handleProfessionalSelected = () => {
-    console.log("handleProfessionalSelected called, selectedProfessional:", selectedProfessional);
     if (!selectedProfessional) {
       toast({
         title: "No Professional Selected",
@@ -209,7 +208,7 @@ export default function ClientBooking() {
       return;
     }
     form.setValue('selectedProfessional', selectedProfessional);
-    console.log("Setting showCalendar to true");
+    setShowProfessionalSelection(false);
     setShowCalendar(true);
   };
 
@@ -424,23 +423,13 @@ export default function ClientBooking() {
           {selectedProfessional && (
             <div className="mt-6">
               <Button 
-                onClick={() => {
-                  console.log("Button clicked!");
-                  handleProfessionalSelected();
-                }}
+                onClick={handleProfessionalSelected}
                 className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
               >
                 Continue to Date & Time
               </Button>
             </div>
           )}
-          
-          {/* Debug info */}
-          <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-            <p>Debug: selectedProfessional = {selectedProfessional || "null"}</p>
-            <p>Debug: showCalendar = {showCalendar.toString()}</p>
-            <p>Debug: businessHours = {businessHours ? businessHours.length : "null"}</p>
-          </div>
         </div>
       </div>
     );
@@ -462,7 +451,10 @@ export default function ClientBooking() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowCalendar(false)}
+              onClick={() => {
+                setShowCalendar(false);
+                setShowProfessionalSelection(true);
+              }}
               className="mr-3"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -594,7 +586,10 @@ export default function ClientBooking() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowBookingForm(false)}
+              onClick={() => {
+                setShowBookingForm(false);
+                setShowCalendar(true);
+              }}
               className="mr-3"
             >
               <ArrowLeft className="h-4 w-4" />
