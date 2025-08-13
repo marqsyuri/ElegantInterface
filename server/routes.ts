@@ -928,6 +928,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public staff endpoint (for client booking professional selection)
+  app.get('/api/public/staff/:publicLink', async (req, res) => {
+    try {
+      const { publicLink } = req.params;
+      
+      // Find company by public link
+      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
+      
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Get staff members for this company
+      const staff = await storage.getStaff(company.id);
+      res.json(staff.map(member => ({
+        id: member.id,
+        name: member.name,
+        specialties: Array.isArray(member.specialties) ? member.specialties : [],
+        profileImage: null // Will be added later when staff upload photos
+      })));
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+      res.status(500).json({ message: "Failed to fetch staff" });
+    }
+  });
+
   // Procedures routes
   app.get('/api/procedures', isAuthenticated, async (req: any, res) => {
     try {

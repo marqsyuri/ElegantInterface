@@ -9,8 +9,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ChevronUp, ChevronDown, Info, X, MapPin } from "lucide-react";
+import { ChevronUp, ChevronDown, Info, X, MapPin, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -32,12 +33,20 @@ interface CompanyInfo {
   clinicWhatsapp?: string;
 }
 
+interface Professional {
+  id: number;
+  name: string;
+  specialties: string[];
+  profileImage?: string;
+}
+
 const bookingSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().min(10, "Phone number is required"),
   email: z.string().email("Valid email is required"),
   notes: z.string().optional(),
   selectedServices: z.array(z.string()).min(1, "Please select at least one service"),
+  selectedProfessional: z.string().min(1, "Please select a professional"),
 });
 
 type BookingForm = z.infer<typeof bookingSchema>;
@@ -46,7 +55,9 @@ export default function ClientBooking() {
   const { publicLink } = useParams<{ publicLink: string }>();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [showProfessionalSelection, setShowProfessionalSelection] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [selectedProfessional, setSelectedProfessional] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -58,6 +69,7 @@ export default function ClientBooking() {
       email: "",
       notes: "",
       selectedServices: [],
+      selectedProfessional: "",
     },
   });
 
@@ -71,6 +83,11 @@ export default function ClientBooking() {
     enabled: !!publicLink,
   });
 
+  const { data: professionals } = useQuery<Professional[]>({
+    queryKey: [`/api/public/staff/${publicLink}`],
+    enabled: !!publicLink,
+  });
+
   const bookingMutation = useMutation({
     mutationFn: (data: BookingForm) =>
       apiRequest(`/api/public/appointments/${publicLink}`, "POST", data),
@@ -81,6 +98,8 @@ export default function ClientBooking() {
       });
       form.reset();
       setSelectedServices([]);
+      setSelectedProfessional("");
+      setShowProfessionalSelection(false);
       setShowBookingForm(false);
     },
     onError: () => {
@@ -142,6 +161,19 @@ export default function ClientBooking() {
       });
       return;
     }
+    setShowProfessionalSelection(true);
+  };
+
+  const handleProfessionalSelected = () => {
+    if (!selectedProfessional) {
+      toast({
+        title: "No Professional Selected",
+        description: "Please select a professional to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+    form.setValue('selectedProfessional', selectedProfessional);
     setShowBookingForm(true);
   };
 
@@ -168,7 +200,8 @@ export default function ClientBooking() {
     return `${minutes} mins`;
   };
 
-  if (showBookingForm) {
+  // Professional Selection Screen
+  if (showProfessionalSelection) {
     const selectedServiceDetails = services.filter(s => 
       selectedServices.includes(s.id.toString())
     );
@@ -181,13 +214,13 @@ export default function ClientBooking() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowBookingForm(false)}
+              onClick={() => setShowProfessionalSelection(false)}
               className="mr-3"
             >
-              <X className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex-1">
-              <h1 className="text-lg font-medium text-slate-900">Book Appointment</h1>
+              <h1 className="text-lg font-medium text-slate-900">Select Professional</h1>
               {company?.clinicAddress && (
                 <div className="flex items-center text-slate-600 text-sm mt-1">
                   <MapPin className="h-3 w-3 mr-1" />
@@ -215,6 +248,144 @@ export default function ClientBooking() {
                     <span className="text-slate-900 font-medium">${parseFloat(service.price).toFixed(2)}</span>
                   </div>
                 ))}
+                <div className="border-t pt-2 flex justify-between items-center font-medium">
+                  <span>Total</span>
+                  <span>${calculateTotal().toFixed(2)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Professional Selection */}
+          <h3 className="text-lg font-medium text-slate-900 mb-4">Choose Your Professional</h3>
+          
+          {professionals && professionals.length > 0 ? (
+            <div className="space-y-3">
+              {professionals.map((professional) => (
+                <Card 
+                  key={professional.id} 
+                  className={`cursor-pointer transition-all ${
+                    selectedProfessional === professional.id.toString() 
+                      ? 'ring-2 ring-slate-800 bg-slate-50' 
+                      : 'hover:bg-slate-50'
+                  }`}
+                  onClick={() => setSelectedProfessional(professional.id.toString())}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center">
+                        {professional.profileImage ? (
+                          <img 
+                            src={professional.profileImage} 
+                            alt={professional.name}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-slate-600 font-medium text-lg">
+                            {professional.name.charAt(0)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-slate-900">{professional.name}</h4>
+                        {professional.specialties.length > 0 && (
+                          <p className="text-sm text-slate-600 mt-1">
+                            {professional.specialties.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                      <div className="w-5 h-5 border-2 border-slate-300 rounded-full flex items-center justify-center">
+                        {selectedProfessional === professional.id.toString() && (
+                          <div className="w-3 h-3 bg-slate-800 rounded-full"></div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-slate-600">No professionals available at the moment.</p>
+            </div>
+          )}
+
+          {/* Continue Button */}
+          {selectedProfessional && (
+            <div className="mt-6">
+              <Button 
+                onClick={handleProfessionalSelected}
+                className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
+              >
+                Continue to Booking
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (showBookingForm) {
+    const selectedServiceDetails = services.filter(s => 
+      selectedServices.includes(s.id.toString())
+    );
+
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {/* Header */}
+        <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
+          <div className="max-w-lg mx-auto px-4 py-4 flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowBookingForm(false)}
+              className="mr-3"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-lg font-medium text-slate-900">Book Appointment</h1>
+              {company?.clinicAddress && (
+                <div className="flex items-center text-slate-600 text-sm mt-1">
+                  <MapPin className="h-3 w-3 mr-1" />
+                  <span>{company.clinicAddress}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-lg mx-auto px-4 py-6">
+          {/* Booking Summary */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <h3 className="font-medium text-slate-900 mb-3">Booking Summary</h3>
+              <div className="space-y-2">
+                {selectedServiceDetails.map((service) => (
+                  <div key={service.id} className="flex justify-between items-center text-sm">
+                    <div>
+                      <span className="text-slate-900">{service.name}</span>
+                      <span className="text-slate-600 ml-2">
+                        {formatDuration(service.duration)}
+                      </span>
+                    </div>
+                    <span className="text-slate-900 font-medium">${parseFloat(service.price).toFixed(2)}</span>
+                  </div>
+                ))}
+                
+                {/* Selected Professional */}
+                {selectedProfessional && professionals && (
+                  <div className="border-t pt-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">Professional:</span>
+                      <span className="text-slate-900 font-medium">
+                        {professionals.find(p => p.id.toString() === selectedProfessional)?.name}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="border-t pt-2 flex justify-between items-center font-medium">
                   <span>Total</span>
                   <span>${calculateTotal().toFixed(2)}</span>
