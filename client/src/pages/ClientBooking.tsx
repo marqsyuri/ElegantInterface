@@ -920,7 +920,7 @@ export default function ClientBooking() {
     <div className="min-h-screen bg-slate-50">
       {/* Hero Section */}
       {company?.heroImageUrl && (
-        <div className="relative h-48 bg-slate-200 overflow-hidden">
+        <div className="relative h-64 bg-slate-200 overflow-hidden">
           <img 
             src={company.heroImageUrl} 
             alt={company.clinicName || 'Salon'}
@@ -928,13 +928,13 @@ export default function ClientBooking() {
           />
           <div className="absolute inset-0 bg-black bg-opacity-30" />
           <div className="absolute inset-0 flex items-end">
-            <div className="max-w-lg mx-auto w-full px-4 pb-6">
-              <h1 className="text-2xl font-bold text-white mb-2">
+            <div className="max-w-lg mx-auto w-full px-4 pb-8">
+              <h1 className="text-3xl font-bold text-white mb-3">
                 {company.clinicName || 'Beauty Salon'}
               </h1>
               {company.clinicAddress && (
-                <div className="flex items-center text-white/90 text-sm">
-                  <MapPin className="h-4 w-4 mr-2" />
+                <div className="flex items-center text-white/90 text-base">
+                  <MapPin className="h-5 w-5 mr-2" />
                   <span>{company.clinicAddress}</span>
                 </div>
               )}
