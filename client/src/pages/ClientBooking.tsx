@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ChevronUp, ChevronDown, Info, X, MapPin, ArrowLeft, Calendar, Clock, CheckCircle } from "lucide-react";
+import { ChevronUp, ChevronDown, Info, X, MapPin, ArrowLeft, Calendar, Clock, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -73,6 +73,7 @@ export default function ClientBooking() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [showProfessionalSelection, setShowProfessionalSelection] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<string>("");
@@ -126,6 +127,7 @@ export default function ClientBooking() {
     }
     form.setValue('selectedDate', selectedDate);
     form.setValue('selectedTime', selectedTime);
+    setShowCalendar(false);
     setShowBookingForm(true);
   };
 
@@ -245,32 +247,56 @@ export default function ClientBooking() {
     return `${minutes} mins`;
   };
 
-  // Generate available dates (next 14 days)
-  const getAvailableDates = () => {
-    const dates = [];
-    const today = new Date();
+  // Generate calendar days for current month
+  const getCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
     
-    for (let i = 1; i <= 14; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
+    // First day of month and last day of month
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    // Start from Sunday of the week containing the first day
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    
+    // Generate 42 days (6 weeks)
+    const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
       
+      const isCurrentMonth = date.getMonth() === month;
+      const isPast = date < today;
       const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       const businessDay = businessHours?.find(bh => bh.dayOfWeek === dayOfWeek);
+      const isAvailable = isCurrentMonth && !isPast && businessDay?.isOpen;
       
-      if (businessDay?.isOpen) {
-        dates.push({
-          date: date.toISOString().split('T')[0],
-          display: date.toLocaleDateString('en-NZ', { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric' 
-          }),
-          dayOfWeek
-        });
-      }
+      days.push({
+        date: date,
+        dateString: date.toISOString().split('T')[0],
+        day: date.getDate(),
+        isCurrentMonth,
+        isPast,
+        isAvailable,
+        isToday: date.getTime() === today.getTime()
+      });
     }
     
-    return dates;
+    return days;
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newMonth = new Date(currentMonth);
+    if (direction === 'prev') {
+      newMonth.setMonth(newMonth.getMonth() - 1);
+    } else {
+      newMonth.setMonth(newMonth.getMonth() + 1);
+    }
+    setCurrentMonth(newMonth);
   };
 
   // Generate time slots for selected date
@@ -450,7 +476,7 @@ export default function ClientBooking() {
     const selectedServiceDetails = services.filter(s => 
       selectedServices.includes(s.id.toString())
     );
-    const availableDates = getAvailableDates();
+    const calendarDays = getCalendarDays();
     const timeSlots = selectedDate ? getTimeSlots(selectedDate) : [];
 
     return (
@@ -507,38 +533,76 @@ export default function ClientBooking() {
             </CardContent>
           </Card>
 
-          {/* Date Selection */}
+          {/* Date Selection - Calendar View */}
           <div className="mb-6">
             <h3 className="text-lg font-medium text-slate-900 mb-4 flex items-center">
               <Calendar className="h-5 w-5 mr-2" />
               Select Date
             </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {availableDates.map((dateOption) => {
-                const dateObj = new Date(dateOption.date);
-                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-                const dayNumber = dateObj.getDate();
-                const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
-                
-                return (
+            
+            {/* Calendar Header */}
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <div className="flex items-center justify-between mb-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateMonth('prev')}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <h4 className="font-medium text-slate-900">
+                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateMonth('next')}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Weekday Headers */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                  <div key={index} className="h-8 flex items-center justify-center text-xs font-medium text-slate-600">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar Days */}
+              <div className="grid grid-cols-7 gap-1">
+                {getCalendarDays().map((day, index) => (
                   <button
-                    key={dateOption.date}
+                    key={index}
                     onClick={() => {
-                      setSelectedDate(dateOption.date);
-                      setSelectedTime(""); // Reset time when date changes
+                      if (day.isAvailable) {
+                        setSelectedDate(day.dateString);
+                        setSelectedTime(""); // Reset time when date changes
+                      }
                     }}
-                    className={`p-4 rounded-xl border transition-all text-center ${
-                      selectedDate === dateOption.date
-                        ? 'bg-slate-800 text-white border-slate-800'
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    disabled={!day.isAvailable}
+                    className={`h-10 w-10 flex items-center justify-center text-sm rounded-lg transition-all ${
+                      !day.isCurrentMonth
+                        ? 'text-slate-300'
+                        : day.isPast
+                          ? 'text-slate-400 cursor-not-allowed'
+                          : !day.isAvailable
+                            ? 'text-slate-400 cursor-not-allowed'
+                            : selectedDate === day.dateString
+                              ? 'bg-slate-800 text-white'
+                              : day.isToday
+                                ? 'bg-slate-100 text-slate-900 font-medium'
+                                : 'hover:bg-slate-50 text-slate-900'
                     }`}
                   >
-                    <div className="text-sm font-medium">
-                      {dayName}, {dayNumber} {monthName}
-                    </div>
+                    {day.day}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
           </div>
 
