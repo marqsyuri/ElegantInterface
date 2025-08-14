@@ -125,8 +125,11 @@ export default function ClientBooking() {
       });
       return;
     }
+    // Update form with all selected values
     form.setValue('selectedDate', selectedDate);
     form.setValue('selectedTime', selectedTime);
+    form.setValue('selectedServices', selectedServices);
+    form.setValue('selectedProfessional', selectedProfessional);
     setShowCalendar(false);
     setShowBookingForm(true);
   };

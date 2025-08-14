@@ -966,6 +966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/public/appointments/:publicLink', async (req, res) => {
     try {
       const { publicLink } = req.params;
+
       const {
         name,
         phone,
@@ -976,6 +977,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedDate,
         selectedTime
       } = req.body;
+
+      // Validate required fields
+      if (!name || !phone || !email || !selectedServices || !selectedProfessional || !selectedDate || !selectedTime) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      if (!selectedServices.length) {
+        return res.status(400).json({ message: "Please select at least one service" });
+      }
       
       // Find company by public link
       const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
@@ -1003,10 +1013,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Calculate total duration and price from selected services
+      const serviceIds = selectedServices.map((id: string) => parseInt(id)).filter(id => !isNaN(id));
+      
+      if (serviceIds.length === 0) {
+        return res.status(400).json({ message: "No valid services selected" });
+      }
+
       const selectedProcedures = await db.select().from(procedures).where(
         and(
           eq(procedures.userId, company.id),
-          inArray(procedures.id, selectedServices.map((id: string) => parseInt(id)))
+          inArray(procedures.id, serviceIds)
         )
       );
 
@@ -1016,10 +1032,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create appointment with the first service (main appointment)
       const appointmentDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
       
+      const serviceId = serviceIds[0];
+      const professionalId = parseInt(selectedProfessional);
+      
+      if (isNaN(serviceId) || isNaN(professionalId)) {
+        return res.status(400).json({ message: "Invalid service or professional selection" });
+      }
+
       const appointmentData = {
         userId: company.id,
         clientId: client[0].id,
-        serviceId: parseInt(selectedServices[0]), // Use first service as primary
+        serviceId: serviceId,
         appointmentDate: appointmentDateTime,
         duration: totalDuration,
         status: 'pending' as const,
