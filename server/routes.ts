@@ -764,37 +764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public API routes for client access (no authentication required)
-  app.get('/api/public/company/:publicLink', async (req, res) => {
-    try {
-      const { publicLink } = req.params;
-      
-      // Get company info by public link
-      const company = await storage.getUserByPublicLink(publicLink);
-      if (!company) {
-        return res.status(404).json({ message: 'Company not found' });
-      }
 
-      // Get business hours
-      const businessHours = await storage.getBusinessHours(company.id);
-      
-      // Get services
-      const services = await storage.getServices(company.id);
-
-      // Return public company information
-      res.json({
-        clinicName: company.clinicName,
-        clinicAddress: company.clinicAddress,
-        clinicPhone: company.clinicPhone,
-        clinicWhatsapp: company.clinicWhatsapp,
-        specialties: company.specialties,
-        businessHours,
-        services,
-      });
-    } catch (error) {
-      console.error("Error fetching company info:", error);
-      res.status(500).json({ message: "Failed to fetch company information" });
-    }
-  });
 
   app.post('/api/public/company/:publicLink/booking', async (req, res) => {
     try {
