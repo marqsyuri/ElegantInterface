@@ -27,9 +27,17 @@ import {
   appointments,
   services,
   notifications,
+  procedures,
+  staff,
+  businessHours,
+  clinicalRecords,
+  transactions,
+  loyalty,
+  inventory,
+  messages,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, or, asc } from "drizzle-orm";
+import { eq, and, gte, lte, or, asc, inArray, desc, isNull, between, sql, like } from "drizzle-orm";
 
 // Utility function to generate unique ID
 function generateUniqueId(): string {
@@ -994,19 +1002,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         client = [newClient];
       }
 
-      // Create appointment request
+      // Calculate total duration and price from selected services
+      const selectedProcedures = await db.select().from(procedures).where(
+        and(
+          eq(procedures.userId, company.id),
+          inArray(procedures.id, selectedServices.map((id: string) => parseInt(id)))
+        )
+      );
+
+      const totalDuration = selectedProcedures.reduce((sum, proc) => sum + (proc.duration || 60), 0);
+      const totalPrice = selectedProcedures.reduce((sum, proc) => sum + parseFloat(proc.price || '0'), 0);
+
+      // Create appointment with the first service (main appointment)
+      const appointmentDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+      
       const appointmentData = {
         userId: company.id,
         clientId: client[0].id,
-        staffId: parseInt(selectedProfessional),
-        procedureIds: selectedServices.map((id: string) => parseInt(id)),
-        date: selectedDate,
-        time: selectedTime,
-        status: 'pending',
+        serviceId: parseInt(selectedServices[0]), // Use first service as primary
+        appointmentDate: appointmentDateTime,
+        duration: totalDuration,
+        status: 'pending' as const,
         notes: notes || '',
-        totalDuration: 60, // Calculate based on selected services
-        totalPrice: '0.00' // Calculate based on selected services
+        totalAmount: totalPrice.toString(),
+        paidAmount: '0.00',
+        paymentStatus: 'pending' as const
       };
+
 
       const appointment = await storage.createAppointment(appointmentData);
       
