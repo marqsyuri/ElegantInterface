@@ -978,6 +978,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedTime
       } = req.body;
 
+
+
       // Validate required fields
       if (!name || !phone || !email || !selectedServices || !selectedProfessional || !selectedDate || !selectedTime) {
         return res.status(400).json({ message: "Missing required fields" });
