@@ -69,7 +69,7 @@ type BookingForm = z.infer<typeof bookingSchema>;
 
 export default function ClientBooking() {
   const { publicLink } = useParams<{ publicLink: string }>();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [showProfessionalSelection, setShowProfessionalSelection] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -184,6 +184,16 @@ export default function ClientBooking() {
     
     setSelectedServices(newSelection);
     form.setValue('selectedServices', newSelection);
+  };
+
+  const toggleCategory = (category: string) => {
+    const newOpenCategories = new Set(openCategories);
+    if (newOpenCategories.has(category)) {
+      newOpenCategories.delete(category);
+    } else {
+      newOpenCategories.add(category);
+    }
+    setOpenCategories(newOpenCategories);
   };
 
   const handleContinue = () => {
@@ -504,26 +514,31 @@ export default function ClientBooking() {
               Select Date
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              {availableDates.map((dateOption) => (
-                <Card
-                  key={dateOption.date}
-                  className={`cursor-pointer transition-all ${
-                    selectedDate === dateOption.date
-                      ? 'ring-2 ring-slate-800 bg-slate-50'
-                      : 'hover:bg-slate-50'
-                  }`}
-                  onClick={() => {
-                    setSelectedDate(dateOption.date);
-                    setSelectedTime(""); // Reset time when date changes
-                  }}
-                >
-                  <CardContent className="p-3 text-center">
-                    <div className="text-sm font-medium text-slate-900">
-                      {dateOption.display}
+              {availableDates.map((dateOption) => {
+                const dateObj = new Date(dateOption.date);
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                const dayNumber = dateObj.getDate();
+                const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+                
+                return (
+                  <button
+                    key={dateOption.date}
+                    onClick={() => {
+                      setSelectedDate(dateOption.date);
+                      setSelectedTime(""); // Reset time when date changes
+                    }}
+                    className={`p-4 rounded-xl border transition-all text-center ${
+                      selectedDate === dateOption.date
+                        ? 'bg-slate-800 text-white border-slate-800'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="text-sm font-medium">
+                      {dayName}, {dayNumber} {monthName}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -871,13 +886,11 @@ export default function ClientBooking() {
             <div key={category}>
               {/* Category Header */}
               <button
-                onClick={() => setSelectedCategory(
-                  selectedCategory === category ? null : category
-                )}
+                onClick={() => toggleCategory(category)}
                 className="w-full px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between hover:bg-slate-50"
               >
                 <span className="text-lg font-medium text-slate-900">{category}</span>
-                {selectedCategory === category ? (
+                {openCategories.has(category) ? (
                   <ChevronUp className="h-5 w-5 text-slate-600" />
                 ) : (
                   <ChevronDown className="h-5 w-5 text-slate-600" />
@@ -885,7 +898,7 @@ export default function ClientBooking() {
               </button>
 
               {/* Category Services */}
-              {(selectedCategory === category || selectedCategory === null) && (
+              {openCategories.has(category) && (
                 <div className="bg-white">
                   {categoryServices.map((service) => {
                     const isSelected = selectedServices.includes(service.id.toString());
