@@ -664,11 +664,24 @@ export default function Appointments() {
 
         {/* Calendar or List View */}
         {viewMode === 'calendar' ? (
-          <AppointmentCalendar
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            appointments={Array.isArray(appointments) ? appointments : []}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Calendar View for Appointments (simplified) */}
+            <div className="lg:col-span-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5" />
+                    Calendar View
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-muted-foreground">
+                    Calendar view for appointments is being updated. Please use List view for now.
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         ) : (
           <div className="space-y-6">
             <Card>

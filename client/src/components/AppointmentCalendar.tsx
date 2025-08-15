@@ -199,13 +199,13 @@ export default function AppointmentCalendar({
 
   return (
     <div className="space-y-4">
-      {selectedServices.length === 0 && (
+      {(!selectedServices || selectedServices.length === 0) && (
         <div className="text-center p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <p className="text-amber-700">Please select services first to see available appointment times.</p>
         </div>
       )}
 
-      {selectedServices.length > 0 && (
+      {selectedServices && selectedServices.length > 0 && (
         <>
           {/* Calendar Header */}
           <div className="flex items-center justify-between">
