@@ -1011,21 +1011,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid service or professional selection" });
       }
 
-      const appointmentData = {
+      // Create appointment directly with db.insert to handle multiple services properly
+      const [appointment] = await db.insert(appointments).values({
         userId: company.id,
         clientId: client[0].id,
         serviceId: serviceId,
+        serviceType: 'procedure',
         appointmentDate: appointmentDateTime,
         duration: totalDuration,
-        status: 'pending' as const,
+        status: 'pending',
         notes: notes || '',
         totalAmount: totalPrice.toString(),
         paidAmount: '0.00',
-        paymentStatus: 'pending' as const
-      };
+        paymentStatus: 'pending'
+      }).returning();
 
-
-      const appointment = await storage.createAppointment(appointmentData);
+      // Create a notification for each selected service
+      const serviceNames = selectedProcedures.map(proc => proc.name).join(', ');
+      await db.insert(notifications).values({
+        userId: company.id,
+        clientId: client[0].id,
+        appointmentId: appointment.id,
+        type: 'booking_request',
+        title: 'New Booking Request',
+        message: `${name} has requested an appointment for: ${serviceNames} on ${selectedDate} at ${selectedTime}`,
+        channel: 'in_app',
+        status: 'pending',
+      });
       
       res.json({ 
         success: true, 
