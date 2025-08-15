@@ -60,7 +60,7 @@ import {
   type InsertBusinessHours,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -258,6 +258,7 @@ export class DatabaseStorage implements IStorage {
         clientId: appointments.clientId,
         serviceId: appointments.serviceId,
         serviceType: appointments.serviceType,
+        selectedProcedures: appointments.selectedProcedures,
         appointmentDate: appointments.appointmentDate,
         duration: appointments.duration,
         status: appointments.status,
@@ -298,6 +299,7 @@ export class DatabaseStorage implements IStorage {
     const result = [];
     for (const appointment of appointmentsWithClients) {
       let service;
+      let allProcedures = [];
       
       if (appointment.serviceType === 'procedure') {
         // Fetch from procedures table
@@ -308,8 +310,21 @@ export class DatabaseStorage implements IStorage {
             eq(procedures.id, appointment.serviceId),
             eq(procedures.userId, userId)
           ));
-        // Add price field to procedure to match service interface
         service = procedure ? { ...procedure, price: '0' } : null;
+
+        // If there are multiple selected procedures, fetch all of them
+        if (appointment.selectedProcedures && Array.isArray(appointment.selectedProcedures) && appointment.selectedProcedures.length > 0) {
+          const procedureIds = appointment.selectedProcedures.map((id: string) => parseInt(id)).filter(id => !isNaN(id));
+          if (procedureIds.length > 0) {
+            allProcedures = await db
+              .select()
+              .from(procedures)
+              .where(and(
+                eq(procedures.userId, userId),
+                inArray(procedures.id, procedureIds)
+              ));
+          }
+        }
       } else {
         // Fetch from services table (default)
         const [serviceRecord] = await db
@@ -324,7 +339,8 @@ export class DatabaseStorage implements IStorage {
       
       result.push({
         ...appointment,
-        service: service || { id: appointment.serviceId, name: 'Unknown Service', category: 'Unknown', price: '0' }
+        service: service || { id: appointment.serviceId, name: 'Unknown Service', category: 'Unknown', price: '0' },
+        allProcedures: allProcedures
       });
     }
     

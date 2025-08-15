@@ -1017,6 +1017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientId: client[0].id,
         serviceId: serviceId,
         serviceType: 'procedure',
+        selectedProcedures: selectedServices, // Store all selected procedure IDs
         appointmentDate: appointmentDateTime,
         duration: totalDuration,
         status: 'pending',

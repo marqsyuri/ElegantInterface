@@ -754,29 +754,52 @@ export default function Appointments() {
                             </div>
                           </div>
                           
-                          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-3">
-                            <div>
-                              <p className="text-xs sm:text-sm text-muted-foreground">Service(s)</p>
-                              <p className="font-medium text-sm sm:text-base">{appointment.service.name}</p>
-                              {appointment.duration > 60 && (
-                                <p className="text-xs text-blue-600">Multiple procedures ({appointment.duration} min total)</p>
+                          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4 mt-3">
+                            <div className="col-span-full">
+                              <p className="text-xs sm:text-sm text-muted-foreground">Procedure(s) to Perform</p>
+                              {appointment.allProcedures && appointment.allProcedures.length > 0 ? (
+                                <div className="space-y-1">
+                                  {appointment.allProcedures.map((procedure: any, index: number) => (
+                                    <div key={index} className="flex justify-between items-center text-sm">
+                                      <span className="font-medium">{procedure.name}</span>
+                                      <div className="flex gap-2 text-xs text-muted-foreground">
+                                        <span>{procedure.duration}min</span>
+                                        <span>NZ${parseFloat(procedure.price || '0').toFixed(2)}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  <div className="pt-1 border-t border-gray-200">
+                                    <div className="flex justify-between items-center text-sm font-semibold">
+                                      <span>Total Duration:</span>
+                                      <span className="text-blue-600">{appointment.duration} minutes</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-1">
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="font-medium">{appointment.service.name}</span>
+                                    <div className="flex gap-2 text-xs text-muted-foreground">
+                                      <span>{appointment.duration}min</span>
+                                    </div>
+                                  </div>
+                                </div>
                               )}
                             </div>
                             <div>
-                              <p className="text-xs sm:text-sm text-muted-foreground">Total Amount</p>
-                              <p className="font-semibold text-green-600 text-sm sm:text-base">
+                              <p className="text-xs sm:text-sm text-muted-foreground">Total to Charge</p>
+                              <p className="font-semibold text-green-600 text-lg">
                                 {appointment.totalAmount ? `NZ$${parseFloat(appointment.totalAmount).toFixed(2)}` : 'No amount set'}
                               </p>
                               {parseFloat(appointment.paidAmount || '0') > 0 && (
-                                <p className="text-xs text-blue-600">Paid: NZ$${parseFloat(appointment.paidAmount).toFixed(2)}</p>
+                                <p className="text-xs text-blue-600">Already paid: NZ$${parseFloat(appointment.paidAmount).toFixed(2)}</p>
                               )}
                             </div>
-                            {appointment.client.phone && (
-                              <div className="xs:col-span-2 sm:col-span-1">
-                                <p className="text-xs sm:text-sm text-muted-foreground">Phone</p>
-                                <p className="font-medium text-sm sm:text-base">{appointment.client.phone}</p>
-                              </div>
-                            )}
+                            <div>
+                              <p className="text-xs sm:text-sm text-muted-foreground">Client Contact</p>
+                              <p className="font-medium text-sm">{appointment.client.phone}</p>
+                              <p className="text-xs text-muted-foreground">{appointment.client.email}</p>
+                            </div>
                           </div>
                           
                           {(appointment.paidAmount && parseFloat(appointment.paidAmount) > 0) && (
