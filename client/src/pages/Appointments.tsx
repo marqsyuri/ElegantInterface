@@ -743,14 +743,20 @@ export default function Appointments() {
                           
                           <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-3">
                             <div>
-                              <p className="text-xs sm:text-sm text-muted-foreground">Service</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">Service(s)</p>
                               <p className="font-medium text-sm sm:text-base">{appointment.service.name}</p>
+                              {appointment.duration > 60 && (
+                                <p className="text-xs text-blue-600">Multiple procedures ({appointment.duration} min total)</p>
+                              )}
                             </div>
                             <div>
                               <p className="text-xs sm:text-sm text-muted-foreground">Total Amount</p>
                               <p className="font-semibold text-green-600 text-sm sm:text-base">
                                 {appointment.totalAmount ? `NZ$${parseFloat(appointment.totalAmount).toFixed(2)}` : 'No amount set'}
                               </p>
+                              {parseFloat(appointment.paidAmount || '0') > 0 && (
+                                <p className="text-xs text-blue-600">Paid: NZ$${parseFloat(appointment.paidAmount).toFixed(2)}</p>
+                              )}
                             </div>
                             {appointment.client.phone && (
                               <div className="xs:col-span-2 sm:col-span-1">

@@ -24,8 +24,8 @@ interface Procedure {
 
 interface AppointmentCalendarProps {
   businessHours: BusinessHour[];
-  selectedServices: string[];
-  procedures: Procedure[];
+  selectedServices?: string[];
+  procedures?: Procedure[];
   onDateTimeSelect: (date: string, time: string) => void;
   selectedDate?: string;
   selectedTime?: string;
@@ -55,6 +55,7 @@ export default function AppointmentCalendar({
 
   // Calculate total duration of selected services
   const totalDuration = useMemo(() => {
+    if (!selectedServices || !procedures) return 0;
     return selectedServices.reduce((total, serviceId) => {
       const procedure = procedures.find(p => p.id.toString() === serviceId);
       return total + (procedure?.duration || 0);
