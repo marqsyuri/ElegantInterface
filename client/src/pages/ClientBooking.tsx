@@ -136,15 +136,19 @@ export default function ClientBooking() {
   };
 
   const bookingMutation = useMutation({
-    mutationFn: (data: BookingForm) =>
-      apiRequest(`/api/public/appointments/${publicLink}`, "POST", data),
-    onSuccess: () => {
+    mutationFn: (data: BookingForm) => {
+      console.log('Submitting booking data:', data);
+      return apiRequest(`/api/public/appointments/${publicLink}`, "POST", data);
+    },
+    onSuccess: (response) => {
+      console.log('Booking successful:', response);
       setShowConfirmation(true);
       setShowBookingForm(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Booking error:', error);
       toast({
-        title: "Error",
+        title: "Error", 
         description: "Failed to submit booking. Please try again.",
         variant: "destructive",
       });
