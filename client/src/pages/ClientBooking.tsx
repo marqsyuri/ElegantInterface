@@ -138,7 +138,7 @@ export default function ClientBooking() {
   const bookingMutation = useMutation({
     mutationFn: (data: BookingForm) => {
       console.log('Submitting booking data:', data);
-      return apiRequest(`/api/public/appointments/${publicLink}`, "POST", data);
+      return apiRequest("POST", `/api/public/appointments/${publicLink}`, data);
     },
     onSuccess: (response) => {
       console.log('Booking successful:', response);
