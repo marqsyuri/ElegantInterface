@@ -814,6 +814,11 @@ export default function ClientBooking() {
                 type="submit" 
                 className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
                 disabled={bookingMutation.isPending}
+                onClick={() => {
+                  console.log('Button clicked, form state:', form.formState);
+                  console.log('Form values:', form.getValues());
+                  console.log('Form errors:', form.formState.errors);
+                }}
               >
                 {bookingMutation.isPending ? "Submitting..." : "Request Appointment"}
               </Button>
