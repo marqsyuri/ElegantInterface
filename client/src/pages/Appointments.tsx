@@ -760,15 +760,15 @@ export default function Appointments() {
                               {appointment.allProcedures && appointment.allProcedures.length > 0 ? (
                                 <div className="space-y-1">
                                   {appointment.allProcedures.map((procedure: any, index: number) => (
-                                    <div key={index} className="flex justify-between items-center text-sm">
-                                      <span className="font-medium">{procedure.name}</span>
-                                      <div className="flex gap-2 text-xs text-muted-foreground">
+                                    <div key={procedure.id || index} className="flex justify-between items-center text-sm bg-blue-50 p-2 rounded">
+                                      <span className="font-medium text-blue-900">{procedure.name}</span>
+                                      <div className="flex gap-2 text-xs text-blue-700">
                                         <span>{procedure.duration}min</span>
                                         <span>NZ${parseFloat(procedure.price || '0').toFixed(2)}</span>
                                       </div>
                                     </div>
                                   ))}
-                                  <div className="pt-1 border-t border-gray-200">
+                                  <div className="pt-2 border-t border-gray-200">
                                     <div className="flex justify-between items-center text-sm font-semibold">
                                       <span>Total Duration:</span>
                                       <span className="text-blue-600">{appointment.duration} minutes</span>

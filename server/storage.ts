@@ -324,6 +324,9 @@ export class DatabaseStorage implements IStorage {
                 inArray(procedures.id, procedureIds)
               ));
           }
+        } else {
+          // Fallback: if no selectedProcedures, just use the main service
+          allProcedures = service ? [service] : [];
         }
       } else {
         // Fetch from services table (default)
