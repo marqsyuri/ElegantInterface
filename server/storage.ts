@@ -302,17 +302,7 @@ export class DatabaseStorage implements IStorage {
       let allProcedures = [];
       
       if (appointment.serviceType === 'procedure') {
-        // Fetch from procedures table
-        const [procedure] = await db
-          .select()
-          .from(procedures)
-          .where(and(
-            eq(procedures.id, appointment.serviceId),
-            eq(procedures.userId, userId)
-          ));
-        service = procedure ? { ...procedure, price: '0' } : null;
-
-        // If there are multiple selected procedures, fetch all of them
+        // For procedures, prioritize selected_procedures over service_id
         if (appointment.selectedProcedures && Array.isArray(appointment.selectedProcedures) && appointment.selectedProcedures.length > 0) {
           const procedureIds = appointment.selectedProcedures.map((id: string) => parseInt(id)).filter(id => !isNaN(id));
           if (procedureIds.length > 0) {
@@ -323,9 +313,19 @@ export class DatabaseStorage implements IStorage {
                 eq(procedures.userId, userId),
                 inArray(procedures.id, procedureIds)
               ));
+            // Use the first procedure as the main service for display
+            service = allProcedures[0] || null;
           }
         } else {
-          // Fallback: if no selectedProcedures, just use the main service
+          // Fallback: fetch from procedures table using serviceId
+          const [procedure] = await db
+            .select()
+            .from(procedures)
+            .where(and(
+              eq(procedures.id, appointment.serviceId),
+              eq(procedures.userId, userId)
+            ));
+          service = procedure || null;
           allProcedures = service ? [service] : [];
         }
       } else {
