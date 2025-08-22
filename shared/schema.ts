@@ -27,11 +27,12 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// User storage table - converted to local authentication
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
+  id: serial("id").primaryKey(),
+  username: varchar("username").unique().notNull(),
+  email: varchar("email").unique().notNull(),
+  password: varchar("password").notNull(), // MD5 hash
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -44,6 +45,8 @@ export const users = pgTable("users", {
   clinicPhone: varchar("clinic_phone"),
   clinicWhatsapp: varchar("clinic_whatsapp"),
   publicLink: varchar("public_link").unique(), // Unique identifier for client access
+  isActive: boolean("is_active").default(true),
+  role: varchar("role").default("admin"), // admin, staff
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -51,7 +54,7 @@ export const users = pgTable("users", {
 // Business Hours table
 export const businessHours = pgTable("business_hours", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   dayOfWeek: varchar("day_of_week").notNull(), // monday, tuesday, etc.
   isOpen: boolean("is_open").default(true),
   openTime: varchar("open_time"), // HH:MM format
@@ -65,7 +68,7 @@ export const businessHours = pgTable("business_hours", {
 // Clients table
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   name: varchar("name").notNull(),
   cpf: varchar("cpf"),
   phone: varchar("phone"),
@@ -82,7 +85,7 @@ export const clients = pgTable("clients", {
 // Services table
 export const services = pgTable("services", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   name: varchar("name").notNull(),
   description: text("description"),
   duration: integer("duration"), // in minutes
@@ -95,7 +98,7 @@ export const services = pgTable("services", {
 // Procedures table
 export const procedures = pgTable("procedures", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   name: varchar("name").notNull(),
   description: text("description"),
   category: varchar("category").notNull(),
@@ -109,7 +112,7 @@ export const procedures = pgTable("procedures", {
 // Appointments table
 export const appointments = pgTable("appointments", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").notNull().references(() => clients.id),
   serviceId: integer("service_id").notNull(),
   serviceType: varchar("service_type").notNull().default("service"), // "service" or "procedure"
@@ -129,7 +132,7 @@ export const appointments = pgTable("appointments", {
 // Clinical records table
 export const clinicalRecords = pgTable("clinical_records", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").notNull().references(() => clients.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
   procedureId: integer("procedure_id").references(() => procedures.id),
@@ -153,7 +156,7 @@ export const clinicalRecords = pgTable("clinical_records", {
 // Financial transactions table
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").references(() => clients.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
   type: varchar("type").notNull(), // income, expense
@@ -169,7 +172,7 @@ export const transactions = pgTable("transactions", {
 // Messages table for client communication
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").references(() => clients.id),
   type: varchar("type").notNull(), // manual, automatic
   channel: varchar("channel").notNull(), // whatsapp, sms, email
@@ -184,7 +187,7 @@ export const messages = pgTable("messages", {
 // Client feedback table
 export const feedback = pgTable("feedback", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").notNull().references(() => clients.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
   rating: integer("rating").notNull(), // 1-5 stars
@@ -195,7 +198,7 @@ export const feedback = pgTable("feedback", {
 // Inventory/Materials table
 export const inventory = pgTable("inventory", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   itemName: varchar("item_name").notNull(),
   category: varchar("category").notNull(), // epi, material, product
   currentStock: integer("current_stock").default(0),
@@ -208,7 +211,7 @@ export const inventory = pgTable("inventory", {
 // Loyalty packages table
 export const loyaltyPackages = pgTable("loyalty_packages", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   name: varchar("name").notNull(),
   description: text("description"),
   services: jsonb("services"), // array of service IDs and quantities
@@ -223,7 +226,7 @@ export const loyaltyPackages = pgTable("loyalty_packages", {
 // Client packages (purchased packages)
 export const clientPackages = pgTable("client_packages", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").notNull().references(() => clients.id),
   packageId: integer("package_id").notNull().references(() => loyaltyPackages.id),
   purchaseDate: date("purchase_date").notNull(),
@@ -237,7 +240,7 @@ export const clientPackages = pgTable("client_packages", {
 // Staff management table
 export const staff = pgTable("staff", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   name: varchar("name").notNull(),
   email: varchar("email"),
   phone: varchar("phone"),
@@ -264,7 +267,7 @@ export const staffSchedules = pgTable("staff_schedules", {
 // Notifications table
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").references(() => clients.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
   type: varchar("type").notNull(), // 'reminder', 'confirmation', 'marketing', 'low_stock'
@@ -280,7 +283,7 @@ export const notifications = pgTable("notifications", {
 // Marketing campaigns table
 export const marketingCampaigns = pgTable("marketing_campaigns", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   name: varchar("name").notNull(),
   type: varchar("type").notNull(), // 'email', 'sms', 'promotion'
   subject: varchar("subject"),
@@ -299,7 +302,7 @@ export const marketingCampaigns = pgTable("marketing_campaigns", {
 // Payment transactions table
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
   clientId: integer("client_id").notNull().references(() => clients.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
@@ -314,7 +317,7 @@ export const payments = pgTable("payments", {
 // Social media integration table
 export const socialMediaPosts = pgTable("social_media_posts", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   platform: varchar("platform").notNull(), // 'facebook', 'instagram', 'google_business'
   content: text("content").notNull(),
   imageUrl: varchar("image_url"),
@@ -608,3 +611,11 @@ export type SocialMediaPost = typeof socialMediaPosts.$inferSelect;
 export type InsertSocialMediaPost = z.infer<typeof insertSocialMediaPostSchema>;
 export type BusinessHours = typeof businessHours.$inferSelect;
 export type InsertBusinessHours = z.infer<typeof insertBusinessHoursSchema>;
+
+// Login schema for authentication
+export const loginUserSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type LoginUser = z.infer<typeof loginUserSchema>;

@@ -64,26 +64,29 @@ import { eq, and, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
-  // User operations (mandatory for Replit Auth)
-  getUser(id: string): Promise<User | undefined>;
+  // User operations (converted to local auth)
+  getUser(id: number): Promise<User | null>;
+  getUserByUsername(username: string): Promise<User | null>;
+  getUserByEmail(email: string): Promise<User | null>;
   getUserByPublicLink(publicLink: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser & { id: string }): Promise<User>;
-  updateUserProfileImage(userId: string, profileImageUrl: string): Promise<void>;
-  updateUserHeroImage(userId: string, heroImageUrl: string): Promise<void>;
+  createUser(user: UpsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<UpsertUser>): Promise<User>;
+  updateUserProfileImage(userId: number, profileImageUrl: string): Promise<void>;
+  updateUserHeroImage(userId: number, heroImageUrl: string): Promise<void>;
   
   // Client operations
-  getClients(userId: string): Promise<Client[]>;
-  getClient(id: number, userId: string): Promise<Client | undefined>;
-  getClientAppointments(userId: string, clientId: number): Promise<Appointment[]>;
+  getClients(userId: number): Promise<Client[]>;
+  getClient(id: number, userId: number): Promise<Client | undefined>;
+  getClientAppointments(userId: number, clientId: number): Promise<Appointment[]>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client>;
   
   // Service operations
-  getServices(userId: string): Promise<Service[]>;
+  getServices(userId: number): Promise<Service[]>;
   createService(service: InsertService): Promise<Service>;
   
   // Appointment operations
-  getAppointments(userId: string, date?: Date): Promise<(Appointment & { client: Client; service: any })[]>;
+  getAppointments(userId: number, date?: Date): Promise<(Appointment & { client: Client; service: any })[]>;
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment>;
   

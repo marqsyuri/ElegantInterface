@@ -24,7 +24,7 @@ Preferred communication style: Simple, everyday language.
 - **Validation**: Shared Zod schemas for full-stack type safety
 
 ### Key Features
-- **Authentication System**: Replit OIDC integration with session management.
+- **Authentication System**: Local user authentication with username/password and MD5 hashing.
 - **Comprehensive Database Schema**: Includes Users, Clients, Services, Appointments, Clinical Records, Transactions, Messages, Feedback, Inventory, and Loyalty Programs.
 - **Core Business Management**: Dashboard, Appointment, Client, Clinical Record, Financial, Communication, Inventory, and Loyalty management.
 - **Client Booking System**: 4-step public booking flow (Service Selection → Professional Selection → Date/Time Selection → Confirmation) with intelligent calendar integration.
@@ -48,11 +48,12 @@ Preferred communication style: Simple, everyday language.
 - `tailwindcss`: Utility-first CSS framework
 - `wouter`: Lightweight React router
 
-### Authentication
-- `openid-client`: OIDC authentication client
-- `passport`: Authentication middleware
+### Authentication (Local)
+- `passport`: Local authentication middleware
+- `passport-local`: Local strategy with username/password
 - `express-session`: Session management
 - `connect-pg-simple`: PostgreSQL session store
+- MD5 password hashing for compatibility
 
 ### Development Tools
 - `vite`: Fast build tool and dev server
@@ -61,6 +62,16 @@ Preferred communication style: Simple, everyday language.
 - `esbuild`: Fast JavaScript bundler
 
 ## Recent Changes (August 2025)
+
+### Local Authentication Conversion (August 22, 2025)
+- **Complete migration from Replit Auth to local authentication**:
+  - User table redesigned with username, email, MD5 password fields
+  - Integer primary keys replacing string UUIDs for all tables
+  - Local passport strategy with username/password login
+  - Admin user created: username `admin`, password `admin` (MD5: 21232f297a57a5a743894a0e4a801fc3)
+- **Database schema updates**: All foreign key references converted to integer types
+- **Session management**: Maintained with PostgreSQL session store
+- **Ready for standalone deployment**: No longer dependent on Replit services
 
 ### Client Booking System Implementation
 - **Complete 4-step booking workflow**: Service selection, professional selection, calendar scheduling, and confirmation
