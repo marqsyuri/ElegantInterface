@@ -7,11 +7,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 
 export default function Landing() {
-  const { loginMutation } = useAuth();
+  const { loginMutation, user } = useAuth();
   const [credentials, setCredentials] = useState({
     username: "",
     password: ""
   });
+
+  // If user is already logged in, this component shouldn't render
+  // but just in case, redirect to dashboard
+  if (user) {
+    window.location.href = "/";
+    return null;
+  }
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
