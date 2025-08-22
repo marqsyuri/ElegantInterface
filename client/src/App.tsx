@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 
 // Pages
@@ -27,7 +27,7 @@ import ClientBooking from "@/pages/ClientBooking";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   return (
     <Switch>
@@ -35,7 +35,7 @@ function Router() {
       <Route path="/client/:publicLink" component={ClientAccess} />
       <Route path="/client/:publicLink/booking" component={ClientBooking} />
       
-      {isLoading || !isAuthenticated ? (
+      {isLoading || !user ? (
         <Route path="/" component={Landing} />
       ) : (
         <>
@@ -63,12 +63,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <SidebarProvider>
-          <Toaster />
-          <Router />
-        </SidebarProvider>
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <SidebarProvider>
+            <Toaster />
+            <Router />
+          </SidebarProvider>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
