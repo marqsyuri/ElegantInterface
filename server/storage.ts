@@ -61,6 +61,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
+import session from "express-session";
 
 // Interface for storage operations
 export interface IStorage {
@@ -149,10 +150,35 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // User operations (mandatory for Replit Auth)
-  async getUser(id: string): Promise<User | undefined> {
+  sessionStore: any;
+
+  constructor() {
+    // Initialize session store with memory store for now
+    import('memorystore').then((createMemoryStore) => {
+      const MemoryStore = createMemoryStore.default(session);
+      this.sessionStore = new MemoryStore({
+        checkPeriod: 86400000, // prune expired entries every 24h
+      });
+    }).catch(() => {
+      // Fallback to memory store if memorystore not available
+      this.sessionStore = new session.MemoryStore();
+    });
+  }
+
+  // User operations (converted to local auth)
+  async getUser(id: number): Promise<User | null> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    return user || null;
+  }
+
+  async getUserByUsername(username: string): Promise<User | null> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || null;
+  }
+
+  async getUserByEmail(email: string): Promise<User | null> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || null;
   }
 
   async getUserByPublicLink(publicLink: string): Promise<User | undefined> {
@@ -160,22 +186,21 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertUser & { id: string }): Promise<User> {
+  async createUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(userData).returning();
+    return user;
+  }
+
+  async updateUser(id: number, userData: Partial<UpsertUser>): Promise<User> {
     const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
+      .update(users)
+      .set({ ...userData, updatedAt: new Date() })
+      .where(eq(users.id, id))
       .returning();
     return user;
   }
 
-  async updateUserProfileImage(userId: string, profileImageUrl: string): Promise<void> {
+  async updateUserProfileImage(userId: number, profileImageUrl: string): Promise<void> {
     await db
       .update(users)
       .set({
@@ -185,7 +210,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  async updateUserHeroImage(userId: string, heroImageUrl: string): Promise<void> {
+  async updateUserHeroImage(userId: number, heroImageUrl: string): Promise<void> {
     await db
       .update(users)
       .set({
@@ -196,7 +221,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Client operations
-  async getClients(userId: string): Promise<Client[]> {
+  async getClients(userId: number): Promise<Client[]> {
     return await db
       .select()
       .from(clients)
@@ -204,7 +229,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(clients.createdAt));
   }
 
-  async getClient(id: number, userId: string): Promise<Client | undefined> {
+  async getClient(id: number, userId: number): Promise<Client | undefined> {
     const [client] = await db
       .select()
       .from(clients)
@@ -226,7 +251,7 @@ export class DatabaseStorage implements IStorage {
     return updatedClient;
   }
 
-  async getClientAppointments(userId: string, clientId: number): Promise<Appointment[]> {
+  async getClientAppointments(userId: number, clientId: number): Promise<Appointment[]> {
     return await db
       .select()
       .from(appointments)

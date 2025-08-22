@@ -3,7 +3,6 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";
 import { createHash } from "crypto";
-import { promisify } from "util";
 import { storage } from "./storage";
 import { User } from "@shared/schema";
 
@@ -92,18 +91,12 @@ export function setupAuth(app: Express) {
         firstName,
         lastName,
         isActive: true,
-        role: 'admin'
+        role: 'user'
       });
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json({ 
-          id: user.id, 
-          username: user.username, 
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName 
-        });
+        res.status(201).json(user);
       });
     } catch (error) {
       console.error('Registration error:', error);
@@ -112,14 +105,23 @@ export function setupAuth(app: Express) {
   });
 
   // Login route
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.status(200).json({ 
-      id: req.user!.id, 
-      username: req.user!.username, 
-      email: req.user!.email,
-      firstName: req.user!.firstName,
-      lastName: req.user!.lastName 
-    });
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) {
+        console.error('Login error:', err);
+        return res.status(500).json({ message: "Login failed" });
+      }
+      if (!user) {
+        return res.status(401).json({ message: info?.message || "Invalid credentials" });
+      }
+      req.login(user, (err) => {
+        if (err) {
+          console.error('Session login error:', err);
+          return res.status(500).json({ message: "Session failed" });
+        }
+        res.status(200).json(user);
+      });
+    })(req, res, next);
   });
 
   // Logout route
@@ -130,22 +132,16 @@ export function setupAuth(app: Express) {
     });
   });
 
-  // Get current user
+  // User info route
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    res.json({ 
-      id: req.user!.id, 
-      username: req.user!.username, 
-      email: req.user!.email,
-      firstName: req.user!.firstName,
-      lastName: req.user!.lastName 
-    });
+    res.json(req.user);
   });
 }
 
-// Middleware to check if user is authenticated
+// Authentication middleware
 export function isAuthenticated(req: any, res: any, next: any) {
   if (req.isAuthenticated()) {
     return next();
