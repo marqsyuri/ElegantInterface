@@ -17,7 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import Sidebar from "@/components/Sidebar";
 import TopHeader from "@/components/TopHeader";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { insertUserSchema, insertBusinessHoursSchema, insertStaffSchema, type BusinessHours, type Staff } from "@shared/schema";
 import { PublicLinkManager } from "@/components/PublicLinkManager";
 import { apiRequest } from "@/lib/queryClient";

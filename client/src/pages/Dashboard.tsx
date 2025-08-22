@@ -3,29 +3,17 @@ import { Calendar, DollarSign, Users, Star, Clock, Phone, CheckCircle, TrendingU
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import PageLayout from "@/components/PageLayout";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Redirect to home if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorised",
-        description: "You need to log in to access this page.",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  // This component should only render when user is authenticated
+  // The App.tsx routing already handles redirection
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -43,8 +31,15 @@ export default function Dashboard() {
     retry: false,
   });
 
-  if (isLoading || !isAuthenticated) {
-    return null;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-8 h-8 animate-spin mx-auto mb-4 border-2 border-primary border-t-transparent rounded-full"></div>
+          <p>Carregando dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

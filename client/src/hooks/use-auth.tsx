@@ -42,6 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<User | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: false, // Don't retry on auth failures
+    refetchOnWindowFocus: false, // Don't refetch when window gains focus
   });
 
   const loginMutation = useMutation({
@@ -55,8 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
-      // No need for toast here - the redirect will happen automatically
-      // The App.tsx will detect the user is logged in and show the dashboard
+      // Force invalidate to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
       toast({

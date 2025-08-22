@@ -13,11 +13,20 @@ export default function Landing() {
     password: ""
   });
 
-  // If user is already logged in, this component shouldn't render
-  // but just in case, redirect to dashboard
+  // If user is already logged in, don't render the login form
   if (user) {
-    window.location.href = "/";
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardContent className="p-8">
+            <div className="text-center">
+              <div className="w-8 h-8 animate-spin mx-auto mb-4 border-2 border-primary border-t-transparent rounded-full"></div>
+              <p>Redirecionando para o dashboard...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const handleLogin = (e: React.FormEvent) => {
