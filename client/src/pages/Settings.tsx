@@ -36,10 +36,11 @@ const userFormSchema = insertUserSchema.partial().pick({
   clinicAddress: true,
   clinicPhone: true,
   clinicWhatsapp: true,
-  inactivityDays: true,
-  reminderHours: true,
   reminderStartTime: true,
   reminderEndTime: true,
+}).extend({
+  inactivityDays: z.coerce.number().min(1).max(365).optional(),
+  reminderHours: z.coerce.number().min(1).max(72).optional(),
 });
 type UserFormData = z.infer<typeof userFormSchema>;
 
