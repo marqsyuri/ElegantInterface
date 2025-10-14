@@ -139,6 +139,33 @@ export function setupAuth(app: Express) {
     }
     res.json(req.user);
   });
+
+  // Update user profile route
+  app.put("/api/auth/user", async (req: any, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      const updates = req.body;
+      
+      // Update user in database
+      const updatedUser = await storage.updateUser(userId, updates);
+      
+      // Update session with new user data
+      req.login(updatedUser, (err: any) => {
+        if (err) {
+          console.error('Session update error:', err);
+          return res.status(500).json({ message: "Failed to update session" });
+        }
+        res.json(updatedUser);
+      });
+    } catch (error) {
+      console.error('Profile update error:', error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
 }
 
 // Authentication middleware

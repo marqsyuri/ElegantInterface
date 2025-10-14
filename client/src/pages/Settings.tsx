@@ -1755,9 +1755,10 @@ export default function Settings() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {/* Inactivity Days */}
-                          <FormField
+                        <Form {...form}>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Inactivity Days */}
+                            <FormField
                             control={form.control}
                             name="inactivityDays"
                             render={({ field }) => (
@@ -1891,11 +1892,12 @@ export default function Settings() {
                         </div>
 
                         <Button 
-                          onClick={() => form.handleSubmit(onSubmit)()}
-                          className="w-full md:w-auto"
-                        >
-                          Save Time Settings
-                        </Button>
+                            onClick={() => form.handleSubmit(onSubmit)()}
+                            className="w-full md:w-auto"
+                          >
+                            Save Time Settings
+                          </Button>
+                        </Form>
                       </CardContent>
                     </Card>
 
