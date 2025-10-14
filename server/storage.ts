@@ -153,16 +153,9 @@ export class DatabaseStorage implements IStorage {
   sessionStore: any;
 
   constructor() {
-    // Initialize session store with memory store for now
-    import('memorystore').then((createMemoryStore) => {
-      const MemoryStore = createMemoryStore.default(session);
-      this.sessionStore = new MemoryStore({
-        checkPeriod: 86400000, // prune expired entries every 24h
-      });
-    }).catch(() => {
-      // Fallback to memory store if memorystore not available
-      this.sessionStore = new session.MemoryStore();
-    });
+    // Initialize session store synchronously - use memory store for all environments for now
+    // PostgreSQL session store can be enabled later with proper synchronous initialization
+    this.sessionStore = new session.MemoryStore();
   }
 
   // User operations (converted to local auth)
