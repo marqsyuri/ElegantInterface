@@ -78,6 +78,9 @@ export const clients = pgTable("clients", {
   healthHistory: text("health_history"),
   isActive: boolean("is_active").default(true),
   loyaltyPoints: integer("loyalty_points").default(0),
+  notifySms: boolean("notify_sms").default(false),
+  notifyWhatsapp: boolean("notify_whatsapp").default(false),
+  notifyPhone: boolean("notify_phone").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
