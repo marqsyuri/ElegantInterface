@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit, Image, Monitor, Smartphone, Plug, Plus, FileJson, Play } from "lucide-react";
+import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit, Image, Monitor, Smartphone, Plug, Plus, FileJson, Play, Timer, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,10 @@ const userFormSchema = insertUserSchema.partial().pick({
   clinicAddress: true,
   clinicPhone: true,
   clinicWhatsapp: true,
+  inactivityDays: true,
+  reminderHours: true,
+  reminderStartTime: true,
+  reminderEndTime: true,
 });
 type UserFormData = z.infer<typeof userFormSchema>;
 
@@ -901,8 +905,44 @@ export default function Settings() {
       clinicAddress: user?.clinicAddress || "",
       clinicPhone: user?.clinicPhone || "",
       clinicWhatsapp: user?.clinicWhatsapp || "",
+      inactivityDays: user?.inactivityDays ?? 7,
+      reminderHours: user?.reminderHours ?? 2,
+      reminderStartTime: user?.reminderStartTime || "18:00",
+      reminderEndTime: user?.reminderEndTime || "20:00",
     },
   });
+
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        email: user.email || "",
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        professionalRegistration: user.professionalRegistration || "",
+        specialties: user.specialties || "",
+        clinicName: user.clinicName || "",
+        clinicCnpj: user.clinicCnpj || "",
+        clinicAddress: user.clinicAddress || "",
+        clinicPhone: user.clinicPhone || "",
+        clinicWhatsapp: user.clinicWhatsapp || "",
+        inactivityDays: user.inactivityDays ?? 7,
+        reminderHours: user.reminderHours ?? 2,
+        reminderStartTime: user.reminderStartTime || "18:00",
+        reminderEndTime: user.reminderEndTime || "20:00",
+      });
+    }
+  }, [user, form]);
+
+  // Helper function to format time (HH:MM to readable format)
+  const formatTime = (time: string) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${minutes} ${period}`;
+  };
 
   // Business hours query and mutation
   const { data: businessHours = [], isLoading: isLoadingHours } = useQuery({
@@ -1706,6 +1746,159 @@ export default function Settings() {
 
                 <TabsContent value="notifications" className="mt-6">
                   <div className="space-y-6">
+                    {/* Time Parameters Section */}
+                    <Card className="border-2 border-green-100">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <Timer className="h-5 w-5 text-green-600" />
+                          Time Parameters
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Inactivity Days */}
+                          <FormField
+                            control={form.control}
+                            name="inactivityDays"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-slate-900 font-medium">Inactivity Timeout (days)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    min="1" 
+                                    max="90"
+                                    placeholder="7" 
+                                    {...field}
+                                    value={field.value ?? 7}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 7)}
+                                  />
+                                </FormControl>
+                                <p className="text-xs text-slate-500">
+                                  Leads with no activity for X days will be marked for follow-up
+                                </p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          {/* Reminder Hours */}
+                          <FormField
+                            control={form.control}
+                            name="reminderHours"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-slate-900 font-medium">Reminder Time (hours)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    min="1" 
+                                    max="48"
+                                    placeholder="2" 
+                                    {...field}
+                                    value={field.value ?? 2}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 2)}
+                                  />
+                                </FormControl>
+                                <p className="text-xs text-slate-500">
+                                  Reminders will be sent X hours before appointments
+                                </p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Reminder Time Configuration */}
+                        <div className="pt-4 border-t">
+                          <h5 className="font-medium text-slate-900 mb-3">Reminder Schedule Configuration</h5>
+                          <p className="text-sm text-slate-600 mb-4">
+                            Set the time window for sending reminders. Reminders will only be sent within this period to respect clients' rest hours.
+                          </p>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Reminder Start Time */}
+                            <FormField
+                              control={form.control}
+                              name="reminderStartTime"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-slate-900 font-medium">Start Time for Reminders</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value || "18:00"}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select start time" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {timeSlots.map((slot) => (
+                                        <SelectItem key={slot.value} value={slot.value}>
+                                          {slot.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <p className="text-xs text-slate-500">
+                                    e.g., 6:00 PM - Reminders start being sent from this time
+                                  </p>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            {/* Reminder End Time */}
+                            <FormField
+                              control={form.control}
+                              name="reminderEndTime"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-slate-900 font-medium">End Time for Reminders</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value || "20:00"}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select end time" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {timeSlots.map((slot) => (
+                                        <SelectItem key={slot.value} value={slot.value}>
+                                          {slot.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <p className="text-xs text-slate-500">
+                                    e.g., 8:00 PM - Reminders stop being sent after this time
+                                  </p>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Validation Message */}
+                          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-green-900">
+                                Valid Configuration: Reminders will be sent between {formatTime(form.watch('reminderStartTime') || '18:00')} and {formatTime(form.watch('reminderEndTime') || '20:00')}
+                              </p>
+                              <p className="text-xs text-green-700 mt-1">
+                                Example: With hours {formatTime(form.watch('reminderStartTime') || '18:00')} - {formatTime(form.watch('reminderEndTime') || '20:00')}, reminders will only be sent during this window.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button 
+                          onClick={() => form.handleSubmit(onSubmit)()}
+                          className="w-full md:w-auto"
+                        >
+                          Save Time Settings
+                        </Button>
+                      </CardContent>
+                    </Card>
+
                     <h4 className="font-medium text-slate-900">Notification Preferences</h4>
                     
                     <div className="space-y-4">
