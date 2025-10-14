@@ -594,6 +594,11 @@ export const insertIntegrationSchema = createInsertSchema(integrations, {
   authData: z.string().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
+}).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export type User = typeof users.$inferSelect;
