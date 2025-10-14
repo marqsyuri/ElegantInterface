@@ -13,6 +13,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import TopHeader from "@/components/TopHeader";
 import PageLayout from "@/components/PageLayout";
 import { insertClientSchema, type Client, type Appointment } from "@shared/schema";
@@ -49,6 +50,9 @@ export default function Clients() {
     defaultValues: {
       isActive: true,
       loyaltyPoints: 0,
+      notifySms: false,
+      notifyWhatsapp: false,
+      notifyPhone: false,
     },
   });
 
@@ -64,12 +68,18 @@ export default function Clients() {
         healthHistory: client.healthHistory || "",
         isActive: client.isActive ?? true,
         loyaltyPoints: client.loyaltyPoints || 0,
+        notifySms: client.notifySms ?? false,
+        notifyWhatsapp: client.notifyWhatsapp ?? false,
+        notifyPhone: client.notifyPhone ?? false,
       });
       setProfileImage(client.profileImage || null);
     } else {
       form.reset({
         isActive: true,
         loyaltyPoints: 0,
+        notifySms: false,
+        notifyWhatsapp: false,
+        notifyPhone: false,
       });
       setProfileImage(null);
     }
@@ -554,6 +564,71 @@ export default function Clients() {
                       </FormItem>
                     )}
                   />
+
+                  <div className="space-y-3 pt-4 border-t">
+                    <h3 className="font-medium text-slate-900">Notification Preferences</h3>
+                    <p className="text-sm text-slate-500 mb-3">Select how you'd like to notify this client</p>
+                    
+                    <FormField
+                      control={form.control}
+                      name="notifySms"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="font-normal">
+                              SMS Notifications
+                            </FormLabel>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="notifyWhatsapp"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="font-normal">
+                              WhatsApp Notifications
+                            </FormLabel>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="notifyPhone"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="font-normal">
+                              Phone Call Reminders
+                            </FormLabel>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">
