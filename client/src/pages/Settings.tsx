@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit, Image, Monitor, Smartphone } from "lucide-react";
+import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit, Image, Monitor, Smartphone, Plug, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -427,6 +427,265 @@ export default function Settings() {
     );
   }
 
+  // Integrations Section Component
+  function IntegrationsSection() {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    
+    const { data: integrations = [], isLoading } = useQuery({
+      queryKey: ['/api/integrations'],
+    });
+
+    const integrationFormSchema = z.object({
+      name: z.string().min(1, "Nome é obrigatório"),
+      url: z.string().url("URL inválida"),
+      authType: z.string().min(1, "Tipo de autenticação é obrigatório"),
+      authData: z.string().optional(),
+    });
+    type IntegrationFormData = z.infer<typeof integrationFormSchema>;
+
+    const integrationForm = useForm<IntegrationFormData>({
+      resolver: zodResolver(integrationFormSchema),
+      defaultValues: {
+        name: "",
+        url: "",
+        authType: "Bearer",
+        authData: "",
+      },
+    });
+
+    const createIntegrationMutation = useMutation({
+      mutationFn: async (data: IntegrationFormData) => {
+        await apiRequest('POST', '/api/integrations', data);
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+        setIsDialogOpen(false);
+        integrationForm.reset();
+        toast({
+          title: "Sucesso",
+          description: "Integração criada com sucesso!",
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Erro",
+          description: `Falha ao criar integração: ${error.message}`,
+          variant: "destructive",
+        });
+      },
+    });
+
+    const deleteIntegrationMutation = useMutation({
+      mutationFn: async (id: number) => {
+        await apiRequest('DELETE', `/api/integrations/${id}`);
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+        toast({
+          title: "Sucesso",
+          description: "Integração removida com sucesso!",
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Erro",
+          description: `Falha ao remover integração: ${error.message}`,
+          variant: "destructive",
+        });
+      },
+    });
+
+    const onSubmit = (data: IntegrationFormData) => {
+      createIntegrationMutation.mutate(data);
+    };
+
+    const handleDelete = (id: number, name: string) => {
+      if (confirm(`Tem certeza que deseja remover a integração "${name}"?`)) {
+        deleteIntegrationMutation.mutate(id);
+      }
+    };
+
+    if (isLoading) {
+      return <div className="p-4 text-center text-slate-500">Carregando integrações...</div>;
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h4 className="font-medium text-slate-900">Endpoints de Integração</h4>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-green-600 hover:bg-green-700">
+                <Plus className="w-4 h-4 mr-2" />
+                + Novo
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Nova Integração</DialogTitle>
+              </DialogHeader>
+              <Form {...integrationForm}>
+                <form onSubmit={integrationForm.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={integrationForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: API Principal" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={integrationForm.control}
+                    name="url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://api.exemplo.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={integrationForm.control}
+                    name="authType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo de Autenticação</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o tipo" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Bearer">Bearer Token</SelectItem>
+                            <SelectItem value="Basic">Basic Auth</SelectItem>
+                            <SelectItem value="API Key">API Key</SelectItem>
+                            <SelectItem value="Custom">Custom</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={integrationForm.control}
+                    name="authData"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dados de Autenticação</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Ex: token, chave API, ou JSON com credenciais" 
+                            {...field} 
+                            rows={3}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={createIntegrationMutation.isPending}>
+                      {createIntegrationMutation.isPending ? "Salvando..." : "Salvar"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {(integrations as any[]).length > 0 ? (
+          <div className="space-y-4">
+            {(integrations as any[]).map((integration: any) => (
+              <div key={integration.id} className="p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <Plug className="w-5 h-5 text-green-600" />
+                      <h5 className="font-medium text-slate-900">{integration.name}</h5>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        integration.isActive 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {integration.isActive ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-1 text-sm">
+                      <div className="flex items-center text-slate-600">
+                        <span className="font-medium mr-2">URL:</span>
+                        <span className="text-slate-500 break-all">{integration.url}</span>
+                      </div>
+                      <div className="flex items-center text-slate-600">
+                        <span className="font-medium mr-2">Auth:</span>
+                        <span className="text-slate-500">{integration.authType}</span>
+                      </div>
+                      {integration.authData && (
+                        <div className="flex items-start text-slate-600">
+                          <span className="font-medium mr-2">Dados:</span>
+                          <span className="text-slate-500 break-all font-mono text-xs bg-slate-100 px-2 py-1 rounded">
+                            {integration.authData}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:text-red-800 hover:bg-red-50 ml-4"
+                    onClick={() => handleDelete(integration.id, integration.name)}
+                    disabled={deleteIntegrationMutation.isPending}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Remover
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-slate-50 rounded-lg">
+            <Plug className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <h5 className="font-medium text-slate-900 mb-2">Nenhuma integração cadastrada</h5>
+            <p className="text-slate-500 mb-4">Adicione endpoints de integração para conectar com sistemas externos</p>
+          </div>
+        )}
+
+        <div className="p-4 border border-slate-200 rounded-lg bg-blue-50 border-blue-200">
+          <div className="flex items-start space-x-3">
+            <Plug className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h5 className="font-medium text-blue-900">Sobre Integrações</h5>
+              <p className="text-sm text-blue-700 mt-1">
+                Cadastre URLs e credenciais de autenticação para integrar com APIs externas.
+                Esses dados serão usados para comunicação com sistemas de terceiros.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -700,7 +959,7 @@ export default function Settings() {
 
             <CardContent>
               <Tabs defaultValue="profile" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="profile" className="flex items-center gap-2">
                     <User className="w-4 h-4" />
                     Profile
@@ -712,6 +971,10 @@ export default function Settings() {
                   <TabsTrigger value="team" className="flex items-center gap-2">
                     <Users className="w-4 h-4" />
                     Team Members
+                  </TabsTrigger>
+                  <TabsTrigger value="integrations" className="flex items-center gap-2">
+                    <Plug className="w-4 h-4" />
+                    Integrations
                   </TabsTrigger>
                   <TabsTrigger value="link" className="flex items-center gap-2">
                     <MessageCircle className="w-4 h-4" />
@@ -1324,6 +1587,10 @@ export default function Settings() {
 
                 <TabsContent value="team" className="mt-6">
                   <TeamMembersSection />
+                </TabsContent>
+
+                <TabsContent value="integrations" className="mt-6">
+                  <IntegrationsSection />
                 </TabsContent>
               </Tabs>
             </CardContent>

@@ -1144,6 +1144,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Integrations routes
+  app.get('/api/integrations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const userIntegrations = await db
+        .select()
+        .from(integrations)
+        .where(eq(integrations.userId, userId))
+        .orderBy(desc(integrations.createdAt));
+      
+      res.json(userIntegrations);
+    } catch (error) {
+      console.error("Error fetching integrations:", error);
+      res.status(500).json({ message: "Failed to fetch integrations" });
+    }
+  });
+
+  app.post('/api/integrations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const validatedData = insertIntegrationSchema.parse(req.body);
+      
+      const [newIntegration] = await db
+        .insert(integrations)
+        .values({
+          ...validatedData,
+          userId,
+        })
+        .returning();
+      
+      res.status(201).json(newIntegration);
+    } catch (error) {
+      console.error("Error creating integration:", error);
+      res.status(500).json({ message: "Failed to create integration" });
+    }
+  });
+
+  app.delete('/api/integrations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const integrationId = parseInt(req.params.id);
+      
+      await db
+        .delete(integrations)
+        .where(
+          and(
+            eq(integrations.id, integrationId),
+            eq(integrations.userId, userId)
+          )
+        );
+      
+      res.json({ message: 'Integration deleted successfully' });
+    } catch (error) {
+      console.error("Error deleting integration:", error);
+      res.status(500).json({ message: "Failed to delete integration" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
