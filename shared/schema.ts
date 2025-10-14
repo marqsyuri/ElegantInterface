@@ -47,6 +47,10 @@ export const users = pgTable("users", {
   publicLink: varchar("public_link").unique(), // Unique identifier for client access
   isActive: boolean("is_active").default(true),
   role: varchar("role").default("admin"), // admin, staff
+  inactivityDays: integer("inactivity_days").default(7), // Days before marking leads for follow-up
+  reminderHours: integer("reminder_hours").default(2), // Hours before appointment to send reminder
+  reminderStartTime: varchar("reminder_start_time").default("18:00"), // Start time for sending reminders
+  reminderEndTime: varchar("reminder_end_time").default("20:00"), // End time for sending reminders
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
