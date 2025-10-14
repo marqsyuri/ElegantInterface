@@ -572,6 +572,26 @@ export const insertBusinessHoursSchema = createInsertSchema(businessHours).omit(
 
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
+// Integrations table
+export const integrations = pgTable("integrations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: varchar("name").notNull(),
+  url: text("url").notNull(),
+  authType: varchar("auth_type").notNull(), // Bearer, Basic, API Key, Custom, etc.
+  authData: text("auth_data"), // JSON string with auth credentials
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertIntegrationSchema = createInsertSchema(integrations, {
+  name: z.string().min(1, "Nome é obrigatório"),
+  url: z.string().url("URL inválida"),
+  authType: z.string().min(1, "Tipo de autenticação é obrigatório"),
+  authData: z.string().optional(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
@@ -611,6 +631,9 @@ export type SocialMediaPost = typeof socialMediaPosts.$inferSelect;
 export type InsertSocialMediaPost = z.infer<typeof insertSocialMediaPostSchema>;
 export type BusinessHours = typeof businessHours.$inferSelect;
 export type InsertBusinessHours = z.infer<typeof insertBusinessHoursSchema>;
+
+export type Integration = typeof integrations.$inferSelect;
+export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
 
 // Login schema for authentication
 export const loginUserSchema = z.object({

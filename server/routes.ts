@@ -22,6 +22,7 @@ import {
   updateProcedureSchema,
   insertPaymentSchema,
   insertSocialMediaPostSchema,
+  insertIntegrationSchema,
   users,
   clients,
   appointments,
@@ -35,6 +36,7 @@ import {
   loyalty,
   inventory,
   messages,
+  integrations,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, or, asc, inArray, desc, isNull, between, sql, like } from "drizzle-orm";
