@@ -63,6 +63,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Time Parameters for Notifications (October 14, 2025) ✅ COMPLETED
+- **Notification Settings Enhancement**: Added configurable time parameters for customer notifications
+  - **Inactivity Tracking**: Days before sending follow-up to inactive clients (1-365 days)
+  - **Reminder Timing**: Hours before appointment to send reminders (1-72 hours)
+  - **Time Window**: Configurable start/end times for sending reminders (respects client rest hours)
+  - **Database Schema**: Added `inactivityDays`, `reminderHours`, `reminderStartTime`, `reminderEndTime` to users table
+  - **UI Implementation**: Clean, English-language time parameters section in Settings > Notifications
+  - **Form Validation**: Numeric coercion with z.coerce.number() for proper type handling
+  - **Backend Route**: PUT /api/auth/user endpoint for profile updates with session refresh
+  - **Status**: Fully functional with end-to-end validation and persistence
+
 ### Replit Environment Setup (October 14, 2025) ✅ COMPLETED
 - **GitHub Import Configuration**: Successfully imported and configured for Replit environment
 - **Database Setup**: PostgreSQL database provisioned and schema pushed with Drizzle ORM
