@@ -582,6 +582,7 @@ export const integrations = pgTable("integrations", {
   authData: text("auth_data"), // JSON string with auth credentials
   username: varchar("username"), // Username for authentication
   password: varchar("password"), // Password for authentication
+  testPayload: text("test_payload"), // JSON payload for testing
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -594,6 +595,7 @@ export const insertIntegrationSchema = createInsertSchema(integrations, {
   authData: z.string().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
+  testPayload: z.string().optional(),
 }).omit({
   id: true,
   userId: true,

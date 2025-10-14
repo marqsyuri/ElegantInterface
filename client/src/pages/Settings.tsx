@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit, Image, Monitor, Smartphone, Plug, Plus } from "lucide-react";
+import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit, Image, Monitor, Smartphone, Plug, Plus, FileJson, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -430,6 +430,10 @@ export default function Settings() {
   // Integrations Section Component
   function IntegrationsSection() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [testDialogOpen, setTestDialogOpen] = useState(false);
+    const [selectedIntegration, setSelectedIntegration] = useState<any>(null);
+    const [testPayload, setTestPayload] = useState("");
+    const [testResult, setTestResult] = useState<any>(null);
     
     const { data: integrations = [], isLoading } = useQuery({
       queryKey: ['/api/integrations'],
@@ -499,6 +503,41 @@ export default function Settings() {
       },
     });
 
+    const updateTestPayloadMutation = useMutation({
+      mutationFn: async ({ id, testPayload }: { id: number; testPayload: string }) => {
+        await apiRequest('PATCH', `/api/integrations/${id}/test-payload`, { testPayload });
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+        toast({
+          title: "Sucesso",
+          description: "Teste de integração salvo!",
+        });
+      },
+    });
+
+    const testIntegrationMutation = useMutation({
+      mutationFn: async (id: number) => {
+        const response = await apiRequest('POST', `/api/integrations/${id}/test`);
+        return response;
+      },
+      onSuccess: (data: any) => {
+        setTestResult(data);
+        toast({
+          title: "Sucesso",
+          description: `Integração testada! Status: ${data.status}`,
+        });
+      },
+      onError: (error: any) => {
+        setTestResult({ success: false, error: error.message });
+        toast({
+          title: "Erro",
+          description: `Falha ao testar: ${error.message}`,
+          variant: "destructive",
+        });
+      },
+    });
+
     const onSubmit = (data: IntegrationFormData) => {
       createIntegrationMutation.mutate(data);
     };
@@ -507,6 +546,28 @@ export default function Settings() {
       if (confirm(`Tem certeza que deseja remover a integração "${name}"?`)) {
         deleteIntegrationMutation.mutate(id);
       }
+    };
+
+    const handleCreateTest = (integration: any) => {
+      setSelectedIntegration(integration);
+      setTestPayload(integration.testPayload || "{}");
+      setTestResult(null);
+      setTestDialogOpen(true);
+    };
+
+    const handleSaveTest = () => {
+      if (selectedIntegration) {
+        updateTestPayloadMutation.mutate({
+          id: selectedIntegration.id,
+          testPayload,
+        });
+      }
+    };
+
+    const handleTestIntegration = (integration: any) => {
+      setSelectedIntegration(integration);
+      setTestResult(null);
+      testIntegrationMutation.mutate(integration.id);
     };
 
     if (isLoading) {
@@ -699,16 +760,39 @@ export default function Settings() {
                     </div>
                   </div>
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-red-600 hover:text-red-800 hover:bg-red-50 ml-4"
-                    onClick={() => handleDelete(integration.id, integration.name)}
-                    disabled={deleteIntegrationMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Remover
-                  </Button>
+                  <div className="flex items-center space-x-2 ml-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                      onClick={() => handleCreateTest(integration)}
+                    >
+                      <FileJson className="w-4 h-4 mr-1" />
+                      Criar Teste
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                      onClick={() => handleTestIntegration(integration)}
+                      disabled={testIntegrationMutation.isPending}
+                    >
+                      <Play className="w-4 h-4 mr-1" />
+                      Testar
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                      onClick={() => handleDelete(integration.id, integration.name)}
+                      disabled={deleteIntegrationMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Remover
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -733,6 +817,73 @@ export default function Settings() {
             </div>
           </div>
         </div>
+
+        {/* Test Dialog */}
+        <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedIntegration?.name} - Teste de Integração
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Payload JSON
+                </label>
+                <Textarea
+                  value={testPayload}
+                  onChange={(e) => setTestPayload(e.target.value)}
+                  placeholder='{"key": "value"}'
+                  className="font-mono text-sm"
+                  rows={10}
+                />
+              </div>
+
+              {testResult && (
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <h5 className="font-medium text-slate-900 mb-2">Resultado do Teste</h5>
+                  {testResult.success ? (
+                    <div className="space-y-2">
+                      <div className="text-sm">
+                        <span className="font-medium">Status:</span>{' '}
+                        <span className={testResult.status === 200 ? 'text-green-600' : 'text-orange-600'}>
+                          {testResult.status} {testResult.statusText}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-sm">Resposta:</span>
+                        <pre className="mt-1 p-3 bg-white rounded border border-slate-200 text-xs overflow-auto max-h-64">
+                          {JSON.stringify(testResult.data, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-red-600 text-sm">
+                      <span className="font-medium">Erro:</span> {testResult.error}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setTestDialogOpen(false)}
+                >
+                  Fechar
+                </Button>
+                <Button
+                  onClick={handleSaveTest}
+                  disabled={updateTestPayloadMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Salvar Teste
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

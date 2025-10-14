@@ -1202,6 +1202,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/integrations/:id/test-payload', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const integrationId = parseInt(req.params.id);
+      const { testPayload } = req.body;
+      
+      const [updated] = await db
+        .update(integrations)
+        .set({ testPayload })
+        .where(
+          and(
+            eq(integrations.id, integrationId),
+            eq(integrations.userId, userId)
+          )
+        )
+        .returning();
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating test payload:", error);
+      res.status(500).json({ message: "Failed to update test payload" });
+    }
+  });
+
+  app.post('/api/integrations/:id/test', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const integrationId = parseInt(req.params.id);
+      
+      const [integration] = await db
+        .select()
+        .from(integrations)
+        .where(
+          and(
+            eq(integrations.id, integrationId),
+            eq(integrations.userId, userId)
+          )
+        );
+
+      if (!integration) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Apply authentication based on type
+      if (integration.authType === 'Bearer' && integration.authData) {
+        headers['Authorization'] = `Bearer ${integration.authData}`;
+      } else if (integration.authType === 'Basic' && integration.username && integration.password) {
+        const credentials = Buffer.from(`${integration.username}:${integration.password}`).toString('base64');
+        headers['Authorization'] = `Basic ${credentials}`;
+      } else if (integration.authType === 'API Key' && integration.authData) {
+        headers['X-API-Key'] = integration.authData;
+      } else if (integration.authData) {
+        // Custom auth - try to parse as JSON for headers
+        try {
+          const customHeaders = JSON.parse(integration.authData);
+          Object.assign(headers, customHeaders);
+        } catch {
+          headers['Authorization'] = integration.authData;
+        }
+      }
+
+      const payload = integration.testPayload ? JSON.parse(integration.testPayload) : {};
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
+
+      const response = await fetch(integration.url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      const responseText = await response.text();
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = responseText;
+      }
+
+      res.json({
+        success: true,
+        status: response.status,
+        statusText: response.statusText,
+        data: responseData,
+      });
+    } catch (error: any) {
+      console.error("Error testing integration:", error);
+      res.status(500).json({ 
+        success: false,
+        message: error.message || "Failed to test integration",
+        error: error.toString(),
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
