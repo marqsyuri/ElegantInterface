@@ -440,6 +440,8 @@ export default function Settings() {
       url: z.string().url("URL inválida"),
       authType: z.string().min(1, "Tipo de autenticação é obrigatório"),
       authData: z.string().optional(),
+      username: z.string().optional(),
+      password: z.string().optional(),
     });
     type IntegrationFormData = z.infer<typeof integrationFormSchema>;
 
@@ -450,6 +452,8 @@ export default function Settings() {
         url: "",
         authType: "Bearer",
         authData: "",
+        username: "",
+        password: "",
       },
     });
 
@@ -596,6 +600,41 @@ export default function Settings() {
                     )}
                   />
                   
+                  <FormField
+                    control={integrationForm.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Usuário (Opcional)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Usuário para autenticação" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={integrationForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Senha (Opcional)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="password"
+                            placeholder="Senha para autenticação" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
                   <div className="flex justify-end space-x-2 pt-4">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancelar
@@ -637,6 +676,18 @@ export default function Settings() {
                         <span className="font-medium mr-2">Auth:</span>
                         <span className="text-slate-500">{integration.authType}</span>
                       </div>
+                      {integration.username && (
+                        <div className="flex items-center text-slate-600">
+                          <span className="font-medium mr-2">Usuário:</span>
+                          <span className="text-slate-500">{integration.username}</span>
+                        </div>
+                      )}
+                      {integration.password && (
+                        <div className="flex items-center text-slate-600">
+                          <span className="font-medium mr-2">Senha:</span>
+                          <span className="text-slate-500">••••••••</span>
+                        </div>
+                      )}
                       {integration.authData && (
                         <div className="flex items-start text-slate-600">
                           <span className="font-medium mr-2">Dados:</span>

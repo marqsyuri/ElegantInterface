@@ -580,6 +580,8 @@ export const integrations = pgTable("integrations", {
   url: text("url").notNull(),
   authType: varchar("auth_type").notNull(), // Bearer, Basic, API Key, Custom, etc.
   authData: text("auth_data"), // JSON string with auth credentials
+  username: varchar("username"), // Username for authentication
+  password: varchar("password"), // Password for authentication
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -590,6 +592,8 @@ export const insertIntegrationSchema = createInsertSchema(integrations, {
   url: z.string().url("URL inválida"),
   authType: z.string().min(1, "Tipo de autenticação é obrigatório"),
   authData: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
 });
 
 export type User = typeof users.$inferSelect;
