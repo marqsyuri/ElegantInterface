@@ -747,7 +747,9 @@ export default function Appointments() {
                               <h3 className="font-semibold text-base sm:text-lg">{appointment.client.name}</h3>
                               <div className="text-sm text-muted-foreground">
                                 <div className="xs:text-right">
-                                  <div className="font-medium">{formatNZTime(appointment.appointmentDate)} - {formatNZTime(endTime.toISOString())}</div>
+                                  <div className="font-medium">
+                                    {format(parseISO(appointment.appointmentDate), "dd/MM/yyyy", { locale: enNZ })} • {formatNZTime(appointment.appointmentDate)} - {formatNZTime(endTime.toISOString())}
+                                  </div>
                                   <div className="text-xs">({appointment.duration || 60} mins)</div>
                                 </div>
                               </div>
