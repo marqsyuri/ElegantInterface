@@ -95,6 +95,8 @@ export const inactiveClients = pgTable("inactive_clients", {
   userId: integer("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").notNull().references(() => clients.id),
   clientName: varchar("client_name").notNull(),
+  clientEmail: varchar("client_email"),
+  clientPhone: varchar("client_phone"),
   lastProcedure: varchar("last_procedure"),
   lastAppointmentDate: timestamp("last_appointment_date"),
   contactPreference: varchar("contact_preference"), // sms, whatsapp, phone
@@ -157,6 +159,8 @@ export const appointmentReminders = pgTable("appointment_reminders", {
   appointmentId: integer("appointment_id").notNull().references(() => appointments.id),
   clientId: integer("client_id").notNull().references(() => clients.id),
   clientName: varchar("client_name").notNull(),
+  clientEmail: varchar("client_email"),
+  clientPhone: varchar("client_phone"),
   appointmentDate: timestamp("appointment_date").notNull(),
   appointmentTime: varchar("appointment_time").notNull(),
   procedureName: varchar("procedure_name"),
