@@ -150,6 +150,22 @@ export const appointments = pgTable("appointments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Appointment Reminders table - populated hourly by scheduled job
+export const appointmentReminders = pgTable("appointment_reminders", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  appointmentId: integer("appointment_id").notNull().references(() => appointments.id),
+  clientId: integer("client_id").notNull().references(() => clients.id),
+  clientName: varchar("client_name").notNull(),
+  appointmentDate: timestamp("appointment_date").notNull(),
+  appointmentTime: varchar("appointment_time").notNull(),
+  procedureName: varchar("procedure_name"),
+  contactPreference: varchar("contact_preference"), // sms, whatsapp, phone
+  status: integer("status").default(0), // 0 = pending, 1 = sent, 2 = confirmed, 3 = cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Clinical records table
 export const clinicalRecords = pgTable("clinical_records", {
   id: serial("id").primaryKey(),
