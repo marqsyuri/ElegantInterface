@@ -1326,6 +1326,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test route for appointment reminders (development only)
+  app.post('/api/test/appointment-reminders', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      console.log('[Test] Running appointment reminders task for user:', userId);
+      
+      await storage.populateAppointmentReminders(userId);
+      const reminders = await storage.getAppointmentReminders(userId, 0); // status = 0 (pending)
+      
+      console.log('[Test] Found', reminders.length, 'pending appointment reminders');
+      res.json({ 
+        success: true, 
+        count: reminders.length,
+        reminders 
+      });
+    } catch (error) {
+      console.error("Error testing appointment reminders:", error);
+      res.status(500).json({ message: "Failed to test appointment reminders" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
