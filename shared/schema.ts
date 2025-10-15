@@ -89,6 +89,20 @@ export const clients = pgTable("clients", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Inactive Clients table - populated daily by scheduled job
+export const inactiveClients = pgTable("inactive_clients", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  clientId: integer("client_id").notNull().references(() => clients.id),
+  clientName: varchar("client_name").notNull(),
+  lastProcedure: varchar("last_procedure"),
+  lastAppointmentDate: timestamp("last_appointment_date"),
+  contactPreference: varchar("contact_preference"), // sms, whatsapp, phone
+  status: integer("status").default(0), // 0 = pending contact, 1 = contacted, 2 = returned, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Services table
 export const services = pgTable("services", {
   id: serial("id").primaryKey(),
@@ -464,6 +478,12 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const insertClientSchema = createInsertSchema(clients).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInactiveClientSchema = createInsertSchema(inactiveClients).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
