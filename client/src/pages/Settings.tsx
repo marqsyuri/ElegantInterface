@@ -1194,42 +1194,44 @@ export default function Settings() {
         
         <div className="p-6 space-y-8">
           <Card>
-            <CardHeader>
+            <CardHeader className="border-b">
               <CardTitle className="text-xl font-semibold text-slate-900">
                 Settings and Profile
               </CardTitle>
             </CardHeader>
 
-            <CardContent>
-              <Tabs defaultValue="profile" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1">
-                  <TabsTrigger value="profile" className="flex items-center gap-1 text-xs md:text-sm">
+            <Tabs defaultValue="profile" className="w-full">
+              <div className="px-6 pt-4 pb-2 border-b bg-slate-50">
+                <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1 bg-transparent h-auto p-0">
+                  <TabsTrigger value="profile" className="flex items-center justify-center gap-1 text-xs md:text-sm py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     <User className="w-4 h-4" />
                     <span className="hidden sm:inline">Profile</span>
                   </TabsTrigger>
-                  <TabsTrigger value="hours" className="flex items-center gap-1 text-xs md:text-sm">
+                  <TabsTrigger value="hours" className="flex items-center justify-center gap-1 text-xs md:text-sm py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     <Clock className="w-4 h-4" />
                     <span className="hidden sm:inline">Hours</span>
                   </TabsTrigger>
-                  <TabsTrigger value="team" className="flex items-center gap-1 text-xs md:text-sm">
+                  <TabsTrigger value="team" className="flex items-center justify-center gap-1 text-xs md:text-sm py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     <Users className="w-4 h-4" />
                     <span className="hidden sm:inline">Team</span>
                   </TabsTrigger>
-                  <TabsTrigger value="integrations" className="flex items-center gap-1 text-xs md:text-sm">
+                  <TabsTrigger value="integrations" className="flex items-center justify-center gap-1 text-xs md:text-sm py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     <Plug className="w-4 h-4" />
                     <span className="hidden sm:inline">Integrations</span>
                   </TabsTrigger>
-                  <TabsTrigger value="link" className="flex items-center gap-1 text-xs md:text-sm">
+                  <TabsTrigger value="link" className="flex items-center justify-center gap-1 text-xs md:text-sm py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     <MessageCircle className="w-4 h-4" />
                     <span className="hidden sm:inline">Client</span>
                   </TabsTrigger>
-                  <TabsTrigger value="notifications" className="flex items-center gap-1 text-xs md:text-sm">
+                  <TabsTrigger value="notifications" className="flex items-center justify-center gap-1 text-xs md:text-sm py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     <Bell className="w-4 h-4" />
                     <span className="hidden sm:inline">Notifications</span>
                   </TabsTrigger>
                 </TabsList>
+              </div>
 
-                <TabsContent value="profile" className="mt-6">
+              <CardContent className="pt-6">
+                <TabsContent value="profile" className="mt-0">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
                       <h4 className="font-medium text-slate-900 mb-4">Professional Profile</h4>
@@ -1528,7 +1530,7 @@ export default function Settings() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="hours" className="mt-6">
+                <TabsContent value="hours" className="mt-0">
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium text-slate-900">Operating Hours</h4>
@@ -1745,7 +1747,7 @@ export default function Settings() {
                   {user && <PublicLinkManager user={user} />}
                 </TabsContent>
 
-                <TabsContent value="notifications" className="mt-6">
+                <TabsContent value="notifications" className="mt-0">
                   <div className="space-y-6">
                     {/* Time Parameters Section */}
                     <Card className="border-2 border-green-100">
@@ -1983,15 +1985,15 @@ export default function Settings() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="team" className="mt-6">
+                <TabsContent value="team" className="mt-0">
                   <TeamMembersSection />
                 </TabsContent>
 
-                <TabsContent value="integrations" className="mt-6">
+                <TabsContent value="integrations" className="mt-0">
                   <IntegrationsSection />
                 </TabsContent>
-              </Tabs>
-            </CardContent>
+              </CardContent>
+            </Tabs>
           </Card>
         </div>
       </main>
