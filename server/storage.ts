@@ -2,6 +2,7 @@ import {
   users,
   clients,
   inactiveClients,
+  appointmentReminders,
   services,
   appointments,
   clinicalRecords,
@@ -969,6 +970,148 @@ export class DatabaseStorage implements IStorage {
       .from(inactiveClients)
       .where(eq(inactiveClients.userId, userId))
       .orderBy(desc(inactiveClients.lastAppointmentDate));
+  }
+
+  // Appointment Reminders operations
+  async findUpcomingAppointments(userId: number): Promise<any[]> {
+    // Get user's reminder settings
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) return [];
+
+    const reminderHours = user.reminderHours || 2;
+    const reminderStartTime = user.reminderStartTime || '09:00';
+    const reminderEndTime = user.reminderEndTime || '21:00';
+
+    // Check if current time is within reminder window
+    const now = new Date();
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    
+    if (currentTime < reminderStartTime || currentTime > reminderEndTime) {
+      return []; // Outside reminder window
+    }
+
+    // Calculate time window for appointments
+    const startWindow = new Date(now.getTime() + reminderHours * 60 * 60 * 1000);
+    const endWindow = new Date(startWindow.getTime() + 60 * 60 * 1000); // 1 hour window
+
+    // Get upcoming appointments in the time window
+    const upcomingAppointments = await db
+      .select()
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.userId, userId),
+          gte(appointments.appointmentDate, startWindow),
+          lte(appointments.appointmentDate, endWindow),
+          inArray(appointments.status, ['pending', 'confirmed', 'scheduled'])
+        )
+      );
+
+    const remindersList: any[] = [];
+
+    for (const appointment of upcomingAppointments) {
+      // Check if reminder already exists
+      const existingReminder = await db
+        .select()
+        .from(appointmentReminders)
+        .where(
+          and(
+            eq(appointmentReminders.appointmentId, appointment.id),
+            eq(appointmentReminders.userId, userId)
+          )
+        )
+        .limit(1);
+
+      if (existingReminder.length > 0) continue; // Skip if reminder already exists
+
+      // Get client info
+      const [client] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.id, appointment.clientId))
+        .limit(1);
+
+      if (!client) continue;
+
+      // Get procedure name
+      let procedureName = null;
+      if (appointment.serviceType === 'service') {
+        const [service] = await db
+          .select({ name: services.name })
+          .from(services)
+          .where(eq(services.id, appointment.serviceId))
+          .limit(1);
+        procedureName = service?.name || null;
+      } else {
+        const [procedure] = await db
+          .select({ name: procedures.name })
+          .from(procedures)
+          .where(eq(procedures.id, appointment.serviceId))
+          .limit(1);
+        procedureName = procedure?.name || null;
+      }
+
+      // Determine contact preference
+      let contactPreference = null;
+      if (client.notifyWhatsapp) contactPreference = 'whatsapp';
+      else if (client.notifySms) contactPreference = 'sms';
+      else if (client.notifyPhone) contactPreference = 'phone';
+
+      // Format appointment time
+      const appointmentDate = new Date(appointment.appointmentDate);
+      const appointmentTime = `${appointmentDate.getHours().toString().padStart(2, '0')}:${appointmentDate.getMinutes().toString().padStart(2, '0')}`;
+
+      remindersList.push({
+        userId,
+        appointmentId: appointment.id,
+        clientId: client.id,
+        clientName: client.name,
+        appointmentDate: appointment.appointmentDate,
+        appointmentTime,
+        procedureName,
+        contactPreference,
+        status: 0,
+      });
+    }
+
+    return remindersList;
+  }
+
+  async populateAppointmentReminders(userId: number): Promise<void> {
+    const remindersData = await this.findUpcomingAppointments(userId);
+    
+    if (remindersData.length === 0) return;
+
+    // Insert new reminders (don't delete old ones to keep history)
+    await db.insert(appointmentReminders).values(remindersData);
+  }
+
+  async populateAllUsersAppointmentReminders(): Promise<void> {
+    // Get all active users
+    const allUsers = await db.select().from(users).where(eq(users.isActive, true));
+
+    // Process each user
+    for (const user of allUsers) {
+      await this.populateAppointmentReminders(user.id);
+    }
+  }
+
+  async getAppointmentReminders(userId: number, status?: number): Promise<any[]> {
+    const query = db
+      .select()
+      .from(appointmentReminders)
+      .where(eq(appointmentReminders.userId, userId));
+
+    if (status !== undefined) {
+      return await query
+        .where(and(
+          eq(appointmentReminders.userId, userId),
+          eq(appointmentReminders.status, status)
+        ))
+        .orderBy(asc(appointmentReminders.appointmentDate));
+    }
+
+    return await query.orderBy(asc(appointmentReminders.appointmentDate));
   }
 }
 
