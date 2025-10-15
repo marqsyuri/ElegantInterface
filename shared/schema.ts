@@ -578,6 +578,8 @@ export const insertStaffSchema = createInsertSchema(staff).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  commissionRate: z.number().optional(),
 });
 
 export const insertStaffScheduleSchema = createInsertSchema(staffSchedules).omit({
