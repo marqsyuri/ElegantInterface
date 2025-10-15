@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initializeScheduler } from "./scheduler";
 
 const app = express();
 // Increase payload limits for image uploads
@@ -68,5 +69,7 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    // Initialize scheduled tasks
+    initializeScheduler();
   });
 })();
