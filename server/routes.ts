@@ -167,6 +167,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/appointments/all', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const appointments = await storage.getAppointments(userId);
+      res.json(appointments);
+    } catch (error) {
+      console.error("Error fetching all appointments:", error);
+      res.status(500).json({ message: "Failed to fetch appointments" });
+    }
+  });
+
   app.get('/api/appointments/:date', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;

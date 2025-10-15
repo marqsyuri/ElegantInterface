@@ -50,6 +50,7 @@ export default function Appointments() {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -67,10 +68,13 @@ export default function Appointments() {
   });
 
   const { data: appointments = [], isLoading: appointmentsLoading } = useQuery({
-    queryKey: ["/api/appointments", selectedDate?.toISOString().split('T')[0]],
-    queryFn: () => fetch(`/api/appointments/${selectedDate?.toISOString().split('T')[0]}`, {
-      credentials: 'include'
-    }).then(res => res.json()),
+    queryKey: ["/api/appointments", showAll ? 'all' : selectedDate?.toISOString().split('T')[0]],
+    queryFn: () => {
+      const url = showAll 
+        ? '/api/appointments/all' 
+        : `/api/appointments/${selectedDate?.toISOString().split('T')[0]}`;
+      return fetch(url, { credentials: 'include' }).then(res => res.json());
+    },
     retry: false,
   });
 
@@ -692,12 +696,22 @@ export default function Appointments() {
                     Appointments List
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="date"
-                      value={selectedDate.toISOString().split('T')[0]}
-                      onChange={(e) => setSelectedDate(new Date(e.target.value))}
-                      className="w-full xs:w-auto text-sm"
-                    />
+                    <Button
+                      variant={showAll ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setShowAll(!showAll)}
+                      className="text-xs sm:text-sm"
+                    >
+                      Show All
+                    </Button>
+                    {!showAll && (
+                      <Input
+                        type="date"
+                        value={selectedDate.toISOString().split('T')[0]}
+                        onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                        className="w-full xs:w-auto text-sm"
+                      />
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -706,12 +720,15 @@ export default function Appointments() {
                   <div className="text-center py-8">Loading appointments...</div>
                 ) : !Array.isArray(appointments) || appointments.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    No appointments scheduled for {format(selectedDate, "EEEE, d MMMM yyyy", { locale: enNZ })}
+                    {showAll ? 'No appointments found' : `No appointments scheduled for ${format(selectedDate, "EEEE, d MMMM yyyy", { locale: enNZ })}`}
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {(Array.isArray(appointments) ? appointments : [])
-                      .sort((a: any, b: any) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime())
+                      .sort((a: any, b: any) => showAll 
+                        ? new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime()
+                        : new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime()
+                      )
                       .map((appointment: any) => {
                       const endTime = new Date(parseISO(appointment.appointmentDate).getTime() + (appointment.duration || 60) * 60000);
                       
