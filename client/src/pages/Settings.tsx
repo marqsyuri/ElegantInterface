@@ -1202,30 +1202,30 @@ export default function Settings() {
 
             <CardContent>
               <Tabs defaultValue="profile" className="w-full">
-                <TabsList className="grid w-full grid-cols-6">
-                  <TabsTrigger value="profile" className="flex items-center gap-2">
+                <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1">
+                  <TabsTrigger value="profile" className="flex items-center gap-1 text-xs md:text-sm">
                     <User className="w-4 h-4" />
-                    Profile
+                    <span className="hidden sm:inline">Profile</span>
                   </TabsTrigger>
-                  <TabsTrigger value="hours" className="flex items-center gap-2">
+                  <TabsTrigger value="hours" className="flex items-center gap-1 text-xs md:text-sm">
                     <Clock className="w-4 h-4" />
-                    Operating Hours
+                    <span className="hidden sm:inline">Hours</span>
                   </TabsTrigger>
-                  <TabsTrigger value="team" className="flex items-center gap-2">
+                  <TabsTrigger value="team" className="flex items-center gap-1 text-xs md:text-sm">
                     <Users className="w-4 h-4" />
-                    Team Members
+                    <span className="hidden sm:inline">Team</span>
                   </TabsTrigger>
-                  <TabsTrigger value="integrations" className="flex items-center gap-2">
+                  <TabsTrigger value="integrations" className="flex items-center gap-1 text-xs md:text-sm">
                     <Plug className="w-4 h-4" />
-                    Integrations
+                    <span className="hidden sm:inline">Integrations</span>
                   </TabsTrigger>
-                  <TabsTrigger value="link" className="flex items-center gap-2">
+                  <TabsTrigger value="link" className="flex items-center gap-1 text-xs md:text-sm">
                     <MessageCircle className="w-4 h-4" />
-                    Client Access
+                    <span className="hidden sm:inline">Client</span>
                   </TabsTrigger>
-                  <TabsTrigger value="notifications" className="flex items-center gap-2">
+                  <TabsTrigger value="notifications" className="flex items-center gap-1 text-xs md:text-sm">
                     <Bell className="w-4 h-4" />
-                    Notifications
+                    <span className="hidden sm:inline">Notifications</span>
                   </TabsTrigger>
                 </TabsList>
 
