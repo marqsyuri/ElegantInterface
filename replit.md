@@ -63,6 +63,21 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Inactive Clients Detection System (October 15, 2025) ✅ COMPLETED
+- **Automated Inactive Client Detection**: Complete backend system to identify and track clients who haven't had appointments within a configurable timeframe
+  - **Database Table**: `inactiveClients` table with clientId, clientName, lastProcedure, lastAppointmentDate, contactPreference, and status fields
+  - **Storage Functions**: Four new methods in DatabaseStorage class:
+    - `findInactiveClients()`: Optimized single-query detection using JOIN to prevent timeouts
+    - `populateInactiveClients()`: Populate inactive clients for a specific user
+    - `populateAllUsersInactiveClients()`: Populate for all active users
+    - `getInactiveClients()`: Retrieve inactive clients list
+  - **Daily Scheduler**: Cron job running at 00:00 (midnight) to automatically populate inactive clients table
+  - **Query Optimization**: Single LEFT JOIN query instead of loop-based queries for better performance
+  - **Contact Preferences**: Automatically determines preferred contact method (WhatsApp/SMS/Phone) from client settings
+  - **Test Endpoint**: POST /api/test/inactive-clients for manual testing (requires authentication)
+  - **Dependencies**: Added `node-cron` package for scheduled tasks
+  - **Status**: Fully functional and production-ready - tested and verified with real data
+
 ### Time Parameters for Notifications (October 14, 2025) ✅ COMPLETED
 - **Notification Settings Enhancement**: Added configurable time parameters for customer notifications
   - **Inactivity Tracking**: Days before sending follow-up to inactive clients (1-365 days)

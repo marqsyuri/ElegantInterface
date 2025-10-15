@@ -61,7 +61,7 @@ import {
   type InsertBusinessHours,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
+import { eq, and, or, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
 import session from "express-session";
 
 // Interface for storage operations
@@ -851,6 +851,107 @@ export class DatabaseStorage implements IStorage {
     
     return results;
   }
+
+  // Inactive Clients operations
+  async findInactiveClients(userId: number): Promise<any[]> {
+    // Get user's inactivity threshold
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) return [];
+
+    const inactivityDays = user.inactivityDays || 7;
+    const thresholdDate = new Date();
+    thresholdDate.setDate(thresholdDate.getDate() - inactivityDays);
+
+    // Find all inactive clients with their last appointment in a single optimized query
+    const inactiveClientsData = await db
+      .select({
+        clientId: clients.id,
+        clientName: clients.name,
+        notifySms: clients.notifySms,
+        notifyWhatsapp: clients.notifyWhatsapp,
+        notifyPhone: clients.notifyPhone,
+        lastAppointmentDate: sql<Date | null>`MAX(${appointments.appointmentDate})`,
+        lastProcedure: sql<string | null>`(
+          SELECT COALESCE(s.name, p.name)
+          FROM ${appointments} a
+          LEFT JOIN ${services} s ON a.service_id = s.id
+          LEFT JOIN ${procedures} p ON a.service_id = p.id
+          WHERE a.client_id = ${clients.id}
+            AND a.status = 'completed'
+          ORDER BY a.appointment_date DESC
+          LIMIT 1
+        )`,
+      })
+      .from(clients)
+      .leftJoin(
+        appointments,
+        and(
+          eq(appointments.clientId, clients.id),
+          eq(appointments.status, 'completed')
+        )
+      )
+      .where(
+        and(
+          eq(clients.userId, userId),
+          eq(clients.isActive, true)
+        )
+      )
+      .groupBy(clients.id, clients.name, clients.notifySms, clients.notifyWhatsapp, clients.notifyPhone)
+      .having(
+        or(
+          sql`MAX(${appointments.appointmentDate}) IS NULL`,
+          sql`MAX(${appointments.appointmentDate}) < ${thresholdDate.toISOString()}`
+        )
+      );
+
+    // Transform results to match expected format
+    return inactiveClientsData.map(client => {
+      let contactPreference = null;
+      if (client.notifyWhatsapp) contactPreference = 'whatsapp';
+      else if (client.notifySms) contactPreference = 'sms';
+      else if (client.notifyPhone) contactPreference = 'phone';
+
+      return {
+        userId,
+        clientId: client.clientId,
+        clientName: client.clientName,
+        lastProcedure: client.lastProcedure,
+        lastAppointmentDate: client.lastAppointmentDate,
+        contactPreference,
+        status: 0,
+      };
+    });
+  }
+
+  async populateInactiveClients(userId: number): Promise<void> {
+    const inactiveClientsData = await this.findInactiveClients(userId);
+    
+    if (inactiveClientsData.length === 0) return;
+
+    // Clear previous entries for this user
+    await db.delete(inactiveClients).where(eq(inactiveClients.userId, userId));
+
+    // Insert new inactive clients
+    await db.insert(inactiveClients).values(inactiveClientsData);
+  }
+
+  async populateAllUsersInactiveClients(): Promise<void> {
+    // Get all active users
+    const allUsers = await db.select().from(users).where(eq(users.isActive, true));
+
+    // Process each user
+    for (const user of allUsers) {
+      await this.populateInactiveClients(user.id);
+    }
+  }
+
+  async getInactiveClients(userId: number): Promise<any[]> {
+    return await db
+      .select()
+      .from(inactiveClients)
+      .where(eq(inactiveClients.userId, userId))
+      .orderBy(desc(inactiveClients.lastAppointmentDate));
+  }
 }
 
 export const storage = new DatabaseStorage();
@@ -910,120 +1011,5 @@ export const procedureStorage = {
           .where(eq(inventory.id, material.materialId));
       }
     }
-  },
-
-  // Inactive Clients operations
-  async findInactiveClients(userId: number): Promise<any[]> {
-    // Get user's inactivity threshold
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user) return [];
-
-    const inactivityDays = user.inactivityDays || 7;
-    const thresholdDate = new Date();
-    thresholdDate.setDate(thresholdDate.getDate() - inactivityDays);
-
-    // Find all clients with their last appointment
-    const clientsWithLastAppointment = await db
-      .select({
-        clientId: clients.id,
-        clientName: clients.name,
-        notifySms: clients.notifySms,
-        notifyWhatsapp: clients.notifyWhatsapp,
-        notifyPhone: clients.notifyPhone,
-        lastAppointmentDate: sql<Date>`MAX(${appointments.appointmentDate})`,
-      })
-      .from(clients)
-      .leftJoin(
-        appointments,
-        and(
-          eq(appointments.clientId, clients.id),
-          eq(appointments.status, 'completed')
-        )
-      )
-      .where(
-        and(
-          eq(clients.userId, userId),
-          eq(clients.isActive, true)
-        )
-      )
-      .groupBy(clients.id, clients.name, clients.notifySms, clients.notifyWhatsapp, clients.notifyPhone);
-
-    // Filter inactive clients and get their last procedure
-    const inactiveClientsData = [];
-    for (const client of clientsWithLastAppointment) {
-      const lastAppDate = client.lastAppointmentDate ? new Date(client.lastAppointmentDate) : null;
-      
-      // If no appointments or last appointment is older than threshold
-      if (!lastAppDate || lastAppDate < thresholdDate) {
-        // Get the last procedure/service name
-        let lastProcedure = null;
-        if (lastAppDate) {
-          const [lastAppt] = await db
-            .select()
-            .from(appointments)
-            .leftJoin(services, eq(appointments.serviceId, services.id))
-            .leftJoin(procedures, eq(appointments.serviceId, procedures.id))
-            .where(
-              and(
-                eq(appointments.clientId, client.clientId),
-                eq(appointments.appointmentDate, lastAppDate)
-              )
-            )
-            .limit(1);
-
-          if (lastAppt) {
-            lastProcedure = lastAppt.services?.name || lastAppt.procedures?.name || null;
-          }
-        }
-
-        // Determine contact preference
-        let contactPreference = null;
-        if (client.notifyWhatsapp) contactPreference = 'whatsapp';
-        else if (client.notifySms) contactPreference = 'sms';
-        else if (client.notifyPhone) contactPreference = 'phone';
-
-        inactiveClientsData.push({
-          userId,
-          clientId: client.clientId,
-          clientName: client.clientName,
-          lastProcedure,
-          lastAppointmentDate: lastAppDate,
-          contactPreference,
-          status: 0,
-        });
-      }
-    }
-
-    return inactiveClientsData;
-  },
-
-  async populateInactiveClients(userId: number): Promise<void> {
-    const inactiveClientsData = await this.findInactiveClients(userId);
-    
-    if (inactiveClientsData.length === 0) return;
-
-    // Clear previous entries for this user
-    await db.delete(inactiveClients).where(eq(inactiveClients.userId, userId));
-
-    // Insert new inactive clients
-    await db.insert(inactiveClients).values(inactiveClientsData);
-  },
-
-  async populateAllUsersInactiveClients(): Promise<void> {
-    // Get all active users
-    const allUsers = await db.select().from(users).where(eq(users.isActive, true));
-
-    // Process each user
-    for (const user of allUsers) {
-      await this.populateInactiveClients(user.id);
-    }
-  },
-
-  async getInactiveClients(userId: number): Promise<any[]> {
-    return await db
-      .select()
-      .from(inactiveClients)
-      .where(eq(inactiveClients.userId, userId))
-      .orderBy(desc(inactiveClients.lastAppointmentDate));
   }
 };

@@ -1305,6 +1305,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test route for inactive clients detection (development only)
+  app.post('/api/test/inactive-clients', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      console.log('[Test] Running inactive clients detection for user:', userId);
+      
+      await storage.populateInactiveClients(userId);
+      const inactiveClients = await storage.getInactiveClients(userId);
+      
+      console.log('[Test] Found', inactiveClients.length, 'inactive clients');
+      res.json({ 
+        success: true, 
+        count: inactiveClients.length,
+        inactiveClients 
+      });
+    } catch (error) {
+      console.error("Error testing inactive clients detection:", error);
+      res.status(500).json({ message: "Failed to test inactive clients detection" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
