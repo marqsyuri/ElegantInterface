@@ -862,65 +862,83 @@ export class DatabaseStorage implements IStorage {
     const thresholdDate = new Date();
     thresholdDate.setDate(thresholdDate.getDate() - inactivityDays);
 
-    // Find all inactive clients with their last appointment in a single optimized query
-    const inactiveClientsData = await db
-      .select({
-        clientId: clients.id,
-        clientName: clients.name,
-        notifySms: clients.notifySms,
-        notifyWhatsapp: clients.notifyWhatsapp,
-        notifyPhone: clients.notifyPhone,
-        lastAppointmentDate: sql<Date | null>`MAX(${appointments.appointmentDate})`,
-        lastProcedure: sql<string | null>`(
-          SELECT COALESCE(s.name, p.name)
-          FROM ${appointments} a
-          LEFT JOIN ${services} s ON a.service_id = s.id
-          LEFT JOIN ${procedures} p ON a.service_id = p.id
-          WHERE a.client_id = ${clients.id}
-            AND a.status = 'completed'
-          ORDER BY a.appointment_date DESC
-          LIMIT 1
-        )`,
-      })
+    // Get all active clients for this user
+    const allClients = await db
+      .select()
       .from(clients)
-      .leftJoin(
-        appointments,
-        and(
-          eq(appointments.clientId, clients.id),
-          eq(appointments.status, 'completed')
-        )
-      )
       .where(
         and(
           eq(clients.userId, userId),
           eq(clients.isActive, true)
         )
-      )
-      .groupBy(clients.id, clients.name, clients.notifySms, clients.notifyWhatsapp, clients.notifyPhone)
-      .having(
-        or(
-          sql`MAX(${appointments.appointmentDate}) IS NULL`,
-          sql`MAX(${appointments.appointmentDate}) < ${thresholdDate.toISOString()}`
-        )
       );
 
-    // Transform results to match expected format
-    return inactiveClientsData.map(client => {
-      let contactPreference = null;
-      if (client.notifyWhatsapp) contactPreference = 'whatsapp';
-      else if (client.notifySms) contactPreference = 'sms';
-      else if (client.notifyPhone) contactPreference = 'phone';
+    const inactiveClientsList: any[] = [];
 
-      return {
-        userId,
-        clientId: client.clientId,
-        clientName: client.clientName,
-        lastProcedure: client.lastProcedure,
-        lastAppointmentDate: client.lastAppointmentDate,
-        contactPreference,
-        status: 0,
-      };
-    });
+    // For each client, check their last appointment
+    for (const client of allClients) {
+      // Get last completed appointment for this client
+      const lastAppointments = await db
+        .select({
+          appointmentDate: appointments.appointmentDate,
+          serviceId: appointments.serviceId,
+        })
+        .from(appointments)
+        .where(
+          and(
+            eq(appointments.clientId, client.id),
+            eq(appointments.status, 'completed')
+          )
+        )
+        .orderBy(desc(appointments.appointmentDate))
+        .limit(1);
+
+      const lastAppointment = lastAppointments[0];
+      
+      // Check if client is inactive (no appointments or last appointment older than threshold)
+      const isInactive = !lastAppointment || new Date(lastAppointment.appointmentDate) < thresholdDate;
+
+      if (isInactive) {
+        // Get procedure name if exists
+        let lastProcedure = null;
+        if (lastAppointment && lastAppointment.serviceId) {
+          const [service] = await db
+            .select({ name: services.name })
+            .from(services)
+            .where(eq(services.id, lastAppointment.serviceId))
+            .limit(1);
+          
+          if (!service) {
+            const [procedure] = await db
+              .select({ name: procedures.name })
+              .from(procedures)
+              .where(eq(procedures.id, lastAppointment.serviceId))
+              .limit(1);
+            lastProcedure = procedure?.name || null;
+          } else {
+            lastProcedure = service.name;
+          }
+        }
+
+        // Determine contact preference
+        let contactPreference = null;
+        if (client.notifyWhatsapp) contactPreference = 'whatsapp';
+        else if (client.notifySms) contactPreference = 'sms';
+        else if (client.notifyPhone) contactPreference = 'phone';
+
+        inactiveClientsList.push({
+          userId,
+          clientId: client.id,
+          clientName: client.name,
+          lastProcedure,
+          lastAppointmentDate: lastAppointment?.appointmentDate || null,
+          contactPreference,
+          status: 0,
+        });
+      }
+    }
+
+    return inactiveClientsList;
   }
 
   async populateInactiveClients(userId: number): Promise<void> {
