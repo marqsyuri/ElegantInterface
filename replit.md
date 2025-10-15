@@ -63,6 +63,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Appointment Reminders System (October 15, 2025) ✅ COMPLETED
+- **Automated Appointment Reminder System**: Complete backend system to notify clients about upcoming appointments
+  - **Database Table**: `appointmentReminders` table with appointmentId, clientId, clientName, appointmentDate, appointmentTime, procedureName, contactPreference, and status fields
+  - **Storage Functions**: Four new methods in DatabaseStorage class:
+    - `findUpcomingAppointments()`: Finds appointments needing reminders within configured time window
+    - `populateAppointmentReminders()`: Populate reminders for a specific user
+    - `populateAllUsersAppointmentReminders()`: Process all active users
+    - `getAppointmentReminders()`: Retrieve reminders with optional status filter
+  - **Hourly Scheduler**: Cron job running every hour at :00 to populate appointment reminders
+  - **Time Window Validation**: Only processes reminders during configured hours (reminderStartTime to reminderEndTime)
+  - **Smart Detection**: Respects user's reminderHours setting (hours before appointment)
+  - **Deduplication**: Prevents duplicate reminders for the same appointment
+  - **Contact Preferences**: Automatically determines preferred contact method (WhatsApp/SMS/Phone)
+  - **Status Tracking**: 0=pending, 1=sent, 2=confirmed, 3=cancelled (for n8n integration)
+  - **Test Endpoint**: POST /api/test/appointment-reminders for manual testing (requires authentication)
+  - **Status**: Fully functional and production-ready - ready for n8n integration
+
 ### Inactive Clients Detection System (October 15, 2025) ✅ COMPLETED
 - **Automated Inactive Client Detection**: Complete backend system to identify and track clients who haven't had appointments within a configurable timeframe
   - **Database Table**: `inactiveClients` table with clientId, clientName, lastProcedure, lastAppointmentDate, contactPreference, and status fields
