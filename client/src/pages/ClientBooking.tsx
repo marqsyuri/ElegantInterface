@@ -1042,13 +1042,52 @@ export default function ClientBooking() {
           ))}
         </div>
 
-        {/* Continue Button - Fixed at bottom */}
+        {/* Selection Summary - Fixed at bottom */}
         {selectedServices.length > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4">
-            <div className="max-w-lg mx-auto">
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg">
+            <div className="max-w-lg mx-auto p-4">
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-slate-900">
+                    Selected ({selectedServices.length})
+                  </h3>
+                  <button
+                    onClick={() => setSelectedServices([])}
+                    className="text-xs text-slate-600 hover:text-slate-900"
+                  >
+                    Clear All
+                  </button>
+                </div>
+                <div className="space-y-1 max-h-20 overflow-y-auto">
+                  {services
+                    .filter(s => selectedServices.includes(s.id.toString()))
+                    .map(service => (
+                      <div key={service.id} className="flex items-center justify-between text-xs">
+                        <span className="text-slate-700 truncate flex-1">{service.name}</span>
+                        <span className="text-slate-900 font-medium ml-2">${parseFloat(service.price).toFixed(2)}</span>
+                      </div>
+                    ))
+                  }
+                </div>
+                <div className="border-t border-slate-200 mt-2 pt-2 flex items-center justify-between text-sm">
+                  <div className="space-y-0.5">
+                    <div className="font-medium text-slate-900">
+                      Total: ${calculateTotal().toFixed(2)}
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      Duration: {formatDuration(
+                        selectedServices.reduce((total, id) => {
+                          const service = services.find(s => s.id.toString() === id);
+                          return total + (service?.duration || 0);
+                        }, 0)
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
               <Button 
                 onClick={handleContinue}
-                className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
+                className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-base font-medium"
               >
                 Continue
               </Button>
@@ -1057,8 +1096,8 @@ export default function ClientBooking() {
         )}
       </div>
 
-      {/* Bottom padding to account for fixed button */}
-      {selectedServices.length > 0 && <div className="h-20" />}
+      {/* Bottom padding to account for fixed summary panel */}
+      {selectedServices.length > 0 && <div className="h-48" />}
     </div>
   );
 }
