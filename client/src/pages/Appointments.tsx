@@ -16,6 +16,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import PageLayout from "@/components/PageLayout";
 import AppointmentCalendar from "@/components/AppointmentCalendar";
 import AppointmentDetailsDialog from "@/components/AppointmentDetailsDialog";
+import { ProcedureMultiSelect } from "@/components/ProcedureMultiSelect";
 import { insertAppointmentSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -41,11 +42,10 @@ export default function Appointments() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [beforeImages, setBeforeImages] = useState<string[]>([]);
   const [clientSearch, setClientSearch] = useState("");
-  const [serviceSearch, setServiceSearch] = useState("");
   const [filteredClients, setFilteredClients] = useState<any[]>([]);
-  const [filteredServices, setFilteredServices] = useState<any[]>([]);
   const [selectedClient, setSelectedClient] = useState<any>(null);
-  const [selectedService, setSelectedService] = useState<any>(null);
+  const [selectedProcedureIds, setSelectedProcedureIds] = useState<number[]>([]);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [afterImages, setAfterImages] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -93,31 +93,21 @@ export default function Appointments() {
     retry: false,
   });
 
-  // Combine services and procedures with prefixed IDs to avoid conflicts
-  const formattedServices = (services as any[]).map(service => ({
-    ...service,
-    id: `service_${service.id}`,
-    type: 'service'
-  }));
-  
-  const formattedProcedures = (procedures as any[]).map(procedure => ({
-    ...procedure,
-    id: `procedure_${procedure.id}`,
-    type: 'procedure',
-    category: procedure.category || 'Procedure'
-  }));
-  
-  const allServices = [...formattedServices, ...formattedProcedures];
+  const { data: staff = [] } = useQuery({
+    queryKey: ["/api/staff"],
+    retry: false,
+  });
 
   // Reset search fields when dialog closes
   useEffect(() => {
     if (!isDialogOpen) {
       setClientSearch("");
-      setServiceSearch("");
       setFilteredClients([]);
-      setFilteredServices([]);
       setSelectedClient(null);
-      setSelectedService(null);
+      setSelectedProcedureIds([]);
+      setSelectedStaffId("");
+      setBeforeImages([]);
+      setAfterImages([]);
       form.reset({
         status: "scheduled",
         serviceType: "service",
@@ -132,18 +122,41 @@ export default function Appointments() {
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: AppointmentFormData) => {
+      // Validation
+      if (selectedProcedureIds.length === 0) {
+        throw new Error("Please select at least one procedure");
+      }
+      if (!selectedClient) {
+        throw new Error("Please select a client");
+      }
+      if (!selectedStaffId) {
+        throw new Error("Please select a staff member");
+      }
+
       const appointmentDateTime = new Date(`${data.appointmentDate}T${data.appointmentTime}`);
-      const { appointmentDate, appointmentTime, ...appointmentData } = data;
       
-      await apiRequest('POST', '/api/appointments', {
-        ...appointmentData,
+      // Get selected procedures data
+      const selectedProcs = (procedures as any[]).filter(p => selectedProcedureIds.includes(p.id));
+      const proceduresToAdd = selectedProcs.map(proc => ({
+        procedureId: proc.id,
+        procedureName: proc.name,
+        procedurePrice: parseFloat(proc.price || '0'),
+        procedureDuration: proc.duration || 60,
+        procedureMaterials: proc.materials || '',
+      }));
+
+      const payload = {
+        clientId: selectedClient.id,
+        staffId: parseInt(selectedStaffId),
         appointmentDate: appointmentDateTime.toISOString(),
-        duration: data.duration || 60,
-        totalAmount: data.totalAmount || "0",
-        paidAmount: data.paidAmount || "0",
-        beforeImages: beforeImages,
-        afterImages: afterImages,
-      });
+        status: data.status,
+        notes: data.notes || '',
+        procedures: proceduresToAdd,
+        beforeImages,
+        afterImages,
+      };
+
+      await apiRequest('POST', '/api/appointments/with-procedures', payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
@@ -151,15 +164,18 @@ export default function Appointments() {
       form.reset();
       setBeforeImages([]);
       setAfterImages([]);
+      setSelectedProcedureIds([]);
+      setSelectedStaffId("");
+      setSelectedClient(null);
       toast({
         title: "Success",
         description: "Appointment created successfully!",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to create appointment. Please try again.",
+        description: error?.message || "Failed to create appointment. Please try again.",
         variant: "destructive",
       });
     },
@@ -356,13 +372,14 @@ export default function Appointments() {
                 
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="space-y-4">
+                      {/* Client Selection */}
                       <FormField
                         control={form.control}
                         name="clientId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Client</FormLabel>
+                            <FormLabel>Client *</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Input
@@ -370,7 +387,7 @@ export default function Appointments() {
                                   value={clientSearch}
                                   onChange={(e) => {
                                     setClientSearch(e.target.value);
-                                    if (e.target.value.length >= 3) {
+                                    if (e.target.value.length >= 2) {
                                       const filtered = (clients as any[])?.filter((client: any) =>
                                         client.name.toLowerCase().includes(e.target.value.toLowerCase())
                                       ) || [];
@@ -379,6 +396,7 @@ export default function Appointments() {
                                       setFilteredClients([]);
                                     }
                                   }}
+                                  className={selectedClient ? "border-green-500" : ""}
                                 />
                                 {filteredClients.length > 0 && (
                                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
@@ -405,80 +423,39 @@ export default function Appointments() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="serviceId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Service</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  placeholder="Type to search services/procedures..."
-                                  value={serviceSearch}
-                                  onChange={(e) => {
-                                    setServiceSearch(e.target.value);
-                                    if (e.target.value.length >= 3) {
-                                      const filtered = allServices?.filter((service: any) =>
-                                        service.name.toLowerCase().includes(e.target.value.toLowerCase())
-                                      ) || [];
-                                      setFilteredServices(filtered);
-                                    } else {
-                                      setFilteredServices([]);
-                                    }
-                                  }}
-                                />
-                                {filteredServices.length > 0 && (
-                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                                    {filteredServices.map((service: any) => (
-                                      <div
-                                        key={`${service.id}-${service.category || 'procedure'}`}
-                                        className="px-3 py-2 cursor-pointer hover:bg-gray-100"
-                                        onClick={() => {
-                                          setSelectedService(service);
-                                          setServiceSearch(service.name);
-                                          setFilteredServices([]);
-                                          
-                                          // Extract the real ID and set the type
-                                          if (service.type === 'procedure') {
-                                            const realId = parseInt(service.id.replace('procedure_', ''));
-                                            field.onChange(realId);
-                                            form.setValue('serviceType', 'procedure');
-                                          } else {
-                                            const realId = parseInt(service.id.replace('service_', ''));
-                                            field.onChange(realId);
-                                            form.setValue('serviceType', 'service');
-                                          }
-                                          
-                                          // Set the price automatically
-                                          if (service.price) {
-                                            form.setValue('totalAmount', service.price.toString());
-                                          }
-                                        }}
-                                      >
-                                        <div className="flex justify-between items-center">
-                                          <div>
-                                            <span className="font-medium">{service.name}</span>
-                                            <div className="text-xs text-gray-500">
-                                              {service.category || 'Procedure'}
-                                            </div>
-                                          </div>
-                                          <div className="text-right">
-                                            <div className="font-semibold text-green-600">
-                                              {service.price ? `NZ$${parseFloat(service.price).toFixed(2)}` : 'No price set'}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {/* Procedures Multi-Select */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Procedures *</label>
+                        <ProcedureMultiSelect
+                          procedures={procedures as any[]}
+                          selectedProcedureIds={selectedProcedureIds}
+                          onSelectionChange={setSelectedProcedureIds}
+                          showSummary={true}
+                        />
+                      </div>
+
+                      {/* Staff Selection */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Professional *</label>
+                        <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                          <SelectTrigger className={selectedStaffId ? "border-green-500" : ""}>
+                            <SelectValue placeholder="Select a professional" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(staff as any[]).map((member: any) => (
+                              <SelectItem key={member.id} value={member.id.toString()}>
+                                <div className="flex items-center gap-2">
+                                  <User className="h-4 w-4" />
+                                  <span>{member.name}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Date and Time */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
 
                       <FormField
                         control={form.control}
@@ -607,21 +584,22 @@ export default function Appointments() {
                           </FormItem>
                         )}
                       />
-                    </div>
+                      </div>
 
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notes</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Additional notes..." {...field} value={field.value || ""} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Notes</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Additional notes..." {...field} value={field.value || ""} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
                     <Tabs defaultValue="before" className="w-full">
                       <TabsList className="grid w-full grid-cols-2 h-auto">
