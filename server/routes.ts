@@ -1058,36 +1058,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
       );
 
-      const totalDuration = selectedProcedures.reduce((sum, proc) => sum + (proc.duration || 60), 0);
-      const totalPrice = selectedProcedures.reduce((sum, proc) => sum + parseFloat(proc.price || '0'), 0);
-
-      // Create appointment with the first service (main appointment)
-      const appointmentDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
-      
-      const serviceId = serviceIds[0];
-      const professionalId = parseInt(selectedProfessional);
-      
-      if (isNaN(serviceId) || isNaN(professionalId)) {
-        return res.status(400).json({ message: "Invalid service or professional selection" });
+      if (selectedProcedures.length === 0) {
+        return res.status(400).json({ message: "Selected procedures not found" });
       }
 
-      // Create appointment directly with db.insert to handle multiple services properly
-      const [appointment] = await db.insert(appointments).values({
-        userId: company.id,
-        clientId: client[0].id,
-        serviceId: serviceId,
-        serviceType: 'procedure',
-        selectedProcedures: selectedServices, // Store all selected procedure IDs
-        appointmentDate: appointmentDateTime,
-        duration: totalDuration,
-        status: 'pending',
-        notes: notes || '',
-        totalAmount: totalPrice.toString(),
-        paidAmount: '0.00',
-        paymentStatus: 'pending'
-      }).returning();
+      const appointmentDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+      const professionalId = parseInt(selectedProfessional);
+      
+      if (isNaN(professionalId)) {
+        return res.status(400).json({ message: "Invalid professional selection" });
+      }
 
-      // Create a notification for each selected service
+      // Use the new multi-procedure system
+      const proceduresToAdd = selectedProcedures.map(proc => ({
+        procedureId: proc.id,
+        procedureName: proc.name,
+        procedurePrice: parseFloat(proc.price || '0'),
+        procedureDuration: proc.duration || 60,
+        procedureMaterials: proc.materials || '',
+      }));
+
+      const appointment = await appointmentStorage.createAppointmentWithProcedures(
+        company.id,
+        client[0].id,
+        professionalId,
+        appointmentDateTime,
+        'pending',
+        notes || '',
+        proceduresToAdd
+      );
+
+      // Create a notification for the booking request
       const serviceNames = selectedProcedures.map(proc => proc.name).join(', ');
       await db.insert(notifications).values({
         userId: company.id,
