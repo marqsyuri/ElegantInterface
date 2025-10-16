@@ -137,18 +137,38 @@ export const appointments = pgTable("appointments", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   clientId: integer("client_id").notNull().references(() => clients.id),
-  serviceId: integer("service_id").notNull(),
+  serviceId: integer("service_id"), // nullable for backwards compatibility
   serviceType: varchar("service_type").notNull().default("service"), // "service" or "procedure"
-  selectedProcedures: jsonb("selected_procedures").$type<string[]>().default([]), // array of procedure IDs for multiple service bookings
+  selectedProcedures: jsonb("selected_procedures").$type<string[]>().default([]), // DEPRECATED: use appointment_procedures table
   appointmentDate: timestamp("appointment_date").notNull(),
-  duration: integer("duration").default(60), // in minutes
+  duration: integer("duration").default(60), // DEPRECATED: use total_duration
   status: varchar("status").notNull().default("pending"), // pending, confirmed, scheduled, completed, cancelled
   notes: text("notes"),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).default('0'),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).default('0'), // DEPRECATED: use total_price
   paidAmount: decimal("paid_amount", { precision: 10, scale: 2 }).default('0'),
   paymentStatus: varchar("payment_status").default("pending"), // pending, partial, paid
   beforeImages: jsonb("before_images").$type<string[]>().default([]), // array of image URLs
   afterImages: jsonb("after_images").$type<string[]>().default([]), // array of image URLs
+  // New calculated fields for multiple procedures
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }),
+  totalDuration: integer("total_duration"), // in minutes
+  procedureCount: integer("procedure_count").default(0),
+  staffId: integer("staff_id").references(() => staff.id), // assigned professional
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Appointment Procedures junction table (many-to-many)
+export const appointmentProcedures = pgTable("appointment_procedures", {
+  id: serial("id").primaryKey(),
+  appointmentId: integer("appointment_id").notNull().references(() => appointments.id, { onDelete: 'cascade' }),
+  procedureId: integer("procedure_id").notNull().references(() => procedures.id),
+  order: integer("order").default(0), // execution order
+  // Snapshot fields - preserve values at booking time
+  procedureName: varchar("procedure_name").notNull(),
+  procedureCategory: varchar("procedure_category").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  duration: integer("duration").notNull(), // in minutes
+  materials: jsonb("materials").$type<{ materialId: number; quantity: number }[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -410,14 +430,22 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
   appointments: many(appointments),
 }));
 
-export const proceduresRelations = relations(procedures, ({ one }) => ({
+export const proceduresRelations = relations(procedures, ({ one, many }) => ({
   user: one(users, { fields: [procedures.userId], references: [users.id] }),
+  appointmentProcedures: many(appointmentProcedures),
 }));
 
-export const appointmentsRelations = relations(appointments, ({ one }) => ({
+export const appointmentsRelations = relations(appointments, ({ one, many }) => ({
   user: one(users, { fields: [appointments.userId], references: [users.id] }),
   client: one(clients, { fields: [appointments.clientId], references: [clients.id] }),
   service: one(services, { fields: [appointments.serviceId], references: [services.id] }),
+  staff: one(staff, { fields: [appointments.staffId], references: [staff.id] }),
+  appointmentProcedures: many(appointmentProcedures),
+}));
+
+export const appointmentProceduresRelations = relations(appointmentProcedures, ({ one }) => ({
+  appointment: one(appointments, { fields: [appointmentProcedures.appointmentId], references: [appointments.id] }),
+  procedure: one(procedures, { fields: [appointmentProcedures.procedureId], references: [procedures.id] }),
 }));
 
 export const clinicalRecordsRelations = relations(clinicalRecords, ({ one }) => ({
@@ -462,6 +490,7 @@ export const clientPackagesRelations = relations(clientPackages, ({ one }) => ({
 export const staffRelations = relations(staff, ({ one, many }) => ({
   user: one(users, { fields: [staff.userId], references: [users.id] }),
   schedules: many(staffSchedules),
+  appointments: many(appointments),
 }));
 
 export const staffSchedulesRelations = relations(staffSchedules, ({ one }) => ({
@@ -515,6 +544,11 @@ export const insertServiceSchema = createInsertSchema(services).omit({
 });
 
 export const insertAppointmentSchema = createInsertSchema(appointments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAppointmentProcedureSchema = createInsertSchema(appointmentProcedures).omit({
   id: true,
   createdAt: true,
 });
