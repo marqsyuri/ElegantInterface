@@ -305,6 +305,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId
       );
 
+      // Automatically deduct materials from inventory
+      await storage.deductMaterialsForAppointment(result.appointment.id, userId);
+
       res.json(result);
     } catch (error) {
       console.error("Error creating appointment with procedures:", error);
@@ -1087,6 +1090,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes || '',
         proceduresToAdd
       );
+
+      // Automatically deduct materials from inventory
+      await storage.deductMaterialsForAppointment(appointment.id, company.id);
 
       // Create a notification for the booking request
       const serviceNames = selectedProcedures.map(proc => proc.name).join(', ');
