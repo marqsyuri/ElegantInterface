@@ -147,29 +147,37 @@ export default function Dashboard() {
                       ))}
                     </div>
                   ) : todayAppointments && (todayAppointments as any[]).length > 0 ? (
-                    (todayAppointments as any[]).slice(0, 3).map((appointment, index) => (
-                      <div key={index} className="flex items-center p-4 bg-accent/30 rounded-xl border border-accent/40 hover:bg-accent/40 transition-colors">
-                        <div className="w-12 h-12 bg-green-50 border border-green-100 rounded-full flex items-center justify-center">
-                          <Clock className="w-5 h-5 text-green-700" />
+                    (todayAppointments as any[]).slice(0, 3).map((appointment, index) => {
+                      const procedureNames = appointment.allProcedures && appointment.allProcedures.length > 0
+                        ? appointment.allProcedures.map((p: any) => p.procedureName || p.name).join(', ')
+                        : appointment.service?.name || "Service";
+                      
+                      return (
+                        <div key={index} className="flex items-center p-4 bg-accent/30 rounded-xl border border-accent/40 hover:bg-accent/40 transition-colors">
+                          <div className="w-12 h-12 bg-green-50 border border-green-100 rounded-full flex items-center justify-center">
+                            <Clock className="w-5 h-5 text-green-700" />
+                          </div>
+                          <div className="ml-4 flex-1">
+                            <p className="font-medium text-foreground">
+                              {new Date(appointment.appointmentDate).toLocaleTimeString('en-NZ', { 
+                                hour: 'numeric', 
+                                minute: '2-digit',
+                                hour12: true 
+                              })}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate" title={procedureNames}>
+                              {procedureNames}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-foreground">{appointment.client?.name || "Client"}</p>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-50 border border-green-100 text-green-700">
+                              {appointment.status || "scheduled"}
+                            </span>
+                          </div>
                         </div>
-                        <div className="ml-4 flex-1">
-                          <p className="font-medium text-foreground">
-                            {new Date(appointment.appointmentDate).toLocaleTimeString('en-NZ', { 
-                              hour: 'numeric', 
-                              minute: '2-digit',
-                              hour12: true 
-                            })}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{appointment.service?.name || "Service"}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-foreground">{appointment.client?.name || "Client"}</p>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-50 border border-green-100 text-green-700">
-                            {appointment.status || "scheduled"}
-                          </span>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="text-center py-8">
                       <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

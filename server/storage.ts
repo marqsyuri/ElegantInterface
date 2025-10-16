@@ -980,10 +980,7 @@ export class DatabaseStorage implements IStorage {
     for (const client of allClients) {
       // Get last completed appointment for this client
       const lastAppointments = await db
-        .select({
-          appointmentDate: appointments.appointmentDate,
-          serviceId: appointments.serviceId,
-        })
+        .select()
         .from(appointments)
         .where(
           and(
@@ -1000,24 +997,41 @@ export class DatabaseStorage implements IStorage {
       const isInactive = !lastAppointment || new Date(lastAppointment.appointmentDate) < thresholdDate;
 
       if (isInactive) {
-        // Get procedure name if exists
+        // Get procedure name(s) - support for multiple procedures
         let lastProcedure = null;
-        if (lastAppointment && lastAppointment.serviceId) {
-          const [service] = await db
-            .select({ name: services.name })
-            .from(services)
-            .where(eq(services.id, lastAppointment.serviceId))
-            .limit(1);
-          
-          if (!service) {
-            const [procedure] = await db
-              .select({ name: procedures.name })
-              .from(procedures)
-              .where(eq(procedures.id, lastAppointment.serviceId))
+        if (lastAppointment) {
+          // Try to get procedures from appointment_procedures table first
+          const procedureRecords = await db
+            .select({
+              procedureName: appointmentProcedures.procedureName,
+            })
+            .from(appointmentProcedures)
+            .where(eq(appointmentProcedures.appointmentId, lastAppointment.id));
+
+          if (procedureRecords.length > 0) {
+            // Concatenate multiple procedure names
+            lastProcedure = procedureRecords
+              .map(p => p.procedureName)
+              .filter(name => name)
+              .join(', ');
+          } else if (lastAppointment.serviceId) {
+            // Fallback to old single service/procedure lookup
+            const [service] = await db
+              .select({ name: services.name })
+              .from(services)
+              .where(eq(services.id, lastAppointment.serviceId))
               .limit(1);
-            lastProcedure = procedure?.name || null;
-          } else {
-            lastProcedure = service.name;
+            
+            if (!service) {
+              const [procedure] = await db
+                .select({ name: procedures.name })
+                .from(procedures)
+                .where(eq(procedures.id, lastAppointment.serviceId))
+                .limit(1);
+              lastProcedure = procedure?.name || null;
+            } else {
+              lastProcedure = service.name;
+            }
           }
         }
 
@@ -1135,22 +1149,40 @@ export class DatabaseStorage implements IStorage {
 
       if (!client) continue;
 
-      // Get procedure name
+      // Get procedure name(s) - support for multiple procedures
       let procedureName = null;
-      if (appointment.serviceType === 'service') {
-        const [service] = await db
-          .select({ name: services.name })
-          .from(services)
-          .where(eq(services.id, appointment.serviceId))
-          .limit(1);
-        procedureName = service?.name || null;
-      } else {
-        const [procedure] = await db
-          .select({ name: procedures.name })
-          .from(procedures)
-          .where(eq(procedures.id, appointment.serviceId))
-          .limit(1);
-        procedureName = procedure?.name || null;
+      
+      // Try to get procedures from appointment_procedures table first
+      const procedureRecords = await db
+        .select({
+          procedureName: appointmentProcedures.procedureName,
+        })
+        .from(appointmentProcedures)
+        .where(eq(appointmentProcedures.appointmentId, appointment.id));
+
+      if (procedureRecords.length > 0) {
+        // Concatenate multiple procedure names
+        procedureName = procedureRecords
+          .map(p => p.procedureName)
+          .filter(name => name)
+          .join(', ');
+      } else if (appointment.serviceId) {
+        // Fallback to old single service/procedure lookup
+        if (appointment.serviceType === 'service') {
+          const [service] = await db
+            .select({ name: services.name })
+            .from(services)
+            .where(eq(services.id, appointment.serviceId))
+            .limit(1);
+          procedureName = service?.name || null;
+        } else {
+          const [procedure] = await db
+            .select({ name: procedures.name })
+            .from(procedures)
+            .where(eq(procedures.id, appointment.serviceId))
+            .limit(1);
+          procedureName = procedure?.name || null;
+        }
       }
 
       // Determine contact preference
