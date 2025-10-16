@@ -272,6 +272,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New route for multiple procedures appointments
+  app.post('/api/appointments/with-procedures', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { procedureIds, clientId, appointmentDate, staffId, notes, status = 'pending' } = req.body;
+
+      if (!Array.isArray(procedureIds) || procedureIds.length === 0) {
+        return res.status(400).json({ message: 'procedureIds must be a non-empty array' });
+      }
+
+      if (!clientId || !appointmentDate) {
+        return res.status(400).json({ message: 'clientId and appointmentDate are required' });
+      }
+
+      const appointmentData = {
+        userId,
+        clientId: parseInt(clientId),
+        appointmentDate: new Date(appointmentDate),
+        staffId: staffId ? parseInt(staffId) : undefined,
+        status,
+        notes: notes || '',
+        paidAmount: '0',
+        paymentStatus: 'pending' as const,
+        beforeImages: [],
+        afterImages: [],
+      };
+
+      const result = await storage.createAppointmentWithProcedures(
+        appointmentData,
+        procedureIds.map((id: any) => parseInt(id)),
+        userId
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error creating appointment with procedures:", error);
+      res.status(500).json({ message: "Failed to create appointment with procedures" });
+    }
+  });
+
+  // Get appointment with all procedures
+  app.get('/api/appointments/:id/with-procedures', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const appointmentId = parseInt(req.params.id);
+
+      const result = await storage.getAppointmentWithProcedures(appointmentId, userId);
+
+      if (!result) {
+        return res.status(404).json({ message: 'Appointment not found' });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching appointment with procedures:", error);
+      res.status(500).json({ message: "Failed to fetch appointment" });
+    }
+  });
+
   // Record payment for appointment
   app.post('/api/appointments/:id/payment', isAuthenticated, async (req: any, res) => {
     try {

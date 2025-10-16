@@ -63,6 +63,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Sistema de Múltiplos Procedimentos por Agendamento (October 16, 2025) 🚧 EM PROGRESSO
+- **Fase 1 - Database & Backend**: ✅ CONCLUÍDA
+  - **Nova Tabela**: `appointment_procedures` (muitos-para-muitos) com snapshot de preços, duração e materiais
+  - **Campos Calculados**: `appointments` agora possui `totalPrice`, `totalDuration`, `procedureCount` e `staffId`
+  - **Migração Automática**: Dados existentes migrados com sucesso para nova estrutura
+  - **Storage Functions**:
+    - `calculateAppointmentTotals()`: Calcula preço e duração total
+    - `createAppointmentWithProcedures()`: Cria agendamento com array de procedimentos
+    - `getAppointmentWithProcedures()`: Busca agendamento com todos procedimentos
+  - **API Routes**:
+    - POST `/api/appointments/with-procedures` - Criar com múltiplos procedimentos
+    - GET `/api/appointments/:id/with-procedures` - Buscar com todos procedimentos
+  - **Snapshot Pattern**: Preserva valores no momento do agendamento (preço, duração, materiais)
+  - **Compatibilidade**: Sistema antigo mantido com soft deprecation
+- **Próximas Fases**: UI de seleção múltipla, atualização de dashboard, sistema de notificações
+
 ### Appointment Reminders System (October 15, 2025) ✅ COMPLETED
 - **Automated Appointment Reminder System**: Complete backend system to notify clients about upcoming appointments
   - **Database Table**: `appointmentReminders` table with appointmentId, clientId, clientName, clientEmail, clientPhone, appointmentDate, appointmentTime, procedureName, contactPreference, and status fields
