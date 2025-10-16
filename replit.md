@@ -87,6 +87,12 @@ Preferred communication style: Simple, everyday language.
   - **Appointment Reminders**: Função `findUpcomingAppointments()` atualizada para concatenar nomes de múltiplos procedimentos
   - **Fallback Support**: Ambas funções mantêm compatibilidade com sistema antigo de procedimento único
   - **Status**: Sistema completo pronto para produção e integração n8n
+- **Fase 4 - Admin Multi-Select UI**: ✅ CONCLUÍDA
+  - **Componente ProcedureMultiSelect**: Componente reutilizável com checkboxes por categoria, resumo em tempo real, totais automáticos e botão "Clear All"
+  - **Formulário New Appointment**: Agora possui multi-select de procedimentos com UI moderna, seleção de profissional, cliente e data/hora
+  - **Integração Backend**: Usa API `/api/appointments/with-procedures` com payload completo de snapshots
+  - **Validação**: Garante seleção mínima de 1 procedimento, cliente e profissional
+  - **Rota Pública Atualizada**: `/api/public/appointments/:publicLink` agora usa `createAppointmentWithProcedures()` para clientes externos
 
 ### Appointment Reminders System (October 15, 2025) ✅ COMPLETED
 - **Automated Appointment Reminder System**: Complete backend system to notify clients about upcoming appointments
