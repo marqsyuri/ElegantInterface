@@ -1,0 +1,108 @@
+alidação: Mínimo 1 procedimento selecionado
+3.2 - Step 2: Seleção de Profissional
+
+Filtrar profissionais que podem fazer todos os procedimentos
+Mostrar resumo dos procedimentos no topo
+3.3 - Step 3: Calendário
+
+Calcular slots baseado em total_duration
+Mostrar duração total no card de horário
+Ex: "11:00 - 13:30 (2h 30min)"
+3.4 - Step 4: Confirmação
+
+Lista completa de procedimentos
+Breakdown de preços individuais + total
+Duração total
+PPE e Materials consolidados
+FASE 4: Frontend - Admin (1.5-2 horas)
+4.1 - Dashboard de Agendamentos
+
+Card de appointment mostra lista de procedures
+Formato compacto: "Hair Dye + 2 more"
+Expandir para ver todos
+4.2 - Página de Appointments
+
+Coluna com múltiplos badges de procedures
+Modal de detalhes mostra tabela completa
+Total price e duration destacados
+4.3 - Formulário de Novo Agendamento (Admin)
+
+Multi-select de procedures com busca
+Preview em tempo real de totais
+Mesma lógica do booking público
+4.4 - Página de Edição
+
+Permitir adicionar/remover procedures
+Recalcular totais automaticamente
+FASE 5: Sistema de Notificações (30-45 min)
+5.1 - Atualizar appointment_reminders
+
+Trocar procedure_name para procedures_summary
+Ex: "Hair Colour Dye, Hair Botox (2 procedimentos)"
+5.2 - Atualizar findUpcomingAppointments()
+
+JOIN com appointment_procedures
+Concatenar nomes dos procedures
+5.3 - Templates de mensagem
+
+Adaptar para mostrar lista de procedures
+FASE 6: Relatórios e Financeiro (1 hour)
+6.1 - Cálculo de Comissões
+
+Baseado em total_price
+Distribuição por procedimento (se necessário)
+6.2 - Relatórios
+
+Procedure mais vendido (contar em appointment_procedures)
+Combos mais comuns
+Receita por procedimento
+6.3 - Inventory tracking
+
+Consolidar PPE/Materials de múltiplos procedures
+Atualizar estoque baseado na soma
+🎨 Mockup da UI (Step 1)
+┌─────────────────────────────────────────────────────┐
+│  Selecione os Procedimentos                         │
+├─────────────────────────────────────────────────────┤
+│  ▼ Hair Treatments                                  │
+│  ┌───────────────────────────────┐                 │
+│  │ ☑ Hair Colour Dye             │                 │
+│  │   $150 • 90 min               │                 │
+│  └───────────────────────────────┘                 │
+│  ┌───────────────────────────────┐                 │
+│  │ ☐ Brazilian Keratin           │                 │
+│  │   $200 • 120 min              │                 │
+│  └───────────────────────────────┘                 │
+│                                                      │
+│  ▼ Nail Services                                    │
+│  ┌───────────────────────────────┐                 │
+│  │ ☑ Manicure                    │                 │
+│  │   $40 • 45 min                │                 │
+│  └───────────────────────────────┘                 │
+├─────────────────────────────────────────────────────┤
+│  📝 Selecionados (2)              │ [Limpar Tudo]   │
+│  • Hair Colour Dye - $150         │                 │
+│  • Manicure - $40                 │                 │
+│  ─────────────────────────────    │                 │
+│  Total: $190 | 2h 15min           │                 │
+│                    [Continuar →]  │                 │
+└─────────────────────────────────────────────────────┘
+🔑 Decisões de Design
+✅ Snapshot de dados: Salvar price, duration, ppe, materials no momento do agendamento
+✅ Soft deprecation: Manter procedure_id por compatibilidade
+✅ Cálculos no backend: Totais calculados e salvos (não recalculados sempre)
+✅ UI progressiva: Mostrar resumo em tempo real
+✅ Mobile-first: Bottom sheet para resumo no mobile
+
+📊 Estimativa Total
+Fase	Tempo
+Database	1h
+Backend	2.5h
+Booking UI	3h
+Admin UI	2h
+Notificações	45min
+Relatórios	1h
+TOTAL	~10 horas
+Estimativa conservadora incluindo testes e ajustes
+
+Quer que eu comece a implementação? Posso começar pela estrutura do banco de dados e ir fase por fase! 🚀
