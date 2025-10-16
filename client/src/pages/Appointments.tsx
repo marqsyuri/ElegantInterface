@@ -46,6 +46,8 @@ export default function Appointments() {
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [selectedProcedureIds, setSelectedProcedureIds] = useState<number[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
+  const [calculatedTotal, setCalculatedTotal] = useState<number>(0);
+  const [calculatedDuration, setCalculatedDuration] = useState<number>(0);
   const [afterImages, setAfterImages] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -106,6 +108,8 @@ export default function Appointments() {
       setSelectedClient(null);
       setSelectedProcedureIds([]);
       setSelectedStaffId("");
+      setCalculatedTotal(0);
+      setCalculatedDuration(0);
       setBeforeImages([]);
       setAfterImages([]);
       form.reset({
@@ -430,6 +434,12 @@ export default function Appointments() {
                           procedures={procedures as any[]}
                           selectedProcedureIds={selectedProcedureIds}
                           onSelectionChange={setSelectedProcedureIds}
+                          onTotalChange={(price, duration) => {
+                            setCalculatedTotal(price);
+                            setCalculatedDuration(duration);
+                            form.setValue('totalAmount', price.toFixed(2));
+                            form.setValue('duration', duration);
+                          }}
                           showSummary={true}
                         />
                       </div>

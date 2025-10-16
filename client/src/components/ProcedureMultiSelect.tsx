@@ -17,6 +17,7 @@ interface ProcedureMultiSelectProps {
   procedures: Procedure[];
   selectedProcedureIds: number[];
   onSelectionChange: (selectedIds: number[]) => void;
+  onTotalChange?: (totalPrice: number, totalDuration: number) => void;
   showSummary?: boolean;
   className?: string;
 }
@@ -25,6 +26,7 @@ export function ProcedureMultiSelect({
   procedures,
   selectedProcedureIds,
   onSelectionChange,
+  onTotalChange,
   showSummary = true,
   className = "",
 }: ProcedureMultiSelectProps) {
@@ -45,6 +47,18 @@ export function ProcedureMultiSelect({
     const allCategories = Object.keys(groupedProcedures);
     setExpandedCategories(new Set(allCategories));
   }, [procedures]);
+
+  // Calculate totals
+  const selectedProcedures = procedures.filter(p => selectedProcedureIds.includes(p.id));
+  const totalPrice = selectedProcedures.reduce((sum, p) => sum + parseFloat(p.price || '0'), 0);
+  const totalDuration = selectedProcedures.reduce((sum, p) => sum + (p.duration || 0), 0);
+
+  // Notify parent when totals change
+  useEffect(() => {
+    if (onTotalChange) {
+      onTotalChange(totalPrice, totalDuration);
+    }
+  }, [totalPrice, totalDuration, onTotalChange]);
 
   const toggleCategory = (category: string) => {
     const newExpanded = new Set(expandedCategories);
@@ -70,11 +84,6 @@ export function ProcedureMultiSelect({
   const handleClearAll = () => {
     onSelectionChange([]);
   };
-
-  // Calculate totals
-  const selectedProcedures = procedures.filter(p => selectedProcedureIds.includes(p.id));
-  const totalPrice = selectedProcedures.reduce((sum, p) => sum + parseFloat(p.price || '0'), 0);
-  const totalDuration = selectedProcedures.reduce((sum, p) => sum + (p.duration || 0), 0);
 
   const formatDuration = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
