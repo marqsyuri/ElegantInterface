@@ -155,7 +155,9 @@ export default function Appointments() {
         appointmentDate: appointmentDateTime.toISOString(),
         status: data.status,
         notes: data.notes || '',
-        procedures: proceduresToAdd,
+        procedureIds: selectedProcedureIds,
+        totalAmount: calculatedTotal,
+        totalDuration: calculatedDuration,
         beforeImages,
         afterImages,
       };
