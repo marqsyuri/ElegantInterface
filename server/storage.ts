@@ -5,6 +5,7 @@ import {
   appointmentReminders,
   services,
   appointments,
+  appointmentProcedures,
   clinicalRecords,
   transactions,
   messages,
@@ -28,6 +29,8 @@ import {
   type InsertService,
   type Appointment,
   type InsertAppointment,
+  type AppointmentProcedure,
+  type InsertAppointmentProcedure,
   type ClinicalRecord,
   type InsertClinicalRecord,
   type Transaction,
@@ -385,6 +388,103 @@ export class DatabaseStorage implements IStorage {
       .where(eq(appointments.id, id))
       .returning();
     return updatedAppointment;
+  }
+
+  // Multiple procedures support
+  calculateAppointmentTotals(proceduresList: Procedure[]): { totalPrice: string; totalDuration: number; procedureCount: number } {
+    const totalPrice = proceduresList.reduce((sum, proc) => sum + parseFloat(proc.price || '0'), 0).toFixed(2);
+    const totalDuration = proceduresList.reduce((sum, proc) => sum + (proc.duration || 0), 0);
+    const procedureCount = proceduresList.length;
+    
+    return { totalPrice, totalDuration, procedureCount };
+  }
+
+  async createAppointmentWithProcedures(
+    appointmentData: Omit<InsertAppointment, 'totalPrice' | 'totalDuration' | 'procedureCount'>,
+    procedureIds: number[],
+    userId: number
+  ): Promise<{ appointment: Appointment; procedures: AppointmentProcedure[] }> {
+    // Fetch all procedures to create snapshots
+    const proceduresList = await db
+      .select()
+      .from(procedures)
+      .where(and(
+        inArray(procedures.id, procedureIds),
+        eq(procedures.userId, userId)
+      ));
+
+    if (proceduresList.length === 0) {
+      throw new Error('No valid procedures found');
+    }
+
+    // Calculate totals
+    const { totalPrice, totalDuration, procedureCount } = this.calculateAppointmentTotals(proceduresList);
+
+    // Create appointment with calculated totals
+    const [newAppointment] = await db
+      .insert(appointments)
+      .values({
+        ...appointmentData,
+        totalPrice,
+        totalDuration,
+        procedureCount,
+      } as any)
+      .returning();
+
+    // Create appointment_procedures records with snapshots
+    const appointmentProceduresData: InsertAppointmentProcedure[] = proceduresList.map((proc, index) => ({
+      appointmentId: newAppointment.id,
+      procedureId: proc.id,
+      order: index,
+      procedureName: proc.name,
+      procedureCategory: proc.category,
+      price: proc.price || '0',
+      duration: proc.duration || 0,
+      materials: proc.materials || [],
+    }));
+
+    const createdProcedures = await db
+      .insert(appointmentProcedures)
+      .values(appointmentProceduresData)
+      .returning();
+
+    return { appointment: newAppointment, procedures: createdProcedures };
+  }
+
+  async getAppointmentWithProcedures(appointmentId: number, userId: number): Promise<{
+    appointment: Appointment;
+    procedures: AppointmentProcedure[];
+    client: Client;
+  } | null> {
+    // Get appointment with client
+    const [appointmentData] = await db
+      .select({
+        appointment: appointments,
+        client: clients,
+      })
+      .from(appointments)
+      .innerJoin(clients, eq(appointments.clientId, clients.id))
+      .where(and(
+        eq(appointments.id, appointmentId),
+        eq(appointments.userId, userId)
+      ));
+
+    if (!appointmentData) {
+      return null;
+    }
+
+    // Get appointment procedures
+    const proceduresList = await db
+      .select()
+      .from(appointmentProcedures)
+      .where(eq(appointmentProcedures.appointmentId, appointmentId))
+      .orderBy(asc(appointmentProcedures.order));
+
+    return {
+      appointment: appointmentData.appointment,
+      procedures: proceduresList,
+      client: appointmentData.client,
+    };
   }
 
   // Clinical records operations
