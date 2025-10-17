@@ -1249,6 +1249,41 @@ export class DatabaseStorage implements IStorage {
 
     return await query.orderBy(asc(appointmentReminders.appointmentDate));
   }
+
+  async deductMaterialsForAppointment(appointmentId: number, userId: number): Promise<void> {
+    // Get all procedures for this appointment with their materials snapshot
+    const proceduresList = await db
+      .select()
+      .from(appointmentProcedures)
+      .where(eq(appointmentProcedures.appointmentId, appointmentId));
+
+    if (!proceduresList || proceduresList.length === 0) return;
+
+    // Process each procedure's materials
+    for (const proc of proceduresList) {
+      if (!proc.materials || (proc.materials as any[]).length === 0) continue;
+
+      // Deduct each material from inventory
+      for (const material of proc.materials as any[]) {
+        const [currentMaterial] = await db
+          .select()
+          .from(inventory)
+          .where(and(
+            eq(inventory.id, material.materialId),
+            eq(inventory.userId, userId)
+          ));
+
+        if (currentMaterial && currentMaterial.currentStock !== null && currentMaterial.currentStock >= material.quantity) {
+          await db
+            .update(inventory)
+            .set({
+              currentStock: currentMaterial.currentStock - material.quantity
+            })
+            .where(eq(inventory.id, material.materialId));
+        }
+      }
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
@@ -1306,41 +1341,6 @@ export const procedureStorage = {
             currentStock: currentMaterial.currentStock - material.quantity
           })
           .where(eq(inventory.id, material.materialId));
-      }
-    }
-  },
-
-  async deductMaterialsForAppointment(appointmentId: number, userId: number): Promise<void> {
-    // Get all procedures for this appointment with their materials snapshot
-    const proceduresList = await db
-      .select()
-      .from(appointmentProcedures)
-      .where(eq(appointmentProcedures.appointmentId, appointmentId));
-
-    if (!proceduresList || proceduresList.length === 0) return;
-
-    // Process each procedure's materials
-    for (const proc of proceduresList) {
-      if (!proc.materials || (proc.materials as any[]).length === 0) continue;
-
-      // Deduct each material from inventory
-      for (const material of proc.materials as any[]) {
-        const [currentMaterial] = await db
-          .select()
-          .from(inventory)
-          .where(and(
-            eq(inventory.id, material.materialId),
-            eq(inventory.userId, userId)
-          ));
-
-        if (currentMaterial && currentMaterial.currentStock !== null && currentMaterial.currentStock >= material.quantity) {
-          await db
-            .update(inventory)
-            .set({
-              currentStock: currentMaterial.currentStock - material.quantity
-            })
-            .where(eq(inventory.id, material.materialId));
-        }
       }
     }
   }
