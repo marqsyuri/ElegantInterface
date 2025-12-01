@@ -1,0 +1,32 @@
+Aqui está um prompt personalizado para você usar em ferramentas de geração de design (IA, briefing etc.), deixando claro que a página deve ser responsiva e funcionar bem em todos os dispositivos — celular, tablet, computador e outros:
+
+**Prompt para Design de Página Responsiva para BeautyFromBrazil**
+
+Crie um design moderno, elegante e totalmente **responsivo** para a página inicial do software BeautyFromBrazil, garantindo que a interface funcione perfeitamente em **todos os tipos de dispositivos**: smartphones, tablets, notebooks, computadores de mesa e telas maiores.
+
+Os requisitos principais são:
+
+- Layout que se adapta automaticamente a qualquer tamanho ou resolução de tela, mantendo usabilidade e clareza.
+- **Sidebar fixa e funcional** que ocupa espaço lateral sem sobrepor o conteúdo, com menu que pode colapsar em ícones para dispositivos móveis ou menores.
+- Cabeçalho fixo com nome do salão e opções para o usuário, que mantém visibilidade sem interferir no conteúdo.
+- Área principal que redimensiona e reorganiza seus elementos para facilitar a leitura e navegação em telas pequenas, médias ou grandes.
+- Uso de **media queries CSS** ou equivalente para modificar fontes, espaçamentos, tamanhos, margens e organização conforme o dispositivo.
+- Paleta de cores sóbria e profissional, mantendo boa legibilidade e contraste em qualquer condição.
+- Botões, links e elementos interativos com tamanhos e espaçamentos pensados para acesso fácil via toque em celulares e tablets, e clique em desktops.
+- Transições suaves para abertura/fechamento de menus e mudanças de layout, garantindo fluidez tanto em desktop quanto em dispositivos móveis.
+- Tipografia moderna e legível, com bom espaçamento e hierarquia visual clara, adaptáveis a diferentes tamanhos de tela.
+
+Este design deve proporcionar uma experiência consistente, limpa e eficiente para todos os usuários, independentemente do dispositivo que estejam usando para acessar o sistema BeautyFromBrazil.
+
+Se quiser posso ajudar a transformar esse prompt em código responsivo, com HTML/CSS/JS, para você usar diretamente no Replit ou outra plataforma. Quer ajuda?
+
+[1] https://elementor.com/blog/pt-br/como-fazer-um-site-responsivo-guia-passo-a-passo/
+[2] https://pm3.com.br/blog/design-responsivo/
+[3] https://kinsta.com/blog/responsive-web-design/
+[4] https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Responsive_Design
+[5] https://www.freecodecamp.org/portuguese/news/design-responsivo-para-a-web-como-adaptar-um-site-a-celulares-e-tablets/
+[6] https://www.task.com.br/blog/design-responsivo/
+[7] https://brasil.uxdesign.cc/design-responsivo-%C3%A9-muito-mais-do-que-tamanho-de-tela-e8df73d004cf
+[8] https://chiefofdesign.com.br/design-responsivo/
+[9] https://labex.io/pt/tutorials/css-responsive-web-design-for-all-screens-300113
+[10] https://www.w3schools.com/html/html_responsive.asp

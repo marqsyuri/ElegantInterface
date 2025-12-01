@@ -1,0 +1,349 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Send, Star, MessageCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import Sidebar from "@/components/Sidebar";
+import TopHeader from "@/components/TopHeader";
+import { insertMessageSchema } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+import { useLocale } from "@/contexts/LocaleContext";
+import { useSidebar } from "@/contexts/SidebarContext";
+
+const messageFormSchema = insertMessageSchema.omit({ userId: true });
+type MessageFormData = z.infer<typeof messageFormSchema>;
+
+export default function Communication() {
+  const { t } = useLocale();
+  const { isExpanded } = useSidebar();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [autoSettings, setAutoSettings] = useState({
+    appointmentReminder: true,
+    postTreatmentFeedback: true,
+    monthlyPromotions: false,
+  });
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const form = useForm<MessageFormData>({
+    resolver: zodResolver(messageFormSchema),
+    defaultValues: {
+      type: "manual",
+      channel: "whatsapp",
+      status: "pending",
+    },
+  });
+
+  const { data: messages = [], isLoading: messagesLoading } = useQuery({
+    queryKey: ["/api/messages"],
+    retry: false,
+  });
+
+  const { data: feedback = [], isLoading: feedbackLoading } = useQuery({
+    queryKey: ["/api/feedback"],
+    retry: false,
+  });
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ["/api/clients"],
+    retry: false,
+  });
+
+  const createMessageMutation = useMutation({
+    mutationFn: async (data: MessageFormData) => {
+      await apiRequest('POST', '/api/messages', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      setIsDialogOpen(false);
+      form.reset();
+      toast({
+        title: t('success'),
+        description: t('created_successfully'),
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: t('error'),
+        description: t('failed_to_create'),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: MessageFormData) => {
+    createMessageMutation.mutate({
+      ...data,
+      sentAt: new Date().toISOString(),
+    });
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
+      <Sidebar />
+      
+      <main className={`${isExpanded ? 'lg:ml-72' : 'lg:ml-16'} pt-16 lg:pt-0 transition-all duration-300`}>
+        <TopHeader title={t("communication_title")} subtitle={t("communication_subtitle")} />
+        
+        <div className="p-6 space-y-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-xl font-semibold text-slate-900">{t('client_communication')}</CardTitle>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Send className="w-4 h-4 mr-2" />
+                    {t('new_message')}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>{t('send_manual_message')}</DialogTitle>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="clientId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('recipient')}</FormLabel>
+                            <Select 
+                              onValueChange={(value) => field.onChange(value === "all" ? null : parseInt(value))} 
+                              value={field.value ? field.value.toString() : "all"}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder={t('select_recipient')} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="all">{t('all_clients')}</SelectItem>
+                                {clients?.map((client: any) => (
+                                  <SelectItem key={client.id} value={client.id.toString()}>
+                                    {client.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="channel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("channel")}</FormLabel>
+                            <div className="flex space-x-4">
+                              <div className="flex items-center space-x-2">
+                                <input 
+                                  type="radio" 
+                                  id="whatsapp" 
+                                  value="whatsapp"
+                                  checked={field.value === "whatsapp"}
+                                  onChange={field.onChange}
+                                  className="text-primary"
+                                />
+                                <label htmlFor="whatsapp" className="text-sm text-slate-700">{t("whatsapp_channel")}</label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <input 
+                                  type="radio" 
+                                  id="sms" 
+                                  value="sms"
+                                  checked={field.value === "sms"}
+                                  onChange={field.onChange}
+                                  className="text-primary"
+                                />
+                                <label htmlFor="sms" className="text-sm text-slate-700">SMS</label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <input 
+                                  type="radio" 
+                                  id="email" 
+                                  value="email"
+                                  checked={field.value === "email"}
+                                  onChange={field.onChange}
+                                  className="text-primary"
+                                />
+                                <label htmlFor="email" className="text-sm text-slate-700">{t("email_channel")}</label>
+                              </div>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="content"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("message_content_label")}</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder={t("message_content_placeholder")}
+                                className="h-24"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex space-x-3">
+                        <Button type="submit" disabled={createMessageMutation.isPending}>
+                          {createMessageMutation.isPending ? t("sending") : t("send_message")}
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                          {t("cancel")}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="font-medium text-slate-900 mb-4">{t("automatic_messages")}</h4>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-medium text-slate-900">{t("appointment_reminder")}</h5>
+                        <Switch 
+                          checked={autoSettings.appointmentReminder}
+                          onCheckedChange={(checked) => 
+                            setAutoSettings(prev => ({ ...prev, appointmentReminder: checked }))
+                          }
+                        />
+                      </div>
+                      <p className="text-sm text-slate-600 mb-2">{t("sent_24h_before")}</p>
+                      <p className="text-sm text-slate-700 italic">
+                        {t("reminder_message")}
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-medium text-slate-900">{t("post_treatment_feedback")}</h5>
+                        <Switch 
+                          checked={autoSettings.postTreatmentFeedback}
+                          onCheckedChange={(checked) => 
+                            setAutoSettings(prev => ({ ...prev, postTreatmentFeedback: checked }))
+                          }
+                        />
+                      </div>
+                      <p className="text-sm text-slate-600 mb-2">{t("sent_2h_after")}</p>
+                      <p className="text-sm text-slate-700 italic">
+                        {t("feedback_message")}
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-medium text-slate-900">{t("monthly_promotions")}</h5>
+                        <Switch 
+                          checked={autoSettings.monthlyPromotions}
+                          onCheckedChange={(checked) => 
+                            setAutoSettings(prev => ({ ...prev, monthlyPromotions: checked }))
+                          }
+                        />
+                      </div>
+                      <p className="text-sm text-slate-600 mb-2">{t("sent_beginning_month")}</p>
+                      <p className="text-sm text-slate-700 italic">
+                        {t("promotion_message")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-slate-900 mb-4">{t("client_feedback")}</h4>
+                  <div className="space-y-4 mb-6">
+                    {feedbackLoading ? (
+                      <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="animate-pulse p-4 border border-slate-200 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
+                                <div className="ml-2 h-4 bg-slate-200 rounded w-24"></div>
+                              </div>
+                              <div className="h-4 bg-slate-200 rounded w-16"></div>
+                            </div>
+                            <div className="h-3 bg-slate-200 rounded w-full mb-2"></div>
+                            <div className="h-3 bg-slate-200 rounded w-20"></div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : feedback?.length > 0 ? (
+                      feedback.slice(0, 5).map((item: any) => (
+                        <div key={item.id} className="p-4 border border-slate-200 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              <Avatar className="w-8 h-8">
+                                <AvatarImage src="" alt="Client" />
+                                <AvatarFallback className="text-xs">
+                                  {getInitials(item.client.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="ml-2 font-medium text-slate-900">{item.client.name}</span>
+                            </div>
+                            <div className="flex text-yellow-400">
+                              {[...Array(5)].map((_, i) => (
+                                <Star 
+                                  key={i} 
+                                  className={`w-4 h-4 ${
+                                    i < item.rating 
+                                      ? 'fill-current' 
+                                      : 'text-slate-300'
+                                  }`} 
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          {item.comment && (
+                            <p className="text-sm text-slate-600">{item.comment}</p>
+                          )}
+                          <p className="text-xs text-slate-400 mt-2">
+                            {new Date(item.createdAt).toLocaleDateString('en-NZ')}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <MessageCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                        <p className="text-slate-500">{t("no_feedback_received")}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    </div>
+  );
+}
