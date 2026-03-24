@@ -22,6 +22,11 @@ export interface AppNotification {
 async function fetchNotifications(): Promise<AppNotification[]> {
   const response = await fetch("/api/notifications", { credentials: "include" });
 
+  // Usuário não autenticado — retorna silenciosamente sem jogar erro
+  if (response.status === 401 || response.status === 403) {
+    return [];
+  }
+
   if (!response.ok) {
     throw new Error("Failed to fetch notifications");
   }
@@ -38,6 +43,7 @@ export function useNotifications() {
     queryFn: fetchNotifications,
     refetchInterval: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: false,
   });
 
   const markAllAsReadMutation = useMutation({

@@ -9,13 +9,6 @@ export const NZ_TIMEZONE = 'Pacific/Auckland';
 export function toNZTime(dateString: string): Date {
   try {
     const date = parseISO(dateString);
-    
-    console.log('🌏 Converting to NZ time:', {
-      input: dateString,
-      parsed: date.toISOString(),
-      local: date.toLocaleString()
-    });
-    
     // For now, just return the date as-is to avoid timezone issues
     return date;
   } catch (error) {
@@ -76,13 +69,6 @@ export function createAppointmentDateTime(dateStr: string, timeStr: string): str
     const appointmentDate = new Date(date);
     appointmentDate.setHours(hours, minutes, 0, 0);
     
-    console.log('🕐 Creating appointment date-time:', {
-      inputDate: dateStr,
-      inputTime: timeStr,
-      outputISO: appointmentDate.toISOString(),
-      localString: appointmentDate.toLocaleString()
-    });
-    
     return appointmentDate.toISOString();
   } catch (error) {
     console.error('Error creating appointment date-time:', error);
@@ -96,16 +82,7 @@ export function createAppointmentDateTime(dateStr: string, timeStr: string): str
 export function parseTimeToMinutes(timeStr: string): number {
   try {
     const [hours, minutes] = timeStr.split(':').map(Number);
-    const totalMinutes = hours * 60 + minutes;
-    
-    console.log('⏰ Parsing time to minutes:', {
-      timeStr,
-      hours,
-      minutes,
-      totalMinutes
-    });
-    
-    return totalMinutes;
+    return hours * 60 + minutes;
   } catch (error) {
     console.error('Error parsing time to minutes:', error);
     return 0;
@@ -119,16 +96,7 @@ export function formatMinutesToTime(minutes: number): string {
   try {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    const timeString = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-    
-    console.log('⏰ Formatting minutes to time:', {
-      minutes,
-      hours,
-      mins,
-      timeString
-    });
-    
-    return timeString;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
   } catch (error) {
     console.error('Error formatting minutes to time:', error);
     return '00:00';
@@ -144,15 +112,7 @@ export function timeRangesOverlap(
   start2: number, // minutes since midnight
   end2: number    // minutes since midnight
 ): boolean {
-  const overlaps = start1 < end2 && end1 > start2;
-  
-  console.log('🔄 Checking time range overlap:', {
-    range1: `${formatMinutesToTime(start1)}-${formatMinutesToTime(end1)}`,
-    range2: `${formatMinutesToTime(start2)}-${formatMinutesToTime(end2)}`,
-    overlaps
-  });
-  
-  return overlaps;
+  return start1 < end2 && end1 > start2;
 }
 
 /**
@@ -160,23 +120,10 @@ export function timeRangesOverlap(
  */
 export function getAppointmentsForDate(appointments: any[], date: Date): any[] {
   try {
-    const filtered = appointments.filter(appointment => {
+    return appointments.filter(appointment => {
       const appointmentDate = toNZTime(appointment.appointmentDate);
-      const isSame = isSameDay(appointmentDate, date);
-      
-      console.log('📅 Date comparison:', {
-        appointmentId: appointment.id,
-        appointmentDate: appointment.appointmentDate,
-        parsedDate: appointmentDate.toISOString(),
-        targetDate: date.toISOString(),
-        isSame
-      });
-      
-      return isSame;
+      return isSameDay(appointmentDate, date);
     });
-    
-    console.log('📅 Filtered appointments for date:', filtered.length);
-    return filtered;
   } catch (error) {
     console.error('Error filtering appointments by date:', error);
     return [];
@@ -189,18 +136,7 @@ export function getAppointmentsForDate(appointments: any[], date: Date): any[] {
 export function getAppointmentTimeInMinutes(appointment: any): number {
   try {
     const appointmentDate = toNZTime(appointment.appointmentDate);
-    const minutes = appointmentDate.getHours() * 60 + appointmentDate.getMinutes();
-    
-    console.log('🕐 Getting appointment time in minutes:', {
-      appointmentId: appointment.id,
-      appointmentDate: appointment.appointmentDate,
-      parsedDate: appointmentDate.toISOString(),
-      hours: appointmentDate.getHours(),
-      minutes: appointmentDate.getMinutes(),
-      totalMinutes: minutes
-    });
-    
-    return minutes;
+    return appointmentDate.getHours() * 60 + appointmentDate.getMinutes();
   } catch (error) {
     console.error('Error getting appointment time in minutes:', error);
     return 0;
@@ -232,20 +168,7 @@ export function hasTimeConflict(
       const aptDuration = appointment.totalDuration || appointment.duration || 60;
       const aptEndMinutes = aptStartMinutes + aptDuration;
 
-      const hasOverlap = timeRangesOverlap(startTimeMinutes, endTimeMinutes, aptStartMinutes, aptEndMinutes);
-      
-      if (hasOverlap) {
-        console.log('⚠️ Time conflict detected:', {
-          newStart: formatMinutesToTime(startTimeMinutes),
-          newEnd: formatMinutesToTime(endTimeMinutes),
-          existingStart: formatMinutesToTime(aptStartMinutes),
-          existingEnd: formatMinutesToTime(aptEndMinutes),
-          appointmentId: appointment.id,
-          clientName: appointment.client?.name
-        });
-      }
-
-      return hasOverlap;
+      return timeRangesOverlap(startTimeMinutes, endTimeMinutes, aptStartMinutes, aptEndMinutes);
     } catch (error) {
       console.error('Error checking time conflict:', error);
       return false;
@@ -276,15 +199,6 @@ export function generateTimeSlots(
     // Filter appointments for the same date
     const dayAppointments = getAppointmentsForDate(existingAppointments, date);
 
-    console.log('🕐 Generating time slots with:', {
-      openTime: formatMinutesToTime(openTime),
-      closeTime: formatMinutesToTime(closeTime),
-      breakStart: breakStart ? formatMinutesToTime(breakStart) : null,
-      breakEnd: breakEnd ? formatMinutesToTime(breakEnd) : null,
-      duration,
-      dayAppointments: dayAppointments.length
-    });
-
     for (let time = openTime; time < closeTime; time += 30) {
       // Skip lunch break times
       if (breakStart && breakEnd && time >= breakStart && time < breakEnd) {
@@ -311,12 +225,6 @@ export function generateTimeSlots(
         available: isAvailable
       });
     }
-
-    console.log('✅ Generated time slots:', {
-      totalSlots: slots.length,
-      availableSlots: slots.filter(s => s.available).length,
-      unavailableSlots: slots.filter(s => !s.available).length
-    });
     
     return slots;
   } catch (error) {

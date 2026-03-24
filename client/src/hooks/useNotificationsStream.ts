@@ -10,12 +10,14 @@ function getWebSocketUrl(): string | null {
   }
 
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const hostname = window.location.hostname;
 
-  if (import.meta.env.DEV) {
-    const host = `${window.location.hostname}:5000`;
-    return `${protocol}://${host}${WS_PATH}`;
+  // Em dev com localhost, aponta direto para a porta do servidor
+  if (import.meta.env.DEV && (hostname === "localhost" || hostname === "127.0.0.1")) {
+    return `${protocol}://${hostname}:5000${WS_PATH}`;
   }
 
+  // Em produção ou quando acessado via domínio, usa o host atual (nginx faz o proxy)
   return `${protocol}://${window.location.host}${WS_PATH}`;
 }
 
@@ -41,20 +43,3 @@ export function useNotificationsStream() {
     },
   });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

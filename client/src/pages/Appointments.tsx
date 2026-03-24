@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Calendar, Clock, User, Camera, CalendarDays, CheckCircle, XCircle, List, Search } from "lucide-react";
+import { Plus, Calendar, Clock, User, Camera, CalendarDays, CheckCircle, XCircle, List, Search, Package, FileText, Scissors, DollarSign, CreditCard, Banknote, QrCode, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,10 @@ import AppointmentCalendar from "@/components/AppointmentCalendar";
 import AppointmentDetailsDialog from "@/components/AppointmentDetailsDialog";
 import FunctionalCalendar from "@/components/FunctionalCalendar";
 import { ProcedureMultiSelect } from "@/components/ProcedureMultiSelect";
+import { ProcedureSearchableSelect } from "@/components/ProcedureSearchableSelect";
 import { TimeSlotAlert } from "@/components/TimeSlotAlert";
+import { StaffCombobox } from "@/components/StaffCombobox";
+import { ProductSearchableSelect, SelectedProduct } from "@/components/ProductSearchableSelect";
 import { insertAppointmentSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -32,17 +35,24 @@ import { getDateLocale, getLocaleString } from "@/lib/dateLocale";
 
 const appointmentFormSchema = insertAppointmentSchema.extend({
   appointmentDate: z.string().min(1, "Date is required"),
-  appointmentTime: z.string().min(1, "Time is required"),
+  appointmentTime: z.string().optional(), // Made optional to allow status-only updates
   duration: z.number().min(15, "Duration must be at least 15 minutes").default(60),
   totalAmount: z.string().optional(),
   paidAmount: z.string().optional(),
   beforeImages: z.array(z.string()).optional(),
   afterImages: z.array(z.string()).optional(),
+  waitlist: z.boolean().optional().default(false),
+  dateOnly: z.boolean().optional().default(false),
 }).omit({ userId: true });
 
 type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
 
 export default function Appointments() {
+  // Get current user data for permission filtering
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/user"],
+    retry: false,
+  });
   const { t, language } = useLocale();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
@@ -53,16 +63,32 @@ export default function Appointments() {
   const [filteredClients, setFilteredClients] = useState<any[]>([]);
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [selectedProcedureIds, setSelectedProcedureIds] = useState<number[]>([]);
-  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
+  const [selectedStaffIds, setSelectedStaffIds] = useState<number[]>([]); // Multiple professionals support
+  const [selectedStaffId, setSelectedStaffId] = useState<string>(""); // Keep for backward compatibility
+  // Map of procedureId -> staffId for individual procedure-staff associations
+  const [procedureStaffMap, setProcedureStaffMap] = useState<Record<number, number | null>>({});
   const [calculatedTotal, setCalculatedTotal] = useState<number>(0);
   const [calculatedDuration, setCalculatedDuration] = useState<number>(0);
   const [afterImages, setAfterImages] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
+  const [consumptions, setConsumptions] = useState<any[]>([]);
+  const [paymentEntries, setPaymentEntries] = useState<Array<{id:number, method:string, amount:string}>>([{id:1, method:'cash', amount:''}]);
+  const addPaymentEntry = () => setPaymentEntries(prev => [...prev, {id: Date.now(), method:'cash', amount:''}]);
+  const removePaymentEntry = (id:number) => setPaymentEntries(prev => prev.filter(p => p.id !== id));
+  const updatePaymentEntry = (id:number, field:'method'|'amount', value:string) =>
+    setPaymentEntries(prev => prev.map(p => p.id === id ? {...p, [field]: value} : p));
+  const totalPaidEntries = () => paymentEntries.reduce((s,p) => s + (parseFloat(p.amount)||0), 0);
+  const [endTimeInput, setEndTimeInput] = useState<string>("");
+  const [endTimeManuallyEdited, setEndTimeManuallyEdited] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'waitlist'>('calendar');
   const [calendarView, setCalendarView] = useState<'month' | 'week'>('week'); // Default to week view
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<any>(null); // Appointment being edited
   const [showAll, setShowAll] = useState(true); // Default to true for calendar view to show all appointments
   const [quickSearch, setQuickSearch] = useState("");
+  const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>(""); // Staff filter for calendar
+  const [waitlistDateFilter, setWaitlistDateFilter] = useState<string>(""); // Date filter for waitlist
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -76,35 +102,63 @@ export default function Appointments() {
       paidAmount: "",
       beforeImages: [],
       afterImages: [],
+      appointmentTime: "", // Add default value to avoid uncontrolled component warning
     },
   });
 
-  const { data: appointments = [], isLoading: appointmentsLoading } = useQuery({
-    queryKey: ["/api/appointments", showAll ? 'all' : selectedDate?.toISOString().split('T')[0]],
+  const { data: products = [] } = useQuery({ queryKey: ["/api/products"] });
+
+  const { data: appointments = [], isLoading: appointmentsLoading, error: appointmentsError } = useQuery({
+    queryKey: ["/api/appointments", showAll ? 'all' : selectedDate?.toISOString().split('T')[0], selectedStaffFilter],
     queryFn: async () => {
-      const url = showAll 
-        ? '/api/appointments/all' 
-        : `/api/appointments/${selectedDate?.toISOString().split('T')[0]}`;
-      
-      console.log('🔍 Fetching appointments from:', url, 'showAll:', showAll);
-      
-      const response = await fetch(url, { credentials: 'include' });
-      const data = await response.json();
-      
-      console.log('📅 API Response:', {
-        url,
-        status: response.status,
-        dataLength: Array.isArray(data) ? data.length : 'not array',
-        data: Array.isArray(data) ? data.map(a => ({
-          id: a.id,
-          date: a.appointmentDate,
-          client: a.client?.name
-        })) : data
-      });
-      
-      return data;
+      try {
+        let url = showAll 
+          ? '/api/appointments/all' 
+          : `/api/appointments/${selectedDate?.toISOString().split('T')[0]}`;
+        
+        // Add staffId filter if selected
+        if (selectedStaffFilter) {
+          const separator = url.includes('?') ? '&' : '?';
+          url = `${url}${separator}staffId=${selectedStaffFilter}`;
+        }
+        
+        
+        const response = await fetch(url, { credentials: 'include' });
+        
+        if (!response.ok) {
+          console.error('📅 API Error:', response.status, response.statusText);
+          // If unauthorized, return empty array (will be handled by auth)
+          if (response.status === 401) {
+            return [];
+          }
+          throw new Error(`Failed to fetch appointments: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        
+        // Log waitlist appointments specifically
+        if (Array.isArray(data)) {
+          const waitlistAppointments = data.filter((a: any) => a.waitlist === true);
+        }
+        
+        // Ensure we always return an array
+        if (!Array.isArray(data)) {
+          console.error('📅 API did not return an array:', data);
+          return [];
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('📅 Error fetching appointments:', error);
+        // Return empty array on error to prevent page from breaking
+        return [];
+      }
     },
     retry: false,
+    onError: (error) => {
+      console.error('📅 Query error:', error);
+    },
   });
 
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
@@ -127,6 +181,43 @@ export default function Appointments() {
     retry: false,
   });
 
+  // Fetch staff procedures map for each selected procedure (database associations - not used in UI anymore)
+  const { data: dbProcedureStaffMap = {} } = useQuery({
+    queryKey: ["/api/procedure-staff-map", selectedProcedureIds],
+    queryFn: async () => {
+      const map: Record<number, any[]> = {};
+      for (const procedureId of selectedProcedureIds) {
+        try {
+          // Get all staff and filter by procedure
+          const allStaffResponse = await fetch('/api/staff', { credentials: 'include' });
+          if (allStaffResponse.ok) {
+            const allStaff = await allStaffResponse.json();
+            const staffForProcedure: any[] = [];
+            
+            for (const staffMember of allStaff) {
+              try {
+                const staffProceduresResponse = await fetch(`/api/staff/${staffMember.id}/procedures`, { credentials: 'include' });
+                if (staffProceduresResponse.ok) {
+                  const staffProcedures = await staffProceduresResponse.json();
+                  if (staffProcedures.some((p: any) => p.id === procedureId)) {
+                    staffForProcedure.push(staffMember);
+                  }
+                }
+              } catch (error) {
+                console.error(`Error fetching procedures for staff ${staffMember.id}:`, error);
+              }
+            }
+            map[procedureId] = staffForProcedure;
+          }
+        } catch (error) {
+          console.error(`Error fetching staff for procedure ${procedureId}:`, error);
+        }
+      }
+      return map;
+    },
+    enabled: selectedProcedureIds.length > 0,
+  });
+
   const { data: businessHours = [] } = useQuery({
     queryKey: ["/api/business-hours"],
     retry: false,
@@ -135,13 +226,19 @@ export default function Appointments() {
   // Reset search fields when dialog closes
   useEffect(() => {
     if (!isDialogOpen) {
+      setSelectedProducts([]);
+      setConsumptions([]);
+      setPaymentEntries([{id:1, method:'cash', amount:''}]);
+      setEditingAppointment(null);
       setClientSearch("");
       setFilteredClients([]);
       setSelectedClient(null);
       setSelectedProcedureIds([]);
-      setSelectedStaffId("");
+      setProcedureStaffMap({}); // Clear procedure-staff associations
       setCalculatedTotal(0);
       setCalculatedDuration(0);
+      setEndTimeManuallyEdited(false);
+      setEndTimeInput("");
       setBeforeImages([]);
       setAfterImages([]);
       form.reset({
@@ -152,15 +249,354 @@ export default function Appointments() {
         paidAmount: "",
         beforeImages: [],
         afterImages: [],
+        waitlist: false,
+        dateOnly: false,
       });
     }
   }, [isDialogOpen, form]);
+
+  // Load appointment data when editing (separate effect to ensure it runs after dialog opens)
+  useEffect(() => {
+    
+    if (editingAppointment && isDialogOpen) {
+      // Load appointment data for editing - fetch full data with staffId
+      const loadAppointmentData = async () => {
+        const appointment = editingAppointment;
+        
+        try {
+          // Fetch full appointment data with procedures and staffId
+          const apiUrl = `/api/appointments/${appointment.id}/with-procedures`;
+          
+          const response = await fetch(apiUrl, {
+            credentials: 'include'
+          });
+          
+          
+          if (response.ok) {
+            const fullData = await response.json();
+            
+            // Set client and update form field
+            const clientToUse = fullData.client || appointment.client;
+            if (clientToUse) {
+              setSelectedClient(clientToUse);
+              setClientSearch(clientToUse.name || '');
+              // Update form field value
+              form.setValue('clientId', clientToUse.id);
+            }
+            
+            // Load procedures with staffId from API
+            const procIds = fullData.procedures?.map((p: any) => p.procedureId) || 
+                           appointment.allProcedures?.map((p: any) => p.id) || 
+                           (appointment.serviceId ? [appointment.serviceId] : []);
+            setSelectedProcedureIds(procIds);
+            
+            // Use fullData.appointment for form data (define before using it)
+            const appointmentToUse = fullData.appointment || appointment;
+            
+            // Load procedure-staff map from appointment_procedures (with staffId from API)
+            const procStaffMap: Record<number, number | null> = {};
+            if (fullData.procedures && fullData.procedures.length > 0) {
+              fullData.procedures.forEach((proc: any) => {
+                // Use procedureId as key (not proc.id, which might be appointment_procedures.id)
+                if (proc.staffId) {
+                  procStaffMap[proc.procedureId] = proc.staffId;
+                } else {
+                  // If no staffId, try to get from appointment staffId as fallback
+                  if (appointmentToUse.staffId) {
+                    procStaffMap[proc.procedureId] = appointmentToUse.staffId;
+                  }
+                }
+              });
+            } else if (appointment.allProcedures) {
+              // Fallback to allProcedures if API data structure is different
+              appointment.allProcedures.forEach((proc: any) => {
+                if (proc.staffId) {
+                  procStaffMap[proc.id] = proc.staffId;
+                } else if (appointment.staffId) {
+                  procStaffMap[proc.id] = appointment.staffId;
+                }
+              });
+            }
+            setProcedureStaffMap(procStaffMap);
+            const appointmentDate = new Date(appointmentToUse.appointmentDate);
+            
+            
+            // Format time correctly (HH:mm) - use local time
+            // Need to match the format used by timeSlots (which uses generateTimeSlots)
+            const hours = appointmentDate.getHours();
+            const minutes = appointmentDate.getMinutes();
+            const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            
+            
+            form.reset({
+              clientId: appointmentToUse.clientId,
+              appointmentDate: appointmentDate.toISOString().split('T')[0],
+              appointmentTime: timeString, // Set in reset
+              status: appointmentToUse.status || "scheduled",
+              notes: appointmentToUse.notes || "",
+              totalAmount: appointmentToUse.totalAmount || "",
+              paidAmount: appointmentToUse.paidAmount || "",
+              duration: appointmentToUse.totalDuration || appointmentToUse.duration || 60,
+              beforeImages: appointmentToUse.beforeImages || [],
+              afterImages: appointmentToUse.afterImages || [],
+            });
+            
+            // Explicitly set appointmentTime after reset to ensure it's set
+            // Use setTimeout to ensure the value is set after the form state updates
+            setTimeout(() => {
+              form.setValue('appointmentTime', timeString, { shouldValidate: false, shouldDirty: false });
+            }, 0);
+            
+            setBeforeImages(appointmentToUse.beforeImages || []);
+            setAfterImages(appointmentToUse.afterImages || []);
+            setCalculatedTotal(parseFloat(appointmentToUse.totalAmount || '0'));
+            setCalculatedDuration(appointmentToUse.totalDuration || appointmentToUse.duration || 60);
+            
+            // Load saved products into selectedProducts state
+            if (fullData.appointmentProducts && fullData.appointmentProducts.length > 0) {
+              setSelectedProducts(fullData.appointmentProducts.map((p: any) => {
+                const charged = parseFloat(p.price || '0');
+                const original = parseFloat(p.originalPrice || p.price || p.productPrice || p.product?.price || '0');
+                return {
+                  productId: p.productId,
+                  name: p.product?.name || p.productName || '',
+                  price: charged,
+                  originalPrice: original || charged,
+                  quantity: p.quantity || 1,
+                };
+              }));
+            } else {
+              setSelectedProducts([]);
+            }
+
+            // Load consumptions (gastos de insumos)
+            try {
+              const prefillRes = await fetch(`/api/appointments/${fullData.id || fullData.appointment?.id}/consumptions/prefill`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+              });
+              const prefillData = await prefillRes.json();
+              setConsumptions(prefillData.consumptions || []);
+            } catch { setConsumptions([]); }
+
+            // Load payment entries from saved payments
+            if (fullData.appointmentPayments && fullData.appointmentPayments.length > 0) {
+              setPaymentEntries(fullData.appointmentPayments.map((p: any, idx: number) => ({
+                id: p.id || idx + 1,
+                method: p.method || 'cash',
+                amount: parseFloat(p.amount || '0').toFixed(2),
+              })));
+            } else {
+              const existingPaid = parseFloat(appointmentToUse.paidAmount || '0');
+              if (existingPaid > 0) {
+                setPaymentEntries([{ id: 1, method: 'cash', amount: existingPaid.toFixed(2) }]);
+              } else {
+                setPaymentEntries([{ id: 1, method: 'cash', amount: '' }]);
+              }
+            }
+          } else {
+            // Fallback to existing appointment data
+            if (appointment.client) {
+              setSelectedClient(appointment.client);
+              setClientSearch(appointment.client.name || '');
+              form.setValue('clientId', appointment.client.id);
+            }
+            
+            const procIds = appointment.allProcedures?.map((p: any) => p.id) || 
+                           (appointment.serviceId ? [appointment.serviceId] : []);
+            setSelectedProcedureIds(procIds);
+            
+            const procStaffMap: Record<number, number | null> = {};
+            if (appointment.allProcedures) {
+              appointment.allProcedures.forEach((proc: any) => {
+                if (proc.staffId) {
+                  procStaffMap[proc.id] = proc.staffId;
+                } else if (appointment.staffId) {
+                  procStaffMap[proc.id] = appointment.staffId;
+                }
+              });
+            }
+            setProcedureStaffMap(procStaffMap);
+            
+            const appointmentDate = new Date(appointment.appointmentDate);
+            const hours = appointmentDate.getHours();
+            const minutes = appointmentDate.getMinutes();
+            const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            
+            form.reset({
+              clientId: appointment.clientId,
+              appointmentDate: appointmentDate.toISOString().split('T')[0],
+              appointmentTime: timeString,
+              status: appointment.status || "scheduled",
+              notes: appointment.notes || "",
+              totalAmount: appointment.totalAmount || "",
+              paidAmount: appointment.paidAmount || "",
+              duration: appointment.totalDuration || appointment.duration || 60,
+              beforeImages: appointment.beforeImages || [],
+              afterImages: appointment.afterImages || [],
+            });
+            
+            setBeforeImages(appointment.beforeImages || []);
+            setAfterImages(appointment.afterImages || []);
+            setCalculatedTotal(parseFloat(appointment.totalAmount || '0'));
+            setCalculatedDuration(appointment.totalDuration || appointment.duration || 60);
+          }
+        } catch (error) {
+          console.error('❌ Error loading appointment data:', error);
+          // Fallback to existing appointment data
+          if (appointment.client) {
+            setSelectedClient(appointment.client);
+            setClientSearch(appointment.client.name || '');
+            form.setValue('clientId', appointment.client.id);
+          }
+          
+          const procIds = appointment.allProcedures?.map((p: any) => p.id) || 
+                         (appointment.serviceId ? [appointment.serviceId] : []);
+          setSelectedProcedureIds(procIds);
+          
+          const procStaffMap: Record<number, number | null> = {};
+          if (appointment.allProcedures) {
+            appointment.allProcedures.forEach((proc: any) => {
+              if (proc.staffId) {
+                procStaffMap[proc.id] = proc.staffId;
+              } else if (appointment.staffId) {
+                procStaffMap[proc.id] = appointment.staffId;
+              }
+            });
+          }
+          setProcedureStaffMap(procStaffMap);
+          
+          const appointmentDate = new Date(appointment.appointmentDate);
+          const hours = appointmentDate.getHours();
+          const minutes = appointmentDate.getMinutes();
+          const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+          
+          form.reset({
+            clientId: appointment.clientId,
+            appointmentDate: appointmentDate.toISOString().split('T')[0],
+            appointmentTime: timeString,
+            status: appointment.status || "scheduled",
+            notes: appointment.notes || "",
+            totalAmount: appointment.totalAmount || "",
+            paidAmount: appointment.paidAmount || "",
+            duration: appointment.totalDuration || appointment.duration || 60,
+            beforeImages: appointment.beforeImages || [],
+            afterImages: appointment.afterImages || [],
+          });
+          
+          setBeforeImages(appointment.beforeImages || []);
+          setAfterImages(appointment.afterImages || []);
+          setCalculatedTotal(parseFloat(appointment.totalAmount || '0'));
+          setCalculatedDuration(appointment.totalDuration || appointment.duration || 60);
+        }
+      };
+      
+      loadAppointmentData();
+    }
+  }, [isDialogOpen, editingAppointment, form]);
+
+  // Listen for edit appointment event
+  useEffect(() => {
+    const handleEditAppointment = (event: CustomEvent) => {
+      const appointment = event.detail;
+      setEditingAppointment(appointment);
+      setIsDialogOpen(true);
+    };
+
+    window.addEventListener('editAppointment' as any, handleEditAppointment as EventListener);
+    return () => {
+      window.removeEventListener('editAppointment' as any, handleEditAppointment as EventListener);
+    };
+  }, []);
 
   // Note: Availability checking is now handled by useTimeSlots hook
   // The backend will perform final conflict checking during appointment creation
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: AppointmentFormData) => {
+      if (editingAppointment) {
+        // Update existing appointment
+        const appointmentId = editingAppointment.id;
+        
+        
+        // Build procedure-staff associations map
+        const procedureStaffAssociations: Record<number, number> = {};
+        selectedProcedureIds.forEach(procedureId => {
+          const staffId = procedureStaffMap[procedureId];
+          if (staffId) {
+            procedureStaffAssociations[procedureId] = staffId;
+          }
+        });
+
+        const staffIdsFromProcedures = Object.values(procedureStaffMap)
+          .filter((id): id is number => id !== null && id !== undefined)
+          .filter((id, index, self) => self.indexOf(id) === index);
+
+        if (staffIdsFromProcedures.length === 0) {
+          throw new Error('Por favor, selecione um profissional para pelo menos um procedimento');
+        }
+
+        // Use existing appointment time if not provided (for status-only updates)
+        let appointmentTimeToUse = data.appointmentTime;
+        if (!appointmentTimeToUse && editingAppointment?.appointmentDate) {
+          const existingDate = new Date(editingAppointment.appointmentDate);
+          const hours = existingDate.getHours();
+          const minutes = existingDate.getMinutes();
+          appointmentTimeToUse = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+
+        const appointmentDateTime = createAppointmentDateTime(data.appointmentDate, appointmentTimeToUse || '12:00');
+        
+        // Convert paidAmount to proper format for database
+        const paidAmountValue = data.paidAmount ? parseFloat(data.paidAmount.toString()).toFixed(2) : '0.00';
+        
+        const payload = {
+          clientId: selectedClient.id,
+          staffId: staffIdsFromProcedures[0],
+          staffIds: staffIdsFromProcedures,
+          procedureStaffMap: procedureStaffAssociations,
+          appointmentDate: appointmentDateTime,
+          status: data.status, // Ensure status is always sent
+          notes: data.notes || '',
+          procedureIds: selectedProcedureIds,
+          totalAmount: calculatedTotal,
+          paidAmount: paidAmountValue,
+          totalDuration: calculatedDuration,
+          beforeImages,
+          afterImages,
+          products: selectedProducts.map((p: any) => ({
+            productId: p.productId,
+            originalPrice: p.originalPrice ?? p.price,
+            quantity: p.quantity || 1,
+            price: p.price,
+          })),
+          paymentEntries: paymentEntries.map((e) => ({
+            method: e.method,
+            amount: e.amount,
+          })),
+        };
+
+        
+        const response = await apiRequest('PUT', `/api/appointments/${appointmentId}/with-procedures`, payload);
+        const responseData = await response.json();
+
+        // Salva consumptions editados
+        if (consumptions.length > 0) {
+          try {
+            await fetch(`/api/appointments/${appointmentId}/consumptions`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ consumptions }),
+            });
+          } catch {}
+        }
+
+        return responseData;
+      }
+      
+      // Create new appointment (existing logic)
       // Validation
       if (selectedProcedureIds.length === 0) {
         throw new Error(t('please_select_procedure'));
@@ -168,9 +604,17 @@ export default function Appointments() {
       if (!selectedClient) {
         throw new Error(t('please_select_client'));
       }
-      if (!selectedStaffId) {
-        throw new Error(t('please_select_staff'));
+      // Collect staff IDs from procedure-staff map (new system using combobox in table)
+      const staffIdsFromProcedures = Object.values(procedureStaffMap)
+        .filter((id): id is number => id !== null && id !== undefined)
+        .filter((id, index, self) => self.indexOf(id) === index); // Remove duplicates
+      
+      // Validate that at least one procedure has a staff assigned
+      if (staffIdsFromProcedures.length === 0) {
+        throw new Error('Por favor, selecione um profissional para pelo menos um procedimento');
       }
+
+      const staffIdsToUse = staffIdsFromProcedures;
 
       const appointmentDateTime = createAppointmentDateTime(data.appointmentDate, data.appointmentTime);
       
@@ -187,33 +631,110 @@ export default function Appointments() {
         procedureMaterials: proc.materials || '',
       }));
 
+      // Build procedure-staff associations map
+      const procedureStaffAssociations: Record<number, number> = {};
+      selectedProcedureIds.forEach(procedureId => {
+        const staffId = procedureStaffMap[procedureId];
+        if (staffId) {
+          procedureStaffAssociations[procedureId] = staffId;
+        }
+      });
+
+      // If dateOnly is true, use only the date without time
+      let finalAppointmentDate = appointmentDateTime;
+      if (data.dateOnly) {
+        // Parse the date string and create a UTC date at midnight to avoid timezone issues
+        // data.appointmentDate is in format "YYYY-MM-DD"
+        const [year, month, day] = data.appointmentDate.split('-').map(Number);
+        const dateOnly = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)); // Use noon UTC to avoid day shifts
+        finalAppointmentDate = dateOnly.toISOString();
+      }
+
+      // Convert paidAmount to proper format for database
+      const paidAmountValue = data.paidAmount ? parseFloat(data.paidAmount.toString()).toFixed(2) : '0.00';
+      
+
       const payload = {
         clientId: selectedClient.id,
-        staffId: parseInt(selectedStaffId),
-        appointmentDate: appointmentDateTime,
+        staffId: staffIdsToUse[0], // First staff as primary for backward compatibility
+        staffIds: staffIdsToUse, // Array of all staff members
+        procedureStaffMap: procedureStaffAssociations, // Map of procedureId -> staffId
+        appointmentDate: finalAppointmentDate,
         status: data.status,
         notes: data.notes || '',
         procedureIds: selectedProcedureIds,
         totalAmount: calculatedTotal,
+        paidAmount: paidAmountValue,
         totalDuration: calculatedDuration,
         beforeImages,
         afterImages,
+        waitlist: data.waitlist || false,
+        dateOnly: data.dateOnly || false,
       };
+
 
       await apiRequest('POST', '/api/appointments/with-procedures', payload);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    onSuccess: async (data, variables) => {
+      
+      // Update cache with the response data if available
+      if (editingAppointment && data) {
+        // The response from /with-procedures returns { appointment, procedures, client }
+        const appointmentFromResponse = data.appointment || data;
+        const appointmentId = editingAppointment.id;
+        
+        
+        // Update all appointment queries with the server response
+        queryClient.setQueriesData(
+          { 
+            queryKey: ["/api/appointments"],
+            exact: false 
+          }, 
+          (old: any) => {
+            if (!old) return old;
+            if (Array.isArray(old)) {
+              const updated = old.map((apt: any) => {
+                if (apt.id === appointmentId) {
+                  // Merge the updated appointment data, ensuring status is from server response
+                  const merged = { 
+                    ...apt, 
+                    ...appointmentFromResponse,
+                    status: appointmentFromResponse.status || apt.status, // Ensure status is updated
+                    notes: appointmentFromResponse.notes !== undefined ? appointmentFromResponse.notes : apt.notes
+                  };
+                  return merged;
+                }
+                return apt;
+              });
+              const found = updated.find((a: any) => a.id === appointmentId);
+              return updated;
+            }
+            return old;
+          }
+        );
+      }
+      
+      // Invalidate queries to ensure fresh data is fetched
+      await queryClient.invalidateQueries({ 
+        queryKey: ["/api/appointments"],
+        exact: false 
+      });
+      
       setIsDialogOpen(false);
+      setEditingAppointment(null);
+      setEndTimeManuallyEdited(false);
+      setEndTimeInput("");
       form.reset();
       setBeforeImages([]);
       setAfterImages([]);
       setSelectedProcedureIds([]);
-      setSelectedStaffId("");
+      setProcedureStaffMap({}); // Clear procedure-staff associations
       setSelectedClient(null);
       toast({
         title: "Success",
-        description: "Appointment created successfully!",
+        description: editingAppointment 
+          ? "Appointment updated successfully!" 
+          : "Appointment created successfully!",
       });
     },
     onError: (error: any) => {
@@ -226,48 +747,69 @@ export default function Appointments() {
   });
 
   // Use dynamic time slots based on business hours and availability
+  // Use first staff from procedureStaffMap for availability checking
+  const firstStaffIdFromProcedures = Object.values(procedureStaffMap)
+    .filter((id): id is number => id !== null && id !== undefined)[0];
+  const staffIdForTimeSlots = firstStaffIdFromProcedures 
+    ? firstStaffIdFromProcedures.toString() 
+    : "";
+
   const { timeSlots, loading: timeSlotsLoading } = useTimeSlots({
     selectedDate: form.watch('appointmentDate') || '',
-    selectedStaffId: selectedStaffId,
+    selectedStaffId: staffIdForTimeSlots,
     duration: calculatedDuration || 60,
     businessHours: businessHours as any[]
   });
 
+  // Set appointmentTime when timeSlots are loaded and we have a value to set
+  useEffect(() => {
+    if (editingAppointment && !timeSlotsLoading && timeSlots.length > 0) {
+      // Get the current value from form state, not just watch
+      const currentTime = form.getValues('appointmentTime');
+      const watchedTime = form.watch('appointmentTime');
+      
+      // Use currentTime from getValues (more reliable) or watchedTime as fallback
+      const timeToUse = currentTime || watchedTime;
+      
+      if (timeToUse) {
+        // Check if the current time matches a slot value
+        const matchingSlot = timeSlots.find(s => s.value === timeToUse);
+        if (matchingSlot) {
+          form.setValue('appointmentTime', timeToUse, { shouldValidate: false, shouldDirty: false });
+        } else {
+          // Try to find the closest slot
+          const [hours, minutes] = timeToUse.split(':').map(Number);
+          const currentMinutes = hours * 60 + minutes;
+          const closestSlot = timeSlots.reduce((closest, slot) => {
+            const [sHours, sMinutes] = slot.value.split(':').map(Number);
+            const slotMinutes = sHours * 60 + sMinutes;
+            const closestDiff = Math.abs(closest ? (parseInt(closest.split(':')[0]) * 60 + parseInt(closest.split(':')[1])) - currentMinutes : Infinity);
+            const slotDiff = Math.abs(slotMinutes - currentMinutes);
+            return slotDiff < closestDiff ? slot.value : closest;
+          }, '');
+          
+          if (closestSlot) {
+            form.setValue('appointmentTime', closestSlot, { shouldValidate: false, shouldDirty: false });
+          }
+        }
+      } else {
+      }
+    }
+  }, [timeSlots, timeSlotsLoading, editingAppointment, form]);
+
   // Debug logs
-  console.log('🔍 Appointments.tsx debug:', {
-    selectedDate: form.watch('appointmentDate'),
-    selectedStaffId,
-    calculatedDuration,
-    businessHoursLength: businessHours.length,
-    businessHours,
-    timeSlotsLength: timeSlots.length,
-    timeSlots,
-    timeSlotsLoading,
-    totalAppointments: appointments.length
-  });
 
   // Additional debug for form state
-  console.log('📝 Form state debug:', {
-    appointmentDate: form.watch('appointmentDate'),
-    staffId: form.watch('staffId'),
-    procedures: form.watch('procedures'),
-    formValues: form.getValues()
-  });
 
   // Check for Clebinho's appointment in the main appointments list
-  const clebinhoInMainList = appointments.find(a => 
+  // Ensure appointments is an array before calling .find()
+  const clebinhoInMainList = Array.isArray(appointments) ? appointments.find(a => 
     a.client?.name?.toLowerCase().includes('clebinho') || 
     a.client?.name?.toLowerCase().includes('seixas')
-  );
+  ) : null;
   
   if (clebinhoInMainList) {
-    console.log('🎯 Clebinho found in main appointments list:', {
-      id: clebinhoInMainList.id,
-      date: clebinhoInMainList.appointmentDate,
-      client: clebinhoInMainList.client?.name
-    });
   } else {
-    console.log('❌ Clebinho NOT found in main appointments list');
   }
 
   const durationOptions = [
@@ -279,15 +821,8 @@ export default function Appointments() {
   ];
 
   const onSubmit = async (data: AppointmentFormData) => {
-    console.log('📝 Submitting appointment form:', {
-      date: data.appointmentDate,
-      time: data.appointmentTime,
-      staffId: selectedStaffId,
-      duration: calculatedDuration || 60
-    });
 
     // Let the backend handle availability checking to avoid conflicts
-    console.log('✅ Creating appointment...');
     createAppointmentMutation.mutate(data);
   };
 
@@ -374,6 +909,7 @@ export default function Appointments() {
 
   // Quick search filter function
   const filterAppointments = (appointments: any[]) => {
+    if (!Array.isArray(appointments)) return [];
     if (!quickSearch.trim()) return appointments;
     
     const searchTerm = quickSearch.toLowerCase().trim();
@@ -438,17 +974,88 @@ export default function Appointments() {
   };
 
   // Use appointments data directly since it already includes client and service details from the JOIN
-  const appointmentsWithDetails = appointments as any[];
+  // Filter by selected staff if a filter is applied
+  const appointmentsWithDetails = useMemo(() => {
+    try {
+      // Ensure appointments is always an array
+      if (!Array.isArray(appointments)) {
+        return [];
+      }
+      
+      let filtered = appointments as any[];
+      
+      // PERMISSION FILTER: Filter by company_id for staff users
+      if (currentUser) {
+        const isStaffUser = currentUser.role === 'staff' || currentUser.accessLevel === 'staff';
+        const userCompanyId = currentUser.companyId || currentUser.company_id;
+        
+        if (isStaffUser && userCompanyId) {
+          
+          filtered = filtered.filter((appointment: any) => {
+            if (!appointment) return false;
+            
+            // Check if any staff member in this appointment belongs to the user's company
+            if (appointment.allStaff && Array.isArray(appointment.allStaff)) {
+              const hasCompanyStaff = appointment.allStaff.some((s: any) => 
+                s && (s.companyId === userCompanyId || s.company_id === userCompanyId)
+              );
+              if (hasCompanyStaff) return true;
+            }
+            
+            // Check procedures for staff with matching company
+            if (appointment.allProcedures && Array.isArray(appointment.allProcedures)) {
+              const hasCompanyProcedure = appointment.allProcedures.some((p: any) => {
+                if (!p || !p.staffId) return false;
+                // Find staff in allStaff array
+                const procedureStaff = appointment.allStaff?.find((s: any) => s?.id === p.staffId);
+                return procedureStaff && (procedureStaff.companyId === userCompanyId || procedureStaff.company_id === userCompanyId);
+              });
+              if (hasCompanyProcedure) return true;
+            }
+            
+            // If no staff info, don't show to staff users (only admins see these)
+            return false;
+          });
+          
+        } else {
+        }
+      }
+      
+      // STAFF FILTER: If a specific staff filter is selected, further filter by that staff
+      if (selectedStaffFilter) {
+        const staffIdNum = parseInt(selectedStaffFilter);
+        if (!isNaN(staffIdNum)) {
+          filtered = filtered.filter((appointment: any) => {
+            if (!appointment) return false;
+            
+            // Check if staff is in appointment_staff (allStaff array)
+            if (appointment.allStaff && Array.isArray(appointment.allStaff)) {
+              return appointment.allStaff.some((s: any) => s && s.id === staffIdNum);
+            }
+            
+            // Check if staff is in appointment_procedures (procedures with staffId)
+            if (appointment.allProcedures && Array.isArray(appointment.allProcedures)) {
+              return appointment.allProcedures.some((p: any) => p && p.staffId === staffIdNum);
+            }
+            
+            // Check if staffId matches directly (backward compatibility)
+            if (appointment.staffId === staffIdNum) {
+              return true;
+            }
+            
+            return false;
+          });
+        }
+      }
+      
+      return filtered;
+    } catch (error) {
+      console.error('Error processing appointmentsWithDetails:', error);
+      return [];
+    }
+  }, [appointments, selectedStaffFilter, currentUser]);
   
-  // Debug log for appointmentsWithDetails
-  console.log('🔍 appointmentsWithDetails debug:', {
-    length: appointmentsWithDetails.length,
-    appointments: appointmentsWithDetails.map(a => ({
-      id: a.id,
-      date: a.appointmentDate,
-      client: a.client?.name
-    }))
-  });
+  // appointmentsWithDetails is memoized to avoid recalculations
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -463,7 +1070,7 @@ export default function Appointments() {
       return;
     }
 
-    const foundAppointment = appointments.find((appointment: any) => appointment.id === appointmentId);
+    const foundAppointment = Array.isArray(appointments) ? appointments.find((appointment: any) => appointment.id === appointmentId) : null;
 
     if (foundAppointment) {
       if (!selectedAppointment || selectedAppointment.id !== foundAppointment.id) {
@@ -480,6 +1087,18 @@ export default function Appointments() {
     }
   }, [appointments, isDetailsDialogOpen, selectedAppointment]);
 
+  // Update selectedAppointment when appointments array changes (e.g., after status update)
+  useEffect(() => {
+    if (selectedAppointment && Array.isArray(appointments) && appointments.length > 0) {
+      const updatedAppointment = Array.isArray(appointments) ? appointments.find((apt: any) => apt.id === selectedAppointment.id) : null;
+      if (updatedAppointment && (
+        updatedAppointment.status !== selectedAppointment.status || 
+        updatedAppointment.notes !== selectedAppointment.notes
+      )) {
+        setSelectedAppointment(updatedAppointment);
+      }
+    }
+  }, [appointments, selectedAppointment?.id]);
 
 
   return (
@@ -513,6 +1132,16 @@ export default function Appointments() {
                 <span className="hidden xs:inline">{t('list_view')}</span>
                 <span className="xs:hidden">{t('list_view')}</span>
               </Button>
+              <Button
+                variant={viewMode === 'waitlist' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('waitlist')}
+                className="flex items-center gap-1 flex-1 sm:flex-none text-xs sm:text-sm"
+              >
+                <User className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Lista de Espera</span>
+                <span className="xs:hidden">Espera</span>
+              </Button>
             </div>
             
             {/* Calendar View Toggle - only show when calendar mode is selected */}
@@ -540,6 +1169,29 @@ export default function Appointments() {
                 </Button>
               </div>
             )}
+            
+            {/* Staff Filter - only show when calendar mode is selected */}
+            {viewMode === 'calendar' && (
+              <Select value={selectedStaffFilter || "all"} onValueChange={(value) => setSelectedStaffFilter(value === "all" ? "" : value)}>
+                <SelectTrigger className="w-full sm:w-[200px] text-xs sm:text-sm">
+                  <SelectValue placeholder="Todos os profissionais" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os profissionais</SelectItem>
+                  {staff && (staff as any[]).length > 0 ? (
+                    (staff as any[]).map((member: any) => (
+                      <SelectItem key={member.id} value={member.id.toString()}>
+                        {member.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="loading" disabled>
+                      Carregando...
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button 
@@ -551,329 +1203,758 @@ export default function Appointments() {
                   <span className="xs:hidden">{t('new_appointment_button').substring(0, 3)}</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                    <Camera className="w-5 h-5" />
-                    {t('create_new_appointment')}
-                  </DialogTitle>
-                </DialogHeader>
-                
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
-                    <div className="space-y-4">
-                      {/* Client Selection */}
-                      <FormField
-                        control={form.control}
-                        name="clientId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('client_label')} *</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  placeholder={t('type_to_search_clients')}
-                                  value={clientSearch}
-                                  onChange={(e) => {
-                                    setClientSearch(e.target.value);
-                                    if (e.target.value.length >= 2) {
-                                      const filtered = (clients as any[])?.filter((client: any) =>
-                                        client.name.toLowerCase().includes(e.target.value.toLowerCase())
-                                      ) || [];
-                                      setFilteredClients(filtered);
-                                    } else {
-                                      setFilteredClients([]);
-                                    }
-                                  }}
-                                  className={selectedClient ? "border-green-500" : ""}
-                                />
-                                {filteredClients.length > 0 && (
-                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                                    {filteredClients.map((client: any) => (
-                                      <div
-                                        key={client.id}
-                                        className="px-3 py-2 cursor-pointer hover:bg-gray-100"
-                                        onClick={() => {
-                                          setSelectedClient(client);
-                                          setClientSearch(client.name);
-                                          setFilteredClients([]);
-                                          field.onChange(client.id);
-                                        }}
-                                      >
-                                        {client.name}
+              <DialogContent className="sm:max-w-[1120px] w-[98vw] max-h-[94vh] overflow-hidden flex flex-col p-0">
+                              <DialogHeader className="px-6 pt-5 pb-4 border-b shrink-0">
+                                <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                                  <Calendar className="w-4 h-4 text-primary" />
+                                  {editingAppointment ? (t('edit_appointment') || 'Editar Agendamento') : t('create_new_appointment')}
+                                </DialogTitle>
+                              </DialogHeader>
+              
+                              <div className="flex-1 overflow-y-auto">
+                              <Form {...form}>
+                                <form onSubmit={form.handleSubmit(onSubmit)}>
+              
+                                  {/* ════ GRID PRINCIPAL 65/35 ════ */}
+                                  <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] min-h-full">
+              
+                                    {/* ══════ COLUNA ESQUERDA — FORM ══════ */}
+                                    <div className="px-6 py-5 space-y-5 border-r">
+              
+                                      {/* CLIENTE */}
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <User className="w-4 h-4 text-primary" />
+                                          <span className="text-sm font-semibold">{t('client_label')} *</span>
+                                        </div>
+                                        <FormField control={form.control} name="clientId" render={({ field }) => (
+                                          <FormItem>
+                                            <FormControl>
+                                              <div className="relative">
+                                                <Input
+                                                  placeholder={t('type_to_search_clients')}
+                                                  value={clientSearch}
+                                                  onChange={(e) => {
+                                                    setClientSearch(e.target.value);
+                                                    if (e.target.value.length >= 2) {
+                                                      const filtered = (clients as any[])?.filter((c: any) =>
+                                                        c.name.toLowerCase().includes(e.target.value.toLowerCase())
+                                                      ) || [];
+                                                      setFilteredClients(filtered);
+                                                    } else { setFilteredClients([]); }
+                                                  }}
+                                                  className={selectedClient ? "border-green-500 pr-8" : ""}
+                                                />
+                                                {selectedClient && <CheckCircle className="absolute right-2 top-2.5 w-4 h-4 text-green-500" />}
+                                                {filteredClients.length > 0 && (
+                                                  <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-44 overflow-y-auto">
+                                                    {filteredClients.map((client: any) => (
+                                                      <div key={client.id} className="px-3 py-2.5 cursor-pointer hover:bg-slate-50 text-sm border-b last:border-0"
+                                                        onClick={() => { setSelectedClient(client); setClientSearch(client.name); setFilteredClients([]); field.onChange(client.id); }}>
+                                                        <span className="font-medium">{client.name}</span>
+                                                        {client.phone && <span className="text-slate-400 ml-2 text-xs">{client.phone}</span>}
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )} />
                                       </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Procedures Multi-Select */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">{t('procedures_label')} *</label>
-                        <ProcedureMultiSelect
-                          procedures={procedures as any[]}
-                          selectedProcedureIds={selectedProcedureIds}
-                          onSelectionChange={setSelectedProcedureIds}
-                          onTotalChange={(price, duration) => {
-                            setCalculatedTotal(price);
-                            setCalculatedDuration(duration);
-                            form.setValue('totalAmount', price.toFixed(2));
-                            form.setValue('duration', duration);
-                            // Auto-fill duration field
-                            form.setValue('duration', duration);
-                          }}
-                          showSummary={true}
-                        />
-                      </div>
-
-                      {/* Staff Selection */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">{t('professional_label')} *</label>
-                        <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
-                          <SelectTrigger className={selectedStaffId ? "border-green-500" : ""}>
-                            <SelectValue placeholder={t('select_professional')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(staff as any[]).map((member: any) => (
-                              <SelectItem key={member.id} value={member.id.toString()}>
-                                <div className="flex items-center gap-2">
-                                  <User className="h-4 w-4" />
-                                  <span>{member.name}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Date and Time */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-
-                      <FormField
-                        control={form.control}
-                        name="appointmentDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('date_label')}</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="appointmentTime"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('time_label')}</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder={t('select_time')} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {timeSlotsLoading ? (
-                                  <SelectItem value="loading" disabled>
-                                    {t('loading_times')}
-                                  </SelectItem>
-                                ) : timeSlots.length === 0 ? (
-                                  <SelectItem value="no-slots" disabled>
-                                    {t('no_times_available')}
-                                  </SelectItem>
-                                ) : (
-                                  timeSlots.map((slot) => (
-                                    <SelectItem 
-                                      key={slot.value} 
-                                      value={slot.value}
-                                      disabled={!slot.available}
-                                    >
-                                      <div className="flex items-center justify-between w-full">
-                                        <span>{slot.label}</span>
-                                        {!slot.available && (
-                                          <span className="text-xs text-red-500 ml-2">
-                                            {t('booked')}
-                                          </span>
+              
+                                      {/* PROCEDIMENTOS */}
+                                      <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <Scissors className="w-4 h-4 text-primary" />
+                                            <span className="text-sm font-semibold">{t('procedures_label')} *</span>
+                                          </div>
+                                        </div>
+                                        <ProcedureSearchableSelect
+                                          procedures={procedures as any[]}
+                                          selectedProcedureIds={selectedProcedureIds}
+                                          onSelectionChange={setSelectedProcedureIds}
+                                          onTotalChange={(price, duration) => {
+                                            setCalculatedTotal(price);
+                                            setCalculatedDuration(duration);
+                                            form.setValue('totalAmount', price.toFixed(2));
+                                            form.setValue('duration', duration);
+                                            // Recalcular endTime quando duração muda (só se usuário não editou manualmente)
+                                            if (!endTimeManuallyEdited) {
+                                              const st = form.getValues('appointmentTime');
+                                              if (st && st !== '') {
+                                                const [h, m] = st.split(':').map(Number);
+                                                const end = h * 60 + m + duration;
+                                                setEndTimeInput(`${Math.floor(end/60)%24}:${String(end%60).padStart(2,'0')}`);
+                                              }
+                                            }
+                                          }}
+                                          placeholder="Buscar e selecionar procedimentos..."
+                                        />
+                                        {selectedProcedureIds.length > 0 && (
+                                          <div className="border rounded-lg overflow-hidden mt-2">
+                                            <table className="w-full text-sm">
+                                              <thead className="bg-slate-50 border-b">
+                                                <tr>
+                                                  <th className="text-left px-3 py-2 text-xs font-semibold text-slate-600">Procedimento</th>
+                                                  <th className="text-left px-3 py-2 text-xs font-semibold text-slate-600">Profissional</th>
+                                                  <th className="text-center px-3 py-2 text-xs font-semibold text-slate-600">Duração</th>
+                                                  <th className="text-right px-3 py-2 text-xs font-semibold text-slate-600">Valor</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                {selectedProcedureIds.map((procedureId) => {
+                                                  const procedure = (procedures as any[]).find(p => p.id === procedureId);
+                                                  return (
+                                                    <tr key={procedureId} className="border-b last:border-0 hover:bg-slate-50/50">
+                                                      <td className="px-3 py-2 font-medium text-slate-800 text-xs">{procedure?.name || `#${procedureId}`}</td>
+                                                      <td className="px-3 py-2">
+                                                        {staff && (staff as any[]).length > 0 ? (
+                                                          <StaffCombobox staff={staff as any[]} selectedStaffId={procedureStaffMap[procedureId] || null}
+                                                            onSelect={(staffId) => setProcedureStaffMap(prev => ({ ...prev, [procedureId]: staffId }))}
+                                                            placeholder="Profissional..." />
+                                                        ) : <span className="text-xs text-slate-400">—</span>}
+                                                      </td>
+                                                      <td className="px-3 py-2 text-center text-xs text-slate-500">{procedure?.duration || 60}min</td>
+                                                      <td className="px-3 py-2 text-right text-xs font-semibold text-slate-800">R${parseFloat(procedure?.price || '0').toFixed(2)}</td>
+                                                    </tr>
+                                                  );
+                                                })}
+                                              </tbody>
+                                            </table>
+                                          </div>
                                         )}
                                       </div>
-                                    </SelectItem>
-                                  ))
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+              
+                                      {/* PRODUTOS */}
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <Package className="w-4 h-4 text-primary" />
+                                          <span className="text-sm font-semibold">Produtos Adicionais</span>
+                                          <span className="text-xs text-muted-foreground">(opcional)</span>
+                                        </div>
+                                        <ProductSearchableSelect products={products as any[]} selectedProducts={selectedProducts} onSelectionChange={setSelectedProducts} allowPriceEdit={true} />
+                                      </div>
+              
+                                      {/* GASTOS DE INSUMOS */}
+                                      {editingAppointment && (
+                                        <div>
+                                          <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-base">🧪</span>
+                                              <span className="text-sm font-semibold">Gastos de Insumos</span>
+                                              <span className="text-xs text-muted-foreground">(uso interno)</span>
+                                              {consumptions.length > 0 && (
+                                                <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">{consumptions.length}</span>
+                                              )}
+                                            </div>
+                                            <button
+                                              type="button"
+                                              className="text-xs text-primary hover:underline flex items-center gap-1"
+                                              onClick={() => {
+                                                setConsumptions(prev => [...prev, {
+                                                  product_id: null,
+                                                  product_name: '',
+                                                  quantity_suggested: 1,
+                                                  quantity_used: 1,
+                                                  unit: 'un',
+                                                  source: 'manual',
+                                                  _isNew: true,
+                                                }]);
+                                              }}
+                                            >
+                                              + Adicionar insumo
+                                            </button>
+                                          </div>
+                                          {consumptions.length === 0 ? (
+                                            <p className="text-xs text-muted-foreground italic px-2 py-1.5 bg-muted/40 rounded">
+                                              Nenhum insumo lançado. Clique em "+ Adicionar insumo" ou cadastre insumos no procedimento para pré-carregar automaticamente.
+                                            </p>
+                                          ) : (
+                                            <div className="space-y-2">
+                                              {consumptions.map((item: any, idx: number) => (
+                                                <div key={item.id || idx} className="flex items-center gap-2 p-2 rounded-md bg-amber-50 border border-amber-100">
+                                                  <div className="flex-1 min-w-0">
+                                                    {item._isNew ? (
+                                                      <select
+                                                        className="w-full text-xs border rounded px-1 py-0.5"
+                                                        value={item.product_id || ''}
+                                                        onChange={(e) => {
+                                                          const pid = parseInt(e.target.value);
+                                                          const prod = (products as any[]).find((p: any) => p.id === pid);
+                                                          setConsumptions(prev => prev.map((c, i) =>
+                                                            i === idx ? { ...c, product_id: pid, product_name: prod?.name || '', unit: prod?.unit || 'un', _isNew: false } : c
+                                                          ));
+                                                        }}
+                                                      >
+                                                        <option value="">Selecione o produto...</option>
+                                                        {(products as any[]).map((p: any) => (
+                                                          <option key={p.id} value={p.id}>{p.name}</option>
+                                                        ))}
+                                                      </select>
+                                                    ) : (
+                                                      <>
+                                                        <p className="text-xs font-medium truncate">{item.product_name}</p>
+                                                        {item.procedure_name && (
+                                                          <p className="text-xs text-muted-foreground">{item.procedure_name}</p>
+                                                        )}
+                                                      </>
+                                                    )}
+                                                  </div>
+                                                  <div className="flex items-center gap-1">
+                                                    <span className="text-xs">
+                                                      {item.source === 'manual' || item._isNew ? '🔵' : item.quantity_used == item.quantity_suggested ? '🟡' : '🟢'}
+                                                    </span>
+                                                    <input
+                                                      type="number"
+                                                      min="0"
+                                                      step="0.001"
+                                                      className="w-16 text-xs border rounded px-1 py-0.5 text-right"
+                                                      value={item.quantity_used}
+                                                      onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setConsumptions(prev => prev.map((c, i) =>
+                                                          i === idx ? { ...c, quantity_used: val, source: item.source === 'template' ? 'edited' : item.source } : c
+                                                        ));
+                                                      }}
+                                                    />
+                                                    <span className="text-xs text-muted-foreground">{item.unit || 'un'}</span>
+                                                  </div>
+                                                  <button
+                                                    type="button"
+                                                    className="text-muted-foreground hover:text-destructive text-xs ml-1"
+                                                    onClick={() => setConsumptions(prev => prev.filter((_, i) => i !== idx))}
+                                                    title="Remover"
+                                                  >✕</button>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
 
-                      {/* Time Slot Alert */}
-                      {timeSlots.length === 0 && form.watch('appointmentDate') && selectedStaffId && (
-                        <TimeSlotAlert
-                          message={t('no_times_available_date')}
-                          type="warning"
-                        />
-                      )}
+                                      {/* DATA E HORÁRIO */}
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <Clock className="w-4 h-4 text-primary" />
+                                          <span className="text-sm font-semibold">Data e Horário</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                          <FormField control={form.control} name="appointmentDate" render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-xs text-slate-500">Data início</FormLabel>
+                                              <FormControl><Input type="date" {...field} /></FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )} />
+                                          <div>
+                                            <label className="text-xs text-slate-500 block mb-1">Data fim <span className="text-muted-foreground">(opcional)</span></label>
+                                            <input
+                                              type="date"
+                                              value={form.watch('appointmentDate') || ''}
+                                              onChange={(e) => {
+                                                // Se data fim diferente da início, apenas guarda em endTimeInput como referência
+                                                // Por ora usa mesma data — pode ser expandido futuramente
+                                              }}
+                                              className="h-9 w-full border border-input rounded-md px-3 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                          <FormField control={form.control} name="appointmentTime" render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-xs text-slate-500">Hora início</FormLabel>
+                                              <FormControl>
+                                                <input
+                                                  type="time"
+                                                  value={field.value || ''}
+                                                  onChange={(e) => {
+                                                    const v = e.target.value;
+                                                    field.onChange(v);
+                                                    // Recalcula hora fim baseado na duração (só se não editou manualmente)
+                                                    if (v && calculatedDuration && !endTimeManuallyEdited) {
+                                                      const [h, m] = v.split(':').map(Number);
+                                                      const end = h * 60 + m + calculatedDuration;
+                                                      setEndTimeInput(`${Math.floor(end/60)%24}:${String(end%60).padStart(2,'0')}`);
+                                                    }
+                                                  }}
+                                                  className="h-9 w-full border border-input rounded-md px-3 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                                />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )} />
+                                          <div>
+                                            <label className="text-xs text-slate-500 block mb-1">Hora fim</label>
+                                            <input
+                                              type="time"
+                                              value={endTimeInput}
+                                              onChange={(e) => {
+                                                const newEnd = e.target.value;
+                                                setEndTimeManuallyEdited(true);
+                                                setEndTimeInput(newEnd);
+                                                const startT = form.getValues('appointmentTime');
+                                                if (startT && newEnd) {
+                                                  const [sh, sm] = startT.split(':').map(Number);
+                                                  const [eh, em] = newEnd.split(':').map(Number);
+                                                  const newDur = (eh * 60 + em) - (sh * 60 + sm);
+                                                  if (newDur > 0) setCalculatedDuration(newDur);
+                                                }
+                                              }}
+                                              className="h-9 w-full border border-input rounded-md px-3 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="flex gap-5 mt-3">
+                                          <FormField control={form.control} name="dateOnly" render={({ field }) => (
+                                            <label className="flex items-center gap-2 cursor-pointer text-sm">
+                                              <input type="checkbox" checked={field.value || false} onChange={field.onChange} className="h-4 w-4 rounded border-gray-300 text-primary" />
+                                              Sem horário
+                                            </label>
+                                          )} />
+                                          <FormField control={form.control} name="waitlist" render={({ field }) => (
+                                            <label className="flex items-center gap-2 cursor-pointer text-sm">
+                                              <input type="checkbox" checked={field.value || false} onChange={field.onChange} className="h-4 w-4 rounded border-gray-300 text-primary" />
+                                              Lista de espera
+                                            </label>
+                                          )} />
+                                        </div>
+                                      </div>
+              
+                                      {/* STATUS */}
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <CheckCircle className="w-4 h-4 text-primary" />
+                                          <span className="text-sm font-semibold">Status</span>
+                                        </div>
+                                        <FormField control={form.control} name="status" render={({ field }) => (
+                                          <FormItem>
+                                            <div className="flex flex-wrap gap-2">
+                                              {[
+                                                { value: 'scheduled', label: 'Agendado', active: 'bg-blue-600 text-white border-blue-600', idle: 'text-blue-700 border-blue-200 hover:bg-blue-50' },
+                                                { value: 'confirmed', label: 'Confirmado', active: 'bg-green-600 text-white border-green-600', idle: 'text-green-700 border-green-200 hover:bg-green-50' },
+                                                { value: 'pending', label: 'Pendente', active: 'bg-amber-500 text-white border-amber-500', idle: 'text-amber-700 border-amber-200 hover:bg-amber-50' },
+                                                { value: 'completed', label: 'Finalizado', active: 'bg-purple-600 text-white border-purple-600', idle: 'text-purple-700 border-purple-200 hover:bg-purple-50' },
+                                                { value: 'cancelled', label: 'Cancelado', active: 'bg-red-600 text-white border-red-600', idle: 'text-red-700 border-red-200 hover:bg-red-50' },
+                                              ].map((s) => (
+                                                <button key={s.value} type="button" onClick={() => field.onChange(s.value)}
+                                                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${field.value === s.value ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"}`}>
+                                                  {s.label}
+                                                </button>
+                                              ))}
+                                            </div>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )} />
+                                      </div>
+              
+                                      {/* OBSERVAÇÕES */}
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <FileText className="w-4 h-4 text-primary" />
+                                          <span className="text-sm font-semibold">{t('notes_label')}</span>
+                                        </div>
+                                        <FormField control={form.control} name="notes" render={({ field }) => (
+                                          <FormItem>
+                                            <FormControl>
+                                              <Textarea placeholder={t('additional_notes')} {...field} value={field.value || ""} rows={2} className="resize-none text-sm" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )} />
+                                      </div>
+              
+                                      {/* FOTOS */}
+                                      <Tabs defaultValue="before" className="w-full">
+                                        <TabsList className="grid w-full grid-cols-2">
+                                          <TabsTrigger value="before" className="text-xs gap-1">📷 Fotos Antes</TabsTrigger>
+                                          <TabsTrigger value="after" className="text-xs gap-1">📷 Fotos Depois</TabsTrigger>
+                                        </TabsList>
+                                        <TabsContent value="before" className="mt-3">
+                                          <FileUpload files={beforeImages} onFilesChange={setBeforeImages} maxFiles={5} label={t('upload_before_photos')} />
+                                        </TabsContent>
+                                        <TabsContent value="after" className="mt-3">
+                                          <FileUpload files={afterImages} onFilesChange={setAfterImages} maxFiles={5} label={t('upload_after_photos')} />
+                                        </TabsContent>
+                                      </Tabs>
+              
+                                    </div>{/* fim coluna esquerda */}
+              
+                                    {/* ══════ COLUNA DIREITA — RESUMO ══════ */}
+                                    <div className="px-5 py-5 bg-slate-50/60">
+                                      <div className="sticky top-4 space-y-4">
+              
+                                        <h3 className="text-sm font-bold text-slate-800">Resumo do Pedido</h3>
+              
+                                        {/* Procedimentos */}
+                                        {selectedProcedureIds.length > 0 && (
+                                          <div>
+                                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Procedimentos</p>
+                                            <div className="space-y-1.5">
+                                              {selectedProcedureIds.map((id) => {
+                                                const p = (procedures as any[]).find(x => x.id === id);
+                                                return (
+                                                  <div key={id} className="flex justify-between text-sm">
+                                                    <span className="flex items-center gap-1.5 text-slate-700">
+                                                      <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+                                                      {p?.name || `#${id}`}
+                                                    </span>
+                                                    <span className="font-medium text-slate-800">R${parseFloat(p?.price || '0').toFixed(2)}</span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                        )}
+              
+                                        {/* Produtos */}
+                                        {selectedProducts.length > 0 && (
+                                          <div>
+                                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Produtos</p>
+                                            <div className="space-y-1.5">
+                                              {selectedProducts.map((p: any) => (
+                                                <div key={p.productId} className="flex justify-between text-sm">
+                                                  <span className="flex items-center gap-1.5 text-slate-700">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                                                    {p.name} {p.quantity > 1 && <span className="text-xs text-slate-400">×{p.quantity}</span>}
+                                                  </span>
+                                                  <span className="font-medium text-slate-800">R${(p.price * p.quantity).toFixed(2)}</span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+              
+                                        {/* Separador + Tempo + Horário */}
+                                        <div className="border-t pt-3 space-y-2">
+                                          {calculatedDuration > 0 && (
+                                            <div className="flex justify-between text-sm">
+                                              <span className="text-amber-600 font-semibold">Tempo Total:</span>
+                                              <span className="text-amber-600 font-bold">
+                                                {calculatedDuration >= 60 ? `${Math.floor(calculatedDuration/60)}h${calculatedDuration%60 > 0 ? ` ${calculatedDuration%60}min` : ''}` : `${calculatedDuration}min`}
+                                              </span>
+                                            </div>
+                                          )}
+                                          {form.watch('appointmentTime') && (
+                                            <div className="flex justify-between items-center text-sm">
+                                              <span className="text-slate-600">Horário:</span>
+                                              <div className="flex items-center gap-1.5 font-medium text-slate-800">
+                                                <span>{form.watch('appointmentTime')}</span>
+                                                <span className="text-slate-400">→</span>
+                                                <input
+                                                  type="time"
+                                                  value={endTimeInput}
+                                                  onChange={(e) => {
+                                                    const newEnd = e.target.value;
+                                                    setEndTimeInput(newEnd);
+                                                    const startT = form.getValues('appointmentTime');
+                                                    if (startT && newEnd) {
+                                                      const [sh, sm] = startT.split(':').map(Number);
+                                                      const [eh, em] = newEnd.split(':').map(Number);
+                                                      const newDur = (eh * 60 + em) - (sh * 60 + sm);
+                                                      if (newDur > 0) setCalculatedDuration(newDur);
+                                                    }
+                                                  }}
+                                                  className="border border-slate-300 rounded px-1.5 py-0.5 text-sm w-20 text-center focus:outline-none focus:border-primary"
+                                                />
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+              
+                                        {/* Total */}
+                                        <div className="bg-slate-900 rounded-xl p-4 text-center">
+                                          <p className="text-xs text-slate-400 mb-0.5">Total</p>
+                                          <p className="text-2xl font-bold text-white">
+                                            R$ {(calculatedTotal + selectedProducts.reduce((s: number, p: any) => s + p.price * p.quantity, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                          </p>
+                                        </div>
+              
+                                        {/* Múltiplos Pagamentos */}
+                                        <div className="space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Pagamentos</p>
+                                            <button type="button" onClick={addPaymentEntry}
+                                              className="text-xs text-primary hover:underline font-medium flex items-center gap-1">
+                                              <Plus className="w-3 h-3" /> Adicionar
+                                            </button>
+                                          </div>
 
-                      {/* Duration is auto-calculated from selected procedures */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">{t('total_duration')}</label>
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                          <p className="text-sm text-blue-800">
-                            <strong>{t('total_duration')}:</strong> {calculatedDuration} {t('minutes')}
-                          </p>
-                          <p className="text-xs text-blue-600 mt-1">
-                            {t('automatically_calculated')}
-                          </p>
-                        </div>
-                      </div>
+                                          <div className="space-y-1.5">
+                                            {paymentEntries.map((entry) => (
+                                              <div key={entry.id} className="flex items-center gap-1.5">
+                                                <select
+                                                  value={entry.method}
+                                                  onChange={(e) => updatePaymentEntry(entry.id, 'method', e.target.value)}
+                                                  className="flex-1 h-8 text-xs border border-input rounded-md px-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                                                  style={{colorScheme:'light'}}
+                                                >
+                                                  <option value="cash">💵 Dinheiro</option>
+                                                  <option value="card">💳 Cartão</option>
+                                                  <option value="pix">🔷 Pix</option>
+                                                </select>
+                                                <div className="relative flex-1">
+                                                  <span className="absolute left-2 top-1.5 text-xs text-slate-400 pointer-events-none">R$</span>
+                                                  <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    placeholder="0,00"
+                                                    value={entry.amount}
+                                                    onChange={(e) => {
+                                                      updatePaymentEntry(entry.id, 'amount', e.target.value);
+                                                      const newTotal = paymentEntries
+                                                        .map(p => p.id === entry.id ? (parseFloat(e.target.value)||0) : (parseFloat(p.amount)||0))
+                                                        .reduce((a,b)=>a+b,0);
+                                                      form.setValue('paidAmount', newTotal.toFixed(2));
+                                                    }}
+                                                    className="w-full h-8 border border-input rounded-md pl-7 pr-2 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                                                  />
+                                                </div>
+                                                {paymentEntries.length > 1 && (
+                                                  <button type="button" onClick={() => removePaymentEntry(entry.id)}
+                                                    className="h-8 w-8 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors">
+                                                    <XCircle className="w-4 h-4" />
+                                                  </button>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
 
-                      <FormField
-                        control={form.control}
-                        name="status"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('status')}</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder={t('select_status')} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="scheduled">{t('scheduled')}</SelectItem>
-                                <SelectItem value="confirmed">{t('confirmed')}</SelectItem>
-                                <SelectItem value="completed">{t('completed')}</SelectItem>
-                                <SelectItem value="cancelled">{t('cancelled')}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="totalAmount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('total_amount')}</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                step="0.01"
-                                placeholder="0.00" 
-                                {...field} 
-                                value={field.value || ""} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="paidAmount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('paid_amount')}</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                step="0.01"
-                                placeholder="0.00" 
-                                {...field} 
-                                value={field.value || ""} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="notes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('notes_label')}</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder={t('additional_notes')} {...field} value={field.value || ""} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <Tabs defaultValue="before" className="w-full">
-                      <TabsList className="grid w-full grid-cols-2 h-auto">
-                        <TabsTrigger value="before" className="text-xs sm:text-sm py-2">
-                          <span className="hidden xs:inline">{t('before_photos')}</span>
-                          <span className="xs:hidden">{t('before_photos').substring(0, 6)}</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="after" className="text-xs sm:text-sm py-2">
-                          <span className="hidden xs:inline">{t('after_photos')}</span>
-                          <span className="xs:hidden">{t('after_photos').substring(0, 5)}</span>
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="before" className="space-y-4">
-                        <FileUpload
-                          files={beforeImages}
-                          onFilesChange={setBeforeImages}
-                          maxFiles={5}
-                          label={t('upload_before_photos')}
-                        />
-                      </TabsContent>
-                      <TabsContent value="after" className="space-y-4">
-                        <FileUpload
-                          files={afterImages}
-                          onFilesChange={setAfterImages}
-                          maxFiles={5}
-                          label={t('upload_after_photos')}
-                        />
-                      </TabsContent>
-                    </Tabs>
-
-                    <Button 
-                      type="submit" 
-                      className="w-full"
-                      disabled={createAppointmentMutation.isPending}
-                    >
-                      {createAppointmentMutation.isPending ? t('creating') : t('new_appointment_button')}
-                    </Button>
-                  </form>
-                </Form>
-              </DialogContent>
+                                          {/* Resumo pagamentos */}
+                                          {(() => {
+                                            const grandTotal = calculatedTotal + selectedProducts.reduce((s: number, p: any) => s + p.price * p.quantity, 0);
+                                            const paid = totalPaidEntries();
+                                            const saldo = grandTotal - paid;
+                                            return grandTotal > 0 ? (
+                                              <div className="border-t pt-2 space-y-1 text-xs">
+                                                <div className="flex justify-between">
+                                                  <span className="text-slate-500">Total pago</span>
+                                                  <span className="font-semibold text-green-700">R$ {paid.toFixed(2)}</span>
+                                                </div>
+                                                {saldo > 0.005 ? (
+                                                  <div className="flex justify-between">
+                                                    <span className="text-slate-500">Saldo restante</span>
+                                                    <span className="font-semibold text-red-600">R$ {saldo.toFixed(2)}</span>
+                                                  </div>
+                                                ) : paid > 0 ? (
+                                                  <p className="text-center text-green-700 font-semibold">✓ Pagamento completo</p>
+                                                ) : null}
+                                                <button type="button"
+                                                  onClick={() => {
+                                                    if (paymentEntries.length > 0) {
+                                                      const share = (grandTotal / paymentEntries.length).toFixed(2);
+                                                      setPaymentEntries(prev => prev.map(p => ({...p, amount: share})));
+                                                      form.setValue('paidAmount', grandTotal.toFixed(2));
+                                                    }
+                                                  }}
+                                                  className="w-full text-primary hover:underline text-center pt-0.5">
+                                                  Dividir igualmente
+                                                </button>
+                                              </div>
+                                            ) : null;
+                                          })()}
+                                        </div>
+              
+                                        {/* Botão submit */}
+                                        <Button type="submit" className="w-full" disabled={createAppointmentMutation.isPending}>
+                                          {createAppointmentMutation.isPending
+                                            ? (editingAppointment ? 'Salvando...' : 'Criando...')
+                                            : (editingAppointment ? 'Salvar Alterações' : '✓ Criar Agendamento')}
+                                        </Button>
+              
+                                      </div>
+                                    </div>{/* fim coluna direita */}
+              
+                                  </div>{/* fim grid */}
+                                </form>
+                              </Form>
+                              </div>
+                            </DialogContent>
             </Dialog>
           </div>
         </div>
 
         {/* Calendar or List View */}
         {viewMode === 'calendar' ? (
-          <FunctionalCalendar
-            appointments={appointmentsWithDetails}
-            viewType={calendarView}
-            onDateSelect={(date) => {
-              setSelectedDate(date);
-              // Removed setShowAll(false) to prevent filtering when clicking on calendar days
-            }}
-            onAppointmentClick={(appointment) => {
-              setSelectedAppointment(appointment);
-              setIsDetailsDialogOpen(true);
-            }}
-            onCreateAppointment={() => setIsDialogOpen(true)}
-            selectedDate={selectedDate}
-          />
+          Array.isArray(appointmentsWithDetails) ? (
+            <FunctionalCalendar
+              appointments={appointmentsWithDetails}
+              viewType={calendarView}
+              onDateSelect={(date) => {
+                setSelectedDate(date);
+                // Removed setShowAll(false) to prevent filtering when clicking on calendar days
+              }}
+              onAppointmentClick={(appointment) => {
+                // Open full edit form instead of details dialog
+                setEditingAppointment(appointment);
+                setIsDialogOpen(true);
+              }}
+              onCreateAppointment={() => setIsDialogOpen(true)}
+              selectedDate={selectedDate}
+            />
+          ) : (
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center text-muted-foreground">
+                  Erro ao carregar agendamentos para o calendário
+                </div>
+              </CardContent>
+            </Card>
+          )
+        ) : viewMode === 'waitlist' ? (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <User className="w-5 h-5" />
+                    Lista de Espera
+                  </CardTitle>
+                  
+                  {/* Filtro de Data */}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={waitlistDateFilter}
+                      onChange={(e) => setWaitlistDateFilter(e.target.value)}
+                      placeholder="Filtrar por data"
+                      className="w-full sm:w-auto"
+                    />
+                    {waitlistDateFilter && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setWaitlistDateFilter("")}
+                      >
+                        Limpar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {appointmentsLoading ? (
+                  <div className="text-center py-8">Carregando lista de espera...</div>
+                ) : (() => {
+                  const waitlistAppointments = Array.isArray(appointments) 
+                    ? appointments.filter((a: any) => {
+                        if (a.waitlist !== true) return false;
+                        if (waitlistDateFilter) {
+                          const appointmentDate = a.appointmentDate 
+                            ? format(parseISO(a.appointmentDate), "yyyy-MM-dd", { locale: dateLocale })
+                            : null;
+                          return appointmentDate === waitlistDateFilter;
+                        }
+                        return true;
+                      })
+                    : [];
+                  
+                  const totalCount = waitlistAppointments.length;
+                  
+                  if (totalCount === 0) {
+                    return (
+                      <div className="text-center py-8 text-muted-foreground">
+                        {waitlistDateFilter 
+                          ? `Nenhum cliente na lista de espera para a data selecionada`
+                          : "Nenhum cliente na lista de espera"}
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <>
+                      {/* Totalizador */}
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm font-medium text-blue-900">
+                          Total de clientes na lista de espera: <span className="text-lg font-bold">{totalCount}</span>
+                        </p>
+                      </div>
+                      
+                      {/* Lista com bordas */}
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        {waitlistAppointments
+                          .sort((a: any, b: any) => {
+                            // Ordenar do mais recente para o mais antigo
+                            const dateA = new Date(a.appointmentDate || a.createdAt).getTime();
+                            const dateB = new Date(b.appointmentDate || b.createdAt).getTime();
+                            return dateB - dateA; // Invertido para mais recente primeiro
+                          })
+                          .map((appointment: any, index: number) => (
+                            <div 
+                              key={appointment.id} 
+                              className={`p-4 bg-white cursor-pointer hover:bg-slate-50 transition-colors ${
+                                index !== waitlistAppointments.length - 1 ? 'border-b border-slate-200' : ''
+                              }`}
+                              onClick={() => {
+                                setSelectedAppointment(appointment);
+                                setIsDetailsDialogOpen(true);
+                              }}
+                            >
+                              <div className="flex flex-col gap-3">
+                                <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2">
+                                  <div>
+                                    <h3 className="font-semibold text-base sm:text-lg">{appointment.client?.name || 'Cliente sem nome'}</h3>
+                                    {appointment.appointmentDate && (
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        Data solicitada: {format(parseISO(appointment.appointmentDate), "dd/MM/yyyy", { locale: dateLocale })}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {/* Informações de contato */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                  {appointment.client?.phone && (
+                                    <div>
+                                      <span className="font-medium">Telefone: </span>
+                                      <span className="text-muted-foreground">{appointment.client.phone}</span>
+                                    </div>
+                                  )}
+                                  {appointment.client?.email && (
+                                    <div>
+                                      <span className="font-medium">Email: </span>
+                                      <span className="text-muted-foreground">{appointment.client.email}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Procedimentos */}
+                                {appointment.allProcedures && appointment.allProcedures.length > 0 && (
+                                  <div>
+                                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">Procedimentos:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {appointment.allProcedures.map((procedure: any, procIndex: number) => (
+                                        <span 
+                                          key={procedure.id || procIndex} 
+                                          className="text-xs sm:text-sm bg-blue-50 text-blue-900 px-2 py-1 rounded border border-blue-200"
+                                        >
+                                          {procedure.name || procedure.procedureName}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Notas */}
+                                {appointment.notes && (
+                                  <div>
+                                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">Notas:</p>
+                                    <p className="text-sm bg-yellow-50 p-2 rounded border border-yellow-200">{appointment.notes}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           <div className="space-y-6">
             <Card>
@@ -947,8 +2028,9 @@ export default function Appointments() {
                           key={appointment.id} 
                           className="p-3 sm:p-4 border rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
                           onClick={() => {
-                            setSelectedAppointment(appointment);
-                            setIsDetailsDialogOpen(true);
+                            // Open full edit form instead of details dialog
+                            setEditingAppointment(appointment);
+                            setIsDialogOpen(true);
                           }}
                         >
                           <div className="flex flex-col gap-3">

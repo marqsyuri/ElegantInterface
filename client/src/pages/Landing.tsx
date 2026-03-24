@@ -22,11 +22,9 @@ export default function Landing() {
     queryFn: async () => {
       const res = await fetch("/api/public/login-banner");
       if (!res.ok) {
-        console.warn("⚠️ Failed to fetch login banner:", res.status);
         return { url: null };
       }
       const data = await res.json();
-      console.log("🔵 Login banner data fetched:", data);
       return data;
     },
     retry: false,
@@ -36,7 +34,6 @@ export default function Landing() {
   // Get banner image URL
   const bannerImageUrl = loginBannerData?.url || null;
   
-  console.log("🔵 Current banner image URL:", bannerImageUrl);
 
   // If user is already logged in, don't render the landing/login
   if (user) {

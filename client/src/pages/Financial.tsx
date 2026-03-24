@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Minus, ArrowUp, ArrowDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Sidebar from "@/components/Sidebar";
 import TopHeader from "@/components/TopHeader";
 import { insertTransactionSchema } from "@shared/schema";
@@ -17,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { z } from "zod";
 import { useLocale } from "@/contexts/LocaleContext";
+import Sales from "@/pages/Sales";
 
 const transactionFormSchema = insertTransactionSchema.extend({
   transactionDate: z.string().min(1, "Date is required"),
@@ -40,20 +42,102 @@ export default function Financial() {
     },
   });
 
-  const { data: transactions = [], isLoading: transactionsLoading } = useQuery({
+  const { data: transactions = [], isLoading: transactionsLoading } = useQuery<any[]>({
     queryKey: ["/api/transactions"],
     retry: false,
   });
 
-  const { data: appointments = [], isLoading: appointmentsLoading } = useQuery({
+  const { data: appointments = [], isLoading: appointmentsLoading } = useQuery<any[]>({
     queryKey: ["/api/appointments"],
     retry: false,
   });
 
-  const { data: stats = {}, isLoading: statsLoading } = useQuery({
-    queryKey: ["/api/dashboard/stats"],
+  const { data: allAppointments = [], isLoading: allAppointmentsLoading } = useQuery<any[]>({
+    queryKey: ["/api/appointments/all"],
     retry: false,
   });
+
+  // Calculate financial stats on the frontend
+  const calculatedStats = useState(() => {
+    // Only calculate if we have data or if loading is finished
+    // We use memoization inside the render, but since we need to recalculate when data changes
+    // we'll implement this as a derived state logic inside render or useMemo
+    return {
+      monthlyRevenue: "0",
+      monthlyExpenses: "0",
+      netProfit: "0"
+    };
+  })[0]; // We'll ignore the setter and use useMemo below
+
+  // Combine transactions and paid appointments into a single list
+  const combinedTransactions = useMemo(() => {
+    // 1. Process existing transactions
+    const processedTransactions = transactions.map((t: any) => ({
+      ...t,
+      // If it has an appointmentId, treat it as an appointment-linked transaction
+      originalSource: t.appointmentId ? 'appointment' : 'transaction',
+    }));
+
+    // 2. Identify which appointments already have a transaction
+    const appointmentIdsWithTransactions = new Set(
+      transactions
+        .filter((t: any) => t.appointmentId)
+        .map((t: any) => t.appointmentId)
+    );
+
+    // 3. Find "orphan" paid appointments (paid but no transaction record found)
+    const orphanAppointments = allAppointments
+      .filter((apt: any) => {
+        const paid = apt.paidAmount ? parseFloat(apt.paidAmount.toString()) : 0;
+        // Include if paid > 0 AND not already covered by a transaction
+        return paid > 0 && !appointmentIdsWithTransactions.has(apt.id);
+      })
+      .map((apt: any) => ({
+        id: `apt-${apt.id}`,
+        type: 'income',
+        description: `${apt.service?.name || 'Serviço'} - ${apt.client?.name || 'Cliente'}`,
+        amount: apt.paidAmount,
+        transactionDate: apt.appointmentDate,
+        category: 'consultation',
+        originalSource: 'appointment',
+        status: apt.status,
+        appointmentId: apt.id 
+      }));
+
+    // 4. Merge and sort
+    return [...processedTransactions, ...orphanAppointments].sort((a, b) => {
+      return new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime();
+    });
+  }, [transactions, allAppointments]);
+
+  const statsCalculator = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // Calculate totals from the combined list for perfect consistency
+    const totalMonthlyRevenue = combinedTransactions
+      .filter((t: any) => {
+        const d = new Date(t.transactionDate);
+        return t.type === 'income' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      })
+      .reduce((sum: number, t: any) => sum + parseFloat(t.amount.toString()), 0);
+
+    const totalMonthlyExpenses = combinedTransactions
+      .filter((t: any) => {
+        const d = new Date(t.transactionDate);
+        return t.type === 'expense' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      })
+      .reduce((sum: number, t: any) => sum + parseFloat(t.amount.toString()), 0);
+
+    const totalNetProfit = totalMonthlyRevenue - totalMonthlyExpenses;
+
+    return {
+      monthlyRevenue: totalMonthlyRevenue,
+      monthlyExpenses: totalMonthlyExpenses,
+      netProfit: totalNetProfit
+    };
+  }, [combinedTransactions]);
 
   const createTransactionMutation = useMutation({
     mutationFn: async (data: TransactionFormData) => {
@@ -98,6 +182,13 @@ export default function Financial() {
         <TopHeader title={t('financial_management')} subtitle={t('control_revenue_expenses')} />
         
         <div className="p-6 space-y-8">
+          <Tabs defaultValue="transactions" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="transactions">Transações</TabsTrigger>
+              <TabsTrigger value="sales">Vendas</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="transactions">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-xl font-semibold text-slate-900">{t("financial_control")}</CardTitle>
@@ -134,13 +225,13 @@ export default function Financial() {
                 <div>
                   <h4 className="font-medium text-slate-900 mb-4">{t("recent_transactions")}</h4>
                   <div className="space-y-3">
-                    {(transactionsLoading || appointmentsLoading) ? (
+                    {(transactionsLoading || allAppointmentsLoading) ? (
                       <div className="space-y-3">
                         {[...Array(5)].map((_, i) => (
                           <div key={i} className="animate-pulse p-4 bg-slate-50 rounded-lg">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center">
-                                <div className="w-10 h-10 bg-slate-200 rounded-full"></div>
+                              <div className="w-10 h-10 bg-slate-200 rounded-full"></div>
                                 <div className="ml-4">
                                   <div className="h-4 bg-slate-200 rounded w-32 mb-1"></div>
                                   <div className="h-3 bg-slate-200 rounded w-20"></div>
@@ -151,31 +242,38 @@ export default function Financial() {
                           </div>
                         ))}
                       </div>
-                    ) : transactions?.length > 0 ? (
-                      transactions.slice(0, 10).map((transaction: any) => (
-                        <div key={transaction.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                    ) : combinedTransactions?.length > 0 ? (
+                      combinedTransactions.slice(0, 15).map((transaction: any) => (
+                        <div key={transaction.id} className={`flex items-center justify-between p-4 rounded-lg border transition-all hover:shadow-sm ${
+                          transaction.originalSource === 'appointment' ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-slate-100'
+                        }`}>
                           <div className="flex items-center">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                               transaction.type === 'income' 
-                                ? 'bg-emerald-100' 
+                                ? (transaction.originalSource === 'appointment' ? 'bg-blue-100' : 'bg-emerald-100')
                                 : 'bg-red-100'
                             }`}>
                               {transaction.type === 'income' ? (
-                                <ArrowUp className="w-5 h-5 text-emerald-600" />
+                                <ArrowUp className={`w-5 h-5 ${transaction.originalSource === 'appointment' ? 'text-blue-600' : 'text-emerald-600'}`} />
                               ) : (
                                 <ArrowDown className="w-5 h-5 text-red-600" />
                               )}
                             </div>
                             <div className="ml-4">
-                              <p className="font-medium text-slate-900">{transaction.description}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-slate-900">{transaction.description}</p>
+                                {transaction.originalSource === 'appointment' && (
+                                  <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Agendamento</span>
+                                )}
+                              </div>
                               <p className="text-sm text-slate-500">
-                                {new Date(transaction.transactionDate).toLocaleDateString('en-NZ')}
+                                {new Date(transaction.transactionDate).toLocaleDateString('pt-BR')}
                               </p>
                             </div>
                           </div>
                           <span className={`font-semibold ${
                             transaction.type === 'income' 
-                              ? 'text-emerald-600' 
+                              ? (transaction.originalSource === 'appointment' ? 'text-blue-600' : 'text-emerald-600')
                               : 'text-red-600'
                           }`}>
                             {transaction.type === 'income' ? '+' : '-'} {formatCurrency(parseFloat(transaction.amount))}
@@ -183,91 +281,13 @@ export default function Financial() {
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-8">
-                        <p className="text-slate-500">{t("no_transactions_recorded")}</p>
+                      <div className="text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                        <p className="text-slate-500 text-sm">{t("no_transactions_recorded")}</p>
                       </div>
                     )}
                   </div>
                   
-                  {/* Appointments Revenue Section */}
-                  <div className="mt-8">
-                    <h4 className="font-medium text-slate-900 mb-4">{t("appointment_revenue")}</h4>
-                    <div className="space-y-3">
-                      {appointmentsLoading ? (
-                        <div className="space-y-3">
-                          {[...Array(3)].map((_, i) => (
-                            <div key={i} className="animate-pulse p-4 bg-blue-50 rounded-lg">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <div className="w-10 h-10 bg-blue-200 rounded-full"></div>
-                                  <div className="ml-4">
-                                    <div className="h-4 bg-blue-200 rounded w-32 mb-1"></div>
-                                    <div className="h-3 bg-blue-200 rounded w-20"></div>
-                                  </div>
-                                </div>
-                                <div className="h-4 bg-blue-200 rounded w-20"></div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : appointments?.length > 0 ? (
-                        appointments.slice(0, 8).map((appointment: any) => (
-                          <div key={appointment.id} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-100">
-                            <div className="flex items-center">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                appointment.status === 'completed' 
-                                  ? 'bg-green-100' 
-                                  : appointment.status === 'confirmed'
-                                  ? 'bg-blue-100'
-                                  : 'bg-yellow-100'
-                              }`}>
-                                <ArrowUp className={`w-5 h-5 ${
-                                  appointment.status === 'completed' 
-                                    ? 'text-green-600' 
-                                    : appointment.status === 'confirmed'
-                                    ? 'text-blue-600'
-                                    : 'text-yellow-600'
-                                }`} />
-                              </div>
-                              <div className="ml-4">
-                                <p className="font-medium text-slate-900">
-                                  {appointment.allProcedures && appointment.allProcedures.length > 0 
-                                    ? appointment.allProcedures.map((p: any) => p.name).join(', ')
-                                    : appointment.service?.name || 'Service'
-                                  } - {appointment.client?.name || 'Client'}
-                                </p>
-                                <p className="text-sm text-slate-500">
-                                  {new Date(appointment.appointmentDate).toLocaleDateString('en-NZ', {
-                                    weekday: 'short',
-                                    day: 'numeric', 
-                                    month: 'short'
-                                  })} • {appointment.status}
-                                  {appointment.allProcedures && appointment.allProcedures.length > 1 && (
-                                    <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                                      {appointment.allProcedures.length} services
-                                    </span>
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                            <span className={`font-semibold ${
-                              appointment.status === 'completed' 
-                                ? 'text-green-600' 
-                                : appointment.status === 'confirmed'
-                                ? 'text-blue-600'
-                                : 'text-yellow-600'
-                            }`}>
-                              {appointment.status === 'completed' ? '+' : ''}{formatCurrency(parseFloat(appointment.totalAmount || appointment.service?.price || 0))}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8">
-                          <p className="text-slate-500">{t("no_appointments_scheduled")}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  {/* Appointments Revenue Section REMOVED - merged into main list */}
                 </div>
 
                 <div>
@@ -279,16 +299,15 @@ export default function Financial() {
                         <div className="p-3 bg-green-50 rounded-lg border border-green-100">
                           <p className="text-sm text-green-700 font-medium">{t("total_revenue")}</p>
                           <p className="text-xl font-bold text-emerald-600">
-                            {statsLoading ? "..." : formatCurrency(parseFloat(stats?.monthlyRevenue || "0"))}
+                            {transactionsLoading || allAppointmentsLoading ? "..." : formatCurrency(statsCalculator.monthlyRevenue)}
                           </p>
                           <p className="text-xs text-green-600">{t("from_appointments_transactions")}</p>
                         </div>
                         <div className="p-3 bg-red-50 rounded-lg border border-red-100">
                           <p className="text-sm text-red-700 font-medium">{t("total_expenses")}</p>
                           <p className="text-xl font-bold text-red-600">
-                            {statsLoading ? "..." : formatCurrency(parseFloat(stats?.monthlyExpenses || "0"))}
+                            {transactionsLoading ? "..." : formatCurrency(statsCalculator.monthlyExpenses)}
                           </p>
-                          <p className="text-xs text-red-600">{t("operating_costs_supplies")}</p>
                         </div>
                       </div>
                       
@@ -329,15 +348,15 @@ export default function Financial() {
                           <div>
                             <p className="text-sm text-slate-600">{t("net_profit")}</p>
                             <p className="text-2xl font-bold text-slate-900">
-                              {statsLoading ? "..." : formatCurrency(parseFloat(stats?.netProfit || "0"))}
+                              {transactionsLoading ? "..." : formatCurrency(statsCalculator.netProfit)}
                             </p>
                           </div>
                           <div className="text-right">
                             <p className="text-sm text-slate-600">{t("profit_margin")}</p>
                             <p className="text-lg font-semibold text-slate-700">
-                              {statsLoading ? "..." : 
-                                parseFloat(stats?.monthlyRevenue || "0") > 0 ? 
-                                  `${((parseFloat(stats?.netProfit || "0") / parseFloat(stats?.monthlyRevenue || "0")) * 100).toFixed(1)}%`
+                              {transactionsLoading ? "..." : 
+                                statsCalculator.monthlyRevenue > 0 ? 
+                                  `${((statsCalculator.netProfit / statsCalculator.monthlyRevenue) * 100).toFixed(1)}%`
                                   : "0%"
                               }
                             </p>
@@ -472,6 +491,12 @@ export default function Financial() {
               </div>
             </CardContent>
           </Card>
+            </TabsContent>
+            
+            <TabsContent value="sales">
+              <Sales />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { procedureStorage } from "./procedures";
-import { setupAuth, isAuthenticated } from "./auth";
+import { setupAuth, isAuthenticated, isAdmin, isStaff, getEffectiveUserId, hashPasswordMD5 } from "./auth";
 import { hashPassword, isClientAuthenticated } from "./clientAuth";
 import passport from "passport";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -27,10 +27,12 @@ import {
   insertIntegrationSchema,
   insertProductSchema,
   updateProductSchema,
+  insertSaleSchema,
   insertBannerSchema,
   insertPackageSchema,
   insertLoyaltySettingsSchema,
   users,
+  companies,
   clients,
   appointments,
   services,
@@ -40,12 +42,15 @@ import {
   businessHours,
   clinicalRecords,
   transactions,
-  loyalty,
   inventory,
   messages,
   integrations,
   appointmentProcedures,
+  appointmentStaff,
+  appointmentProducts,
+  payments,
   products,
+  sales,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, or, asc, inArray, desc, isNull, isNotNull, between, sql, like } from "drizzle-orm";
@@ -77,7 +82,7 @@ function generateBookingPage(company: any, businessHours: any[]): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${clinicName} - Book Your Appointment</title>
+    <title>${clinicName} - Agende seu Horário</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -291,7 +296,7 @@ function generateBookingPage(company: any, businessHours: any[]): string {
     <div class="slide">
         <a href="/booking/${publicLink}/login" class="login-button" id="loginButton">
             <i class="material-icons">person</i>
-            <span>Login</span>
+            <span>Entrar</span>
         </a>
         
         <div class="header">
@@ -302,27 +307,27 @@ function generateBookingPage(company: any, businessHours: any[]): string {
             <p class="tagline">${specialties}</p>
         </div>
         
-        <a href="/booking/${publicLink}/services" class="cta-button">Book Now</a>
+        <a href="/booking/${publicLink}/services" class="cta-button">Agendar Agora</a>
         
         <div class="features">
             <div class="feature">
                 <i class="material-icons">star</i>
-                <p>Premium Services</p>
+                <p>Serviços Premium</p>
             </div>
             <div class="feature">
                 <i class="material-icons">people</i>
-                <p>Expert Specialists</p>
+                <p>Especialistas</p>
             </div>
             <div class="feature">
                 <i class="material-icons">schedule</i>
-                <p>Flexible Booking</p>
+                <p>Agendamento Flexível</p>
             </div>
         </div>
         
         <div class="info-section">
             <div class="info-title">
                 <i class="material-icons">location_on</i>
-                Contact Information
+                Informações de Contato
             </div>
             <div class="info-item">
                 <i class="material-icons">place</i>
@@ -341,19 +346,19 @@ function generateBookingPage(company: any, businessHours: any[]): string {
         <div class="bottom-nav">
             <a href="#" class="nav-item active">
                 <i class="material-icons">home</i>
-                <span>Home</span>
+                <span>Início</span>
             </a>
             <a href="#services" class="nav-item">
                 <i class="material-icons">content_cut</i>
-                <span>Services</span>
+                <span>Serviços</span>
             </a>
             <a href="#about" class="nav-item">
                 <i class="material-icons">info</i>
-                <span>About Us</span>
+                <span>Sobre</span>
             </a>
             <a href="#contact" class="nav-item">
                 <i class="material-icons">contact_phone</i>
-                <span>Contact</span>
+                <span>Contato</span>
             </a>
         </div>
     </div>
@@ -366,7 +371,7 @@ function generateBookingPage(company: any, businessHours: any[]): string {
                 if (client) {
                     const loginBtn = document.getElementById('loginButton');
                     loginBtn.href = '/booking/${publicLink}/dashboard';
-                    loginBtn.querySelector('span').textContent = 'My Appointments';
+                    loginBtn.querySelector('span').textContent = 'Meus Agendamentos';
                 }
             })
             .catch(() => {});
@@ -407,8 +412,9 @@ function generateServicesPage(company: any, procedures: any[]): string {
   
   // Generate procedure items HTML
   const procedureItems = procedures.map(proc => {
-    const price = proc.price ? `$${parseFloat(proc.price).toFixed(2)}` : 'Price on request';
-    const duration = proc.duration ? `${proc.duration} min` : 'Duration varies';
+  /* Generate Services Page Translations */
+    const price = proc.price ? `R$ ${parseFloat(proc.price).toFixed(2)}` : 'Preço sob consulta';
+    const duration = proc.duration ? `${proc.duration} min` : 'Duração varia';
     const description = proc.description || '';
     const truncatedDesc = description.length > 100 ? description.substring(0, 100) + '...' : description;
     
@@ -437,7 +443,7 @@ function generateServicesPage(company: any, procedures: any[]): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${clinicName} - Our Services</title>
+    <title>${clinicName} - Nossos Serviços</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -711,15 +717,15 @@ function generateServicesPage(company: any, procedures: any[]): string {
 <body>
     <div class="slide">
         <div class="header">
-            <h1 class="title">Our Services</h1>
+            <h1 class="title">Nossos Serviços</h1>
             <div class="search-bar">
                 <i class="material-icons">search</i>
-                <input type="text" id="searchInput" placeholder="Search for services...">
+                <input type="text" id="searchInput" placeholder="Buscar serviços...">
             </div>
         </div>
         
         <div class="categories">
-            <div class="category active" data-category="all">All</div>
+            <div class="category active" data-category="all">Todos</div>
             ${categories.map(cat => `<div class="category" data-category="${cat}">${cat}</div>`).join('')}
         </div>
         
@@ -728,30 +734,30 @@ function generateServicesPage(company: any, procedures: any[]): string {
         </div>
         
         <div class="selected-count" id="selectedCount">
-            <span id="countText">0 services selected</span>
+            <span id="countText">0 serviços selecionados</span>
         </div>
         
         <button class="continue-button" id="continueBtn" disabled>
             <i class="material-icons">arrow_forward</i>
-            Continue
+            Continuar
         </button>
         
         <div class="bottom-nav">
             <a href="/booking/${publicLink}" class="nav-item">
                 <i class="material-icons">home</i>
-                <span>Home</span>
+                <span>Início</span>
             </a>
             <a href="/booking/${publicLink}/services" class="nav-item active">
                 <i class="material-icons">content_cut</i>
-                <span>Services</span>
+                <span>Serviços</span>
             </a>
             <a href="#" class="nav-item">
                 <i class="material-icons">info</i>
-                <span>About Us</span>
+                <span>Sobre</span>
             </a>
             <a href="#" class="nav-item">
                 <i class="material-icons">contact_phone</i>
-                <span>Contact</span>
+                <span>Contato</span>
             </a>
         </div>
     </div>
@@ -788,7 +794,7 @@ function generateServicesPage(company: any, procedures: any[]): string {
             const countText = document.getElementById('countText');
             const continueBtn = document.getElementById('continueBtn');
             
-            countText.textContent = count + (count === 1 ? ' service selected' : ' services selected');
+            countText.textContent = count + (count === 1 ? ' serviço selecionado' : ' serviços selecionados');
             
             if (count > 0) {
                 countEl.classList.add('visible');
@@ -881,7 +887,7 @@ function generateSpecialistsPage(company: any, staff: any[]): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${clinicName} - Choose Specialist</title>
+    <title>${clinicName} - Escolha o Especialista</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -915,15 +921,15 @@ function generateSpecialistsPage(company: any, staff: any[]): string {
 <body>
     <div class="slide">
         <div class="header">
-            <h1 class="title">Choose Your Specialist</h1>
+            <h1 class="title">Escolha seu Especialista</h1>
         </div>
         <div class="specialists">${staffItems}</div>
-        <button class="continue-button" id="continueBtn" disabled><i class="material-icons">arrow_forward</i>Continue</button>
+        <button class="continue-button" id="continueBtn" disabled><i class="material-icons">arrow_forward</i>Continuar</button>
         <div class="bottom-nav">
-            <a href="/booking/${publicLink}" class="nav-item"><i class="material-icons">home</i><span>Home</span></a>
-            <a href="/booking/${publicLink}/services" class="nav-item"><i class="material-icons">content_cut</i><span>Services</span></a>
-            <a href="#" class="nav-item active"><i class="material-icons">person</i><span>Specialist</span></a>
-            <a href="#" class="nav-item"><i class="material-icons">contact_phone</i><span>Contact</span></a>
+            <a href="/booking/${publicLink}" class="nav-item"><i class="material-icons">home</i><span>Início</span></a>
+            <a href="/booking/${publicLink}/services" class="nav-item"><i class="material-icons">content_cut</i><span>Serviços</span></a>
+            <a href="#" class="nav-item active"><i class="material-icons">person</i><span>Profissional</span></a>
+            <a href="#" class="nav-item"><i class="material-icons">contact_phone</i><span>Contato</span></a>
         </div>
     </div>
     <script>
@@ -961,7 +967,7 @@ function generateDateTimePage(company: any, businessHours: any[]): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${clinicName} - Select Date & Time</title>
+    <title>${clinicName} - Selecione Data e Horário</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -974,7 +980,7 @@ function generateDateTimePage(company: any, businessHours: any[]): string {
         .section-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #333; }
         .calendar { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 30px; }
         .date-input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 16px; }
-        .time-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .time-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; min-height: 100px; }
         .time-slot { padding: 12px; border-radius: 10px; text-align: center; font-size: 16px; font-weight: 500; cursor: pointer; background-color: #f0f0f0; color: #333; transition: all 0.3s ease; }
         .time-slot:hover { background-color: #e91e63; color: white; }
         .time-slot.selected { background-color: #e91e63; color: white; }
@@ -985,58 +991,101 @@ function generateDateTimePage(company: any, businessHours: any[]): string {
         .nav-item.active { color: #e91e63; }
         .nav-item i { font-size: 24px; margin-bottom: 5px; }
         .nav-item span { font-size: 12px; }
+        .loading-slots, .no-slots { grid-column: 1 / -1; text-align: center; padding: 20px; color: #888; }
     </style>
 </head>
 <body>
     <div class="slide">
         <div class="header">
-            <h1 class="title">Select Date & Time</h1>
+            <h1 class="title">Selecione Data e Horário</h1>
         </div>
         <div class="content">
             <div class="calendar">
-                <div class="section-title">Select Date</div>
+                <div class="section-title">Selecione a Data</div>
                 <input type="date" class="date-input" id="dateInput" min="${new Date().toISOString().split('T')[0]}">
             </div>
-            <div class="section-title">Available Time Slots</div>
+            <div class="section-title">Horários Disponíveis</div>
             <div class="time-slots" id="timeSlots">
-                <div class="time-slot" data-time="09:00">9:00 AM</div>
-                <div class="time-slot" data-time="10:00">10:00 AM</div>
-                <div class="time-slot" data-time="11:00">11:00 AM</div>
-                <div class="time-slot" data-time="12:00">12:00 PM</div>
-                <div class="time-slot" data-time="13:00">1:00 PM</div>
-                <div class="time-slot" data-time="14:00">2:00 PM</div>
-                <div class="time-slot" data-time="15:00">3:00 PM</div>
-                <div class="time-slot" data-time="16:00">4:00 PM</div>
-                <div class="time-slot" data-time="17:00">5:00 PM</div>
+                <div class="no-slots">Selecione uma data para ver os horários disponíveis</div>
             </div>
         </div>
-        <button class="continue-button" id="continueBtn" disabled><i class="material-icons">arrow_forward</i>Continue</button>
+        <button class="continue-button" id="continueBtn" disabled><i class="material-icons">arrow_forward</i>Continuar</button>
         <div class="bottom-nav">
-            <a href="/booking/${publicLink}" class="nav-item"><i class="material-icons">home</i><span>Home</span></a>
-            <a href="/booking/${publicLink}/services" class="nav-item"><i class="material-icons">content_cut</i><span>Services</span></a>
-            <a href="#" class="nav-item active"><i class="material-icons">schedule</i><span>Date/Time</span></a>
-            <a href="#" class="nav-item"><i class="material-icons">contact_phone</i><span>Contact</span></a>
+            <a href="/booking/${publicLink}" class="nav-item"><i class="material-icons">home</i><span>Início</span></a>
+            <a href="/booking/${publicLink}/services" class="nav-item"><i class="material-icons">content_cut</i><span>Serviços</span></a>
+            <a href="#" class="nav-item active"><i class="material-icons">schedule</i><span>Data/Hora</span></a>
+            <a href="#" class="nav-item"><i class="material-icons">contact_phone</i><span>Contato</span></a>
         </div>
     </div>
     <script>
         let selectedDate = null;
         let selectedTime = null;
-        document.getElementById('dateInput').addEventListener('change', function() {
+        const publicLink = '${publicLink}';
+        
+        // Load stored selections
+        const selectedSpecialist = sessionStorage.getItem('selectedSpecialist');
+        const selectedServices = JSON.parse(sessionStorage.getItem('selectedServices') || '[]');
+
+        const dateInput = document.getElementById('dateInput');
+        const timeSlotsContainer = document.getElementById('timeSlots');
+        const continueBtn = document.getElementById('continueBtn');
+
+        dateInput.addEventListener('change', function() {
             selectedDate = this.value;
+            selectedTime = null;
             updateContinueButton();
+            fetchSlots(selectedDate);
         });
-        document.querySelectorAll('.time-slot').forEach(slot => {
-            slot.addEventListener('click', function() {
-                document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
-                this.classList.add('selected');
-                selectedTime = this.getAttribute('data-time');
-                updateContinueButton();
-            });
-        });
-        function updateContinueButton() {
-            document.getElementById('continueBtn').disabled = !(selectedDate && selectedTime);
+
+        async function fetchSlots(date) {
+            timeSlotsContainer.innerHTML = '<div class="loading-slots">Carregando horários...</div>';
+            
+            try {
+                // Build Query
+                let url = \`/api/public/slots?publicLink=\${publicLink}&date=\${date}\`;
+                if (selectedSpecialist) url += \`&staffId=\${selectedSpecialist}\`;
+                if (selectedServices.length > 0) url += \`&serviceIds=\${selectedServices.join(',')}\`;
+
+                const response = await fetch(url);
+                const slots = await response.json();
+
+                renderSlots(slots);
+            } catch (error) {
+                console.error('Error fetching slots:', error);
+                timeSlotsContainer.innerHTML = '<div class="no-slots">Erro ao carregar horários. Tente novamente.</div>';
+            }
         }
-        document.getElementById('continueBtn').addEventListener('click', function() {
+
+        function renderSlots(slots) {
+            if (!slots || slots.length === 0) {
+                timeSlotsContainer.innerHTML = '<div class="no-slots">Nenhum horário disponível para esta data.</div>';
+                return;
+            }
+
+            timeSlotsContainer.innerHTML = '';
+            
+            slots.forEach(time => {
+                const slotEl = document.createElement('div');
+                slotEl.className = 'time-slot';
+                slotEl.textContent = time;
+                slotEl.setAttribute('data-time', time);
+                
+                slotEl.addEventListener('click', function() {
+                    document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedTime = this.getAttribute('data-time');
+                    updateContinueButton();
+                });
+                
+                timeSlotsContainer.appendChild(slotEl);
+            });
+        }
+
+        function updateContinueButton() {
+            continueBtn.disabled = !(selectedDate && selectedTime);
+        }
+
+        continueBtn.addEventListener('click', function() {
             if (selectedDate && selectedTime) {
                 sessionStorage.setItem('selectedDate', selectedDate);
                 sessionStorage.setItem('selectedTime', selectedTime);
@@ -1048,6 +1097,7 @@ function generateDateTimePage(company: any, businessHours: any[]): string {
 </html>`;
 }
 
+
 // Function to generate customer information page
 function generateCustomerPage(company: any): string {
   const clinicName = company.clinicName || 'Beauty Salon';
@@ -1058,7 +1108,7 @@ function generateCustomerPage(company: any): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${clinicName} - Your Information</title>
+    <title>${clinicName} - Suas Informações</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -1100,15 +1150,15 @@ function generateCustomerPage(company: any): string {
 <body>
     <div class="slide">
         <div class="header">
-            <h1 class="title">Your Information</h1>
+            <h1 class="title">Suas Informações</h1>
         </div>
         <div class="content">
             <div class="login-link" id="loginLink" style="display: none;">
-                Already have an account? <a href="/booking/${publicLink}/login">Login</a> to pre-fill your information
+                Já tem uma conta? <a href="/booking/${publicLink}/login">Entre</a> para preencher seus dados
             </div>
             <form id="customerForm">
                 <div class="form-group">
-                    <label class="form-label">Full Name *</label>
+                    <label class="form-label">Nome Completo *</label>
                     <input type="text" class="form-input" id="name" required>
                 </div>
                 <div class="form-group">
@@ -1116,21 +1166,21 @@ function generateCustomerPage(company: any): string {
                     <input type="email" class="form-input" id="email" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Phone *</label>
+                    <label class="form-label">Telefone *</label>
                     <input type="tel" class="form-input" id="phone" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Notes (Optional)</label>
-                    <textarea class="form-input" id="notes" rows="4" placeholder="Any special requirements or notes..."></textarea>
+                    <label class="form-label">Observações (Opcional)</label>
+                    <textarea class="form-input" id="notes" rows="4" placeholder="Alguma observação especial..."></textarea>
                 </div>
             </form>
         </div>
-        <button class="continue-button" id="continueBtn"><i class="material-icons">arrow_forward</i>Continue</button>
+        <button class="continue-button" id="continueBtn"><i class="material-icons">arrow_forward</i>Continuar</button>
         <div class="bottom-nav">
-            <a href="/booking/${publicLink}" class="nav-item"><i class="material-icons">home</i><span>Home</span></a>
-            <a href="/booking/${publicLink}/services" class="nav-item"><i class="material-icons">content_cut</i><span>Services</span></a>
-            <a href="#" class="nav-item active"><i class="material-icons">person</i><span>Your Info</span></a>
-            <a href="#" class="nav-item"><i class="material-icons">contact_phone</i><span>Contact</span></a>
+            <a href="/booking/${publicLink}" class="nav-item"><i class="material-icons">home</i><span>Início</span></a>
+            <a href="/booking/${publicLink}/services" class="nav-item"><i class="material-icons">content_cut</i><span>Serviços</span></a>
+            <a href="#" class="nav-item active"><i class="material-icons">person</i><span>Seus Dados</span></a>
+            <a href="#" class="nav-item"><i class="material-icons">contact_phone</i><span>Contato</span></a>
         </div>
     </div>
     <script>
@@ -1139,10 +1189,30 @@ function generateCustomerPage(company: any): string {
             .then(res => res.ok ? res.json() : null)
             .then(client => {
                 if (client) {
-                    // Client is logged in - auto-fill data
-                    document.getElementById('name').value = client.name || '';
-                    document.getElementById('email').value = client.email || '';
-                    document.getElementById('phone').value = client.phone || '';
+                    // Client is logged in - auto-fill data and LOCK fields
+                    const nameField = document.getElementById('name');
+                    const emailField = document.getElementById('email');
+                    const phoneField = document.getElementById('phone');
+                    
+                    nameField.value = client.name || '';
+                    emailField.value = client.email || '';
+                    phoneField.value = client.phone || '';
+                    
+                    // Lock fields to enforce identity
+                    [nameField, emailField, phoneField].forEach(field => {
+                        field.readOnly = true;
+                        field.style.backgroundColor = '#f0f0f0';
+                        field.style.color = '#555';
+                        field.title = 'Estes dados est\\u00E3o vinculados \\u00E0 sua conta logada.';
+                    });
+                    
+                    // Show message
+                    const loginLink = document.getElementById('loginLink');
+                    loginLink.style.display = 'block';
+                    loginLink.innerHTML = \`<i class="material-icons" style="vertical-align: middle; font-size: 16px; margin-right: 5px; color: #4caf50;">check_circle</i> Voc\\u00EA est\\u00E1 logado como <strong>\${client.name}</strong>\`;
+                    loginLink.style.backgroundColor = '#e8f5e9';
+                    loginLink.style.border = '1px solid #c8e6c9';
+                    loginLink.style.color = '#2e7d32';
                 } else {
                     // Not logged in - show login link
                     document.getElementById('loginLink').style.display = 'block';
@@ -1160,7 +1230,7 @@ function generateCustomerPage(company: any): string {
             const notes = document.getElementById('notes').value;
             
             if (!name || !email || !phone) {
-                alert('Please fill in all required fields');
+                alert('Por favor, preencha todos os campos obrigatórios');
                 return;
             }
             
@@ -1185,7 +1255,7 @@ function generateConfirmationPage(company: any): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${clinicName} - Confirmation</title>
+    <title>${clinicName} - Confirmação</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -1216,25 +1286,25 @@ function generateConfirmationPage(company: any): string {
     <div class="slide">
         <div class="header">
             <div class="success-icon"><i class="material-icons">check</i></div>
-            <h1 class="title">Review Your Booking</h1>
+            <h1 class="title">Revise seu Agendamento</h1>
         </div>
         <div class="content">
             <div class="summary" id="summary">
                 <div class="summary-item">
-                    <div class="summary-label">Services</div>
-                    <div class="summary-value" id="servicesText">Loading...</div>
+                    <div class="summary-label">Serviços</div>
+                    <div class="summary-value" id="servicesText">Carregando...</div>
                 </div>
                 <div class="summary-item">
-                    <div class="summary-label">Specialist</div>
-                    <div class="summary-value" id="specialistText">Loading...</div>
+                    <div class="summary-label">Especialista</div>
+                    <div class="summary-value" id="specialistText">Carregando...</div>
                 </div>
                 <div class="summary-item">
-                    <div class="summary-label">Date & Time</div>
-                    <div class="summary-value" id="datetimeText">Loading...</div>
+                    <div class="summary-label">Data e Horário</div>
+                    <div class="summary-value" id="datetimeText">Carregando...</div>
                 </div>
                 <div class="summary-item">
-                    <div class="summary-label">Your Information</div>
-                    <div class="summary-value" id="customerText">Loading...</div>
+                    <div class="summary-label">Seus Dados</div>
+                    <div class="summary-value" id="customerText">Carregando...</div>
                 </div>
             </div>
             <div class="info-box">
@@ -1243,12 +1313,12 @@ function generateConfirmationPage(company: any): string {
                 <p>Phone: ${phone}</p>
             </div>
         </div>
-        <button class="confirm-button" id="confirmBtn"><i class="material-icons">check_circle</i>Confirm Booking</button>
+        <button class="confirm-button" id="confirmBtn"><i class="material-icons">check_circle</i>Confirmar Agendamento</button>
         <div class="bottom-nav">
-            <a href="/booking/${publicLink}" class="nav-item"><i class="material-icons">home</i><span>Home</span></a>
-            <a href="/booking/${publicLink}/services" class="nav-item"><i class="material-icons">content_cut</i><span>Services</span></a>
-            <a href="#" class="nav-item active"><i class="material-icons">check_circle</i><span>Confirm</span></a>
-            <a href="#" class="nav-item"><i class="material-icons">contact_phone</i><span>Contact</span></a>
+            <a href="/booking/${publicLink}" class="nav-item"><i class="material-icons">home</i><span>Início</span></a>
+            <a href="/booking/${publicLink}/services" class="nav-item"><i class="material-icons">content_cut</i><span>Serviços</span></a>
+            <a href="#" class="nav-item active"><i class="material-icons">check_circle</i><span>Confirmar</span></a>
+            <a href="#" class="nav-item"><i class="material-icons">contact_phone</i><span>Contato</span></a>
         </div>
     </div>
     <script>
@@ -1259,10 +1329,10 @@ function generateConfirmationPage(company: any): string {
         const selectedTime = sessionStorage.getItem('selectedTime');
         const customerInfo = JSON.parse(sessionStorage.getItem('customerInfo') || '{}');
         
-        document.getElementById('servicesText').textContent = selectedServices.length + ' service(s) selected';
-        document.getElementById('specialistText').textContent = selectedSpecialist ? 'Specialist ID: ' + selectedSpecialist : 'Not selected';
-        document.getElementById('datetimeText').textContent = selectedDate && selectedTime ? selectedDate + ' at ' + selectedTime : 'Not selected';
-        document.getElementById('customerText').textContent = customerInfo.name ? customerInfo.name + ' - ' + customerInfo.email : 'Not provided';
+        document.getElementById('servicesText').textContent = selectedServices.length + ' serviço(s) selecionado(s)';
+        document.getElementById('specialistText').textContent = selectedSpecialist ? 'Especialista ID: ' + selectedSpecialist : 'Não selecionado';
+        document.getElementById('datetimeText').textContent = selectedDate && selectedTime ? selectedDate + ' às ' + selectedTime : 'Não selecionado';
+        document.getElementById('customerText').textContent = customerInfo.name ? customerInfo.name + ' - ' + customerInfo.email : 'Não informado';
         
         document.getElementById('confirmBtn').addEventListener('click', async function() {
             const bookingData = {
@@ -1284,15 +1354,15 @@ function generateConfirmationPage(company: any): string {
                 });
                 
                 if (response.ok) {
-                    alert('Booking confirmed! We will contact you soon.');
+                    alert('Agendamento confirmado! Entraremos em contato em breve.');
                     sessionStorage.clear();
                     window.location.href = '/booking/${publicLink}';
                 } else {
                     const errorData = await response.json();
-                    alert('Error creating booking: ' + (errorData.message || 'Please try again.'));
+                    alert('Erro ao criar agendamento: ' + (errorData.message || 'Por favor tente novamente.'));
                 }
             } catch (error) {
-                alert('Error creating booking. Please try again.');
+                alert('Erro ao criar agendamento. Por favor tente novamente.');
             }
         });
     </script>
@@ -1313,7 +1383,7 @@ function generateClientLoginPage(company: any): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${clinicName} - Client Login</title>
+    <title>${clinicName} - Login do Cliente</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -1439,8 +1509,8 @@ function generateClientLoginPage(company: any): string {
             <a href="/booking/${publicLink}" class="back-button">
                 <i class="material-icons">arrow_back</i>
             </a>
-            <h1>Welcome Back</h1>
-            <p>Login to manage your appointments</p>
+            <h1>Bem-vindo de volta</h1>
+            <p>Entre para gerenciar seus agendamentos</p>
         </div>
         
         <div class="form-container">
@@ -1454,17 +1524,17 @@ function generateClientLoginPage(company: any): string {
                 </div>
                 
                 <div class="form-group">
-                    <label for="password">Password</label>
+                    <label for="password">Senha</label>
                     <input type="password" id="password" name="password" required>
                 </div>
                 
                 <button type="submit" class="login-button" id="loginBtn">
-                    Login
+                    Entrar
                 </button>
             </form>
             
             <div class="register-link">
-                Don't have an account? <a href="/booking/${publicLink}/register">Register</a>
+                Não tem uma conta? <a href="/booking/${publicLink}/register">Cadastre-se</a>
             </div>
         </div>
     </div>
@@ -1484,7 +1554,7 @@ function generateClientLoginPage(company: any): string {
             errorMessage.style.display = 'none';
             successMessage.style.display = 'none';
             loginBtn.disabled = true;
-            loginBtn.textContent = 'Logging in...';
+            loginBtn.textContent = 'Entrando...';
             
             try {
                 const response = await fetch('/api/client/login/${publicLink}', {
@@ -1496,22 +1566,22 @@ function generateClientLoginPage(company: any): string {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    successMessage.textContent = 'Login successful! Redirecting...';
+                    successMessage.textContent = 'Login realizado com sucesso! Redirecionando...';
                     successMessage.style.display = 'block';
                     setTimeout(() => {
                         window.location.href = '/booking/${publicLink}/dashboard';
                     }, 1000);
                 } else {
-                    errorMessage.textContent = data.message || 'Login failed. Please try again.';
+                    errorMessage.textContent = data.message || 'Falha no login. Por favor tente novamente.';
                     errorMessage.style.display = 'block';
                     loginBtn.disabled = false;
-                    loginBtn.textContent = 'Login';
+                    loginBtn.textContent = 'Entrar';
                 }
             } catch (error) {
-                errorMessage.textContent = 'An error occurred. Please try again.';
+                errorMessage.textContent = 'Ocorreu um erro. Por favor tente novamente.';
                 errorMessage.style.display = 'block';
                 loginBtn.disabled = false;
-                loginBtn.textContent = 'Login';
+                loginBtn.textContent = 'Entrar';
             }
         });
     </script>
@@ -1528,7 +1598,7 @@ function generateClientRegisterPage(company: any): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${clinicName} - Create Account</title>
+    <title>${clinicName} - Criar Conta</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -1661,8 +1731,8 @@ function generateClientRegisterPage(company: any): string {
             <a href="/booking/${publicLink}" class="back-button">
                 <i class="material-icons">arrow_back</i>
             </a>
-            <h1>Create Account</h1>
-            <p>Join us and manage your appointments easily</p>
+            <h1>Criar Conta</h1>
+            <p>Junte-se a nós e gerencie seus agendamentos facilmente</p>
         </div>
         
         <div class="form-container">
@@ -1671,7 +1741,7 @@ function generateClientRegisterPage(company: any): string {
             
             <form id="registerForm">
                 <div class="form-group">
-                    <label for="name">Full Name *</label>
+                    <label for="name">Nome Completo *</label>
                     <input type="text" id="name" name="name" required>
                 </div>
                 
@@ -1681,28 +1751,28 @@ function generateClientRegisterPage(company: any): string {
                 </div>
                 
                 <div class="form-group">
-                    <label for="phone">Phone</label>
+                    <label for="phone">Telefone</label>
                     <input type="tel" id="phone" name="phone">
                 </div>
                 
                 <div class="form-group">
-                    <label for="password">Password *</label>
+                    <label for="password">Senha *</label>
                     <input type="password" id="password" name="password" required minlength="6">
                 </div>
                 
                 <div class="form-group">
-                    <label for="confirmPassword">Confirm Password *</label>
+                    <label for="confirmPassword">Confirmar Senha *</label>
                     <input type="password" id="confirmPassword" name="confirmPassword" required minlength="6">
                     <div class="password-match" id="passwordMatch"></div>
                 </div>
                 
                 <button type="submit" class="register-button" id="registerBtn">
-                    Create Account
+                    Criar Conta
                 </button>
             </form>
             
             <div class="login-link">
-                Already have an account? <a href="/booking/${publicLink}/login">Login</a>
+                Já tem uma conta? <a href="/booking/${publicLink}/login">Entre</a>
             </div>
         </div>
     </div>
@@ -1720,11 +1790,11 @@ function generateClientRegisterPage(company: any): string {
         confirmPassword.addEventListener('input', () => {
             if (confirmPassword.value) {
                 if (password.value === confirmPassword.value) {
-                    passwordMatch.textContent = '✓ Passwords match';
+                    passwordMatch.textContent = '✓ Senhas coincidem';
                     passwordMatch.className = 'password-match success';
                     passwordMatch.style.display = 'block';
                 } else {
-                    passwordMatch.textContent = '✗ Passwords do not match';
+                    passwordMatch.textContent = '✗ Senhas não coincidem';
                     passwordMatch.className = 'password-match error';
                     passwordMatch.style.display = 'block';
                 }
@@ -1743,7 +1813,7 @@ function generateClientRegisterPage(company: any): string {
             const confirmPwd = confirmPassword.value;
             
             if (pwd !== confirmPwd) {
-                errorMessage.textContent = 'Passwords do not match';
+                errorMessage.textContent = 'Senhas não coincidem';
                 errorMessage.style.display = 'block';
                 return;
             }
@@ -1751,7 +1821,7 @@ function generateClientRegisterPage(company: any): string {
             errorMessage.style.display = 'none';
             successMessage.style.display = 'none';
             registerBtn.disabled = true;
-            registerBtn.textContent = 'Creating account...';
+            registerBtn.textContent = 'Criando conta...';
             
             try {
                 const response = await fetch('/api/client/register/${publicLink}', {
@@ -1763,22 +1833,22 @@ function generateClientRegisterPage(company: any): string {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    successMessage.textContent = 'Account created successfully! Redirecting to login...';
+                    successMessage.textContent = 'Conta criada com sucesso! Redirecionando para o login...';
                     successMessage.style.display = 'block';
                     setTimeout(() => {
                         window.location.href = '/booking/${publicLink}/login';
                     }, 1500);
                 } else {
-                    errorMessage.textContent = data.message || 'Registration failed. Please try again.';
+                    errorMessage.textContent = data.message || 'Falha no cadastro. Por favor tente novamente.';
                     errorMessage.style.display = 'block';
                     registerBtn.disabled = false;
-                    registerBtn.textContent = 'Create Account';
+                    registerBtn.textContent = 'Criar Conta';
                 }
             } catch (error) {
-                errorMessage.textContent = 'An error occurred. Please try again.';
+                errorMessage.textContent = 'Ocorreu um erro. Por favor tente novamente.';
                 errorMessage.style.display = 'block';
                 registerBtn.disabled = false;
-                registerBtn.textContent = 'Create Account';
+                registerBtn.textContent = 'Criar Conta';
             }
         });
     </script>
@@ -1795,7 +1865,7 @@ function generateClientDashboardPage(company: any): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${clinicName} - My Appointments</title>
+    <title>${clinicName} - Meus Agendamentos</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -1970,20 +2040,20 @@ function generateClientDashboardPage(company: any): string {
             <a href="/booking/${publicLink}" class="back-button">
                 <i class="material-icons">arrow_back</i>
             </a>
-            <button onclick="logout()" class="logout-button">Logout</button>
-            <h1>My Appointments</h1>
-            <p class="welcome" id="welcomeText">Loading...</p>
+            <button onclick="logout()" class="logout-button">Sair</button>
+            <h1>Meus Agendamentos</h1>
+            <p class="welcome" id="welcomeText">Carregando...</p>
         </div>
         
         <div class="content" id="content">
             <div class="loading">
                 <i class="material-icons" style="font-size: 48px; color: #e91e63;">hourglass_empty</i>
-                <p>Loading your appointments...</p>
+                <p>Carregando seus agendamentos...</p>
             </div>
         </div>
         
         <a href="/booking/${publicLink}/services" class="book-new-button">
-            Book New Appointment
+            Agendar Novo Horário
         </a>
     </div>
     
@@ -1997,7 +2067,7 @@ function generateClientDashboardPage(company: any): string {
                     return;
                 }
                 const client = await meResponse.json();
-                document.getElementById('welcomeText').textContent = \`Welcome back, \${client.name}!\`;
+                document.getElementById('welcomeText').textContent = \`Bem-vindo de volta, \${client.name}!\`;
                 
                 // Get appointments
                 const aptsResponse = await fetch('/api/client/appointments');
@@ -2009,8 +2079,8 @@ function generateClientDashboardPage(company: any): string {
                 document.getElementById('content').innerHTML = \`
                     <div class="empty-state">
                         <i class="material-icons">error_outline</i>
-                        <h3>Error loading appointments</h3>
-                        <p>Please try again later</p>
+                        <h3>Erro ao carregar agendamentos</h3>
+                        <p>Por favor tente novamente mais tarde</p>
                     </div>
                 \`;
             }
@@ -2023,8 +2093,8 @@ function generateClientDashboardPage(company: any): string {
                 content.innerHTML = \`
                     <div class="empty-state">
                         <i class="material-icons">event_available</i>
-                        <h3>No appointments yet</h3>
-                        <p>Book your first appointment to get started!</p>
+                        <h3>Nenhum agendamento ainda</h3>
+                        <p>Agende seu primeiro horário para começar!</p>
                     </div>
                 \`;
                 return;
@@ -2038,14 +2108,14 @@ function generateClientDashboardPage(company: any): string {
             let html = '';
             
             if (upcoming.length > 0) {
-                html += '<h2 style="margin-bottom: 15px; font-size: 20px;">Upcoming Appointments</h2>';
+                html += '<h2 style="margin-bottom: 15px; font-size: 20px;">Próximos Agendamentos</h2>';
                 upcoming.forEach(apt => {
                     html += renderAppointmentCard(apt, true);
                 });
             }
             
             if (past.length > 0) {
-                html += '<h2 style="margin-top: 30px; margin-bottom: 15px; font-size: 20px;">Past Appointments</h2>';
+                html += '<h2 style="margin-top: 30px; margin-bottom: 15px; font-size: 20px;">Agendamentos Passados</h2>';
                 past.forEach(apt => {
                     html += renderAppointmentCard(apt, false);
                 });
@@ -2056,11 +2126,11 @@ function generateClientDashboardPage(company: any): string {
         
         function renderAppointmentCard(apt, isUpcoming) {
             const date = new Date(apt.appointmentDate);
-            const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-            const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = date.toLocaleDateString('pt-BR', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+            const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             
             const proceduresHtml = apt.procedures.map(proc => 
-                \`<div class="procedure-item">• \${proc.procedureName} (\${proc.duration} min - $\${parseFloat(proc.price).toFixed(2)})</div>\`
+                \`<div class="procedure-item">• \${proc.procedureName} (\${proc.duration} min - R$\${parseFloat(proc.price).toFixed(2)})</div>\`
             ).join('');
             
             const canCancel = isUpcoming && apt.status !== 'cancelled' && apt.status !== 'completed';
@@ -2084,12 +2154,12 @@ function generateClientDashboardPage(company: any): string {
                         \` : ''}
                         <div class="detail-row">
                             <i class="material-icons">attach_money</i>
-                            <span>$\${parseFloat(apt.totalPrice).toFixed(2)}</span>
+                            <span>R$\${parseFloat(apt.totalPrice).toFixed(2)}</span>
                         </div>
                         \${proceduresHtml ? \`
                             <div class="detail-row">
                                 <i class="material-icons">content_cut</i>
-                                <span>\${apt.procedureCount} service(s):</span>
+                                <span>\${apt.procedureCount} serviço(s):</span>
                             </div>
                             <div class="procedures-list">
                                 \${proceduresHtml}
@@ -2099,7 +2169,7 @@ function generateClientDashboardPage(company: any): string {
                     \${canCancel ? \`
                         <div class="appointment-actions">
                             <button class="action-button cancel-button" onclick="cancelAppointment(\${apt.id})">
-                                Cancel Appointment
+                                Cancelar Agendamento
                             </button>
                         </div>
                     \` : ''}
@@ -2108,7 +2178,7 @@ function generateClientDashboardPage(company: any): string {
         }
         
         async function cancelAppointment(id) {
-            if (!confirm('Are you sure you want to cancel this appointment?')) {
+            if (!confirm('Tem certeza que deseja cancelar este agendamento?')) {
                 return;
             }
             
@@ -2118,14 +2188,14 @@ function generateClientDashboardPage(company: any): string {
                 });
                 
                 if (response.ok) {
-                    alert('Appointment cancelled successfully');
+                    alert('Agendamento cancelado com sucesso');
                     loadClientData();
                 } else {
                     const data = await response.json();
-                    alert(data.message || 'Failed to cancel appointment');
+                    alert(data.message || 'Falha ao cancelar agendamento');
                 }
             } catch (error) {
-                alert('An error occurred. Please try again.');
+                alert('Ocorreu um erro. Por favor tente novamente.');
             }
         }
         
@@ -2145,29 +2215,6 @@ function generateClientDashboardPage(company: any): string {
 </html>`;
 }
 
-async function fetchUserNotifications(userId: number) {
-  return db
-    .select()
-    .from(notifications)
-    .where(eq(notifications.userId, userId))
-    .orderBy(desc(notifications.createdAt));
-}
-
-async function markAllNotificationsRead(userId: number) {
-  const now = new Date();
-  const updated = await db
-    .update(notifications)
-    .set({
-      status: 'read',
-      isRead: true,
-      readAt: now,
-      updatedAt: now,
-    })
-    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)))
-    .returning({ id: notifications.id });
-
-  return updated.length;
-}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup local authentication (admin and client)
@@ -2175,8 +2222,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Client auth is configured in clientAuth.ts via passport strategies
 
   // ========================================
-  // PUBLIC BOOKING ROUTES (MUST BE FIRST!)
+  // PUBLIC BOOKING API ROUTES
   // ========================================
+
+  app.get('/api/public/slots', async (req, res) => {
+    try {
+      // 1. Validate inputs
+      const { publicLink, date, staffId, serviceIds } = req.query;
+      
+      if (!publicLink || !date) {
+        return res.status(400).json({ message: 'Missing required parameters' });
+      }
+
+      // 2. Get Company/User
+      const [company] = await db.select().from(users).where(eq(users.publicLink, String(publicLink)));
+      if (!company) {
+        return res.status(404).json({ message: 'Company not found' });
+      }
+
+      // 3. Calculate Service Duration
+      let totalDuration = 30; // Default 30 mins
+      if (serviceIds) {
+        const ids = String(serviceIds).split(',').map(Number);
+        const servicesData = await db
+            .select()
+            .from(services)
+            .where(inArray(services.id, ids));
+        
+        // Also check procedures if not found in services
+        const proceduresData = await db
+            .select()
+            .from(procedures)
+            .where(inArray(procedures.id, ids));
+
+        const totalServiceDuration = servicesData.reduce((acc, curr) => acc + (curr.duration || 0), 0);
+        const totalProcedureDuration = proceduresData.reduce((acc, curr) => acc + (curr.duration || 0), 0);
+        
+        if (totalServiceDuration + totalProcedureDuration > 0) {
+            totalDuration = totalServiceDuration + totalProcedureDuration;
+        }
+      }
+
+      // 4. Determine Day of Week
+      const targetDate = new Date(String(date));
+      // Adjust because 'new Date("2023-01-22")' is UTC, which might be previous day in local if using getDay()
+      // Safest is to append T00:00:00 to ensure we get the right day component, or use simple mapping
+      // Actually, business logic generally expects "YYYY-MM-DD".
+      // Let's assume input is "YYYY-MM-DD" and we handle it explicitly.
+      const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      // Create date object treating the string as local time component
+      const [year, month, day] = String(date).split('-').map(Number);
+      const localDate = new Date(year, month - 1, day);
+      const dayName = daysOfWeek[localDate.getDay()];
+
+      console.log(`[Slots API] Date: ${date} (${dayName}), Staff: ${staffId}, Duration: ${totalDuration}`);
+
+      // 5. Get Work Schedule (Staff Specific or General)
+      let openTime = '09:00';
+      let closeTime = '17:00';
+      let isWorkingDay = false;
+
+      if (staffId && String(staffId) !== 'undefined') {
+        const schedule = await storage.getStaffSchedule(Number(staffId));
+        const daySchedule = schedule.find(s => s.dayOfWeek.toLowerCase() === dayName);
+        if (daySchedule && daySchedule.isAvailable) {
+             openTime = daySchedule.startTime;
+             closeTime = daySchedule.endTime;
+             isWorkingDay = true;
+        }
+      } else {
+        // Fallback to Company Hours
+        const businessHours = await storage.getBusinessHours(company.id.toString());
+        const dayHours = businessHours.find(h => h.dayOfWeek.toLowerCase() === dayName);
+        if (dayHours && dayHours.isOpen) {
+            openTime = dayHours.openTime || '09:00';
+            closeTime = dayHours.closeTime || '17:00';
+            isWorkingDay = true;
+        }
+      }
+
+      if (!isWorkingDay) {
+        return res.json([]);
+      }
+
+      // 6. Get Existing Appointments (Blockers)
+      let blockers: { start: number; end: number }[] = [];
+      if (staffId && String(staffId) !== 'undefined') {
+        const appointments = await storage.getAppointmentsByDate(Number(staffId), localDate);
+        
+        blockers = appointments.map(apt => {
+             const aptDate = new Date(apt.appointmentDate);
+             const startMinutes = aptDate.getHours() * 60 + aptDate.getMinutes();
+             // Determine duration
+             // Prefer totalDuration (new field), fallback to legacy duration, fallback to 30
+             const duration = apt.totalDuration || apt.duration || 60; 
+             return { start: startMinutes, end: startMinutes + duration };
+        });
+      }
+
+      // 7. Generate Slots
+      const timeToMinutes = (t: string) => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+      };
+
+      const minutesToTime = (m: number) => {
+        const h = Math.floor(m / 60);
+        const mins = m % 60;
+        return `${h.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+      };
+
+      const startMin = timeToMinutes(openTime);
+      const endMin = timeToMinutes(closeTime);
+      const slots: string[] = [];
+
+      // Step interval 30 mins
+      for (let time = startMin; time < endMin; time += 30) {
+        const slotStart = time;
+        const slotEnd = time + totalDuration;
+
+        // Check boundary
+        if (slotEnd > endMin) continue;
+
+        // Check blockers
+        const isBlocked = blockers.some(b => {
+             // Overlap: (SlotStart < BlockEnd) AND (SlotEnd > BlockStart)
+             return slotStart < b.end && slotEnd > b.start;
+        });
+
+        if (!isBlocked) {
+            slots.push(minutesToTime(slotStart));
+        }
+      }
+
+      res.json(slots);
+
+    } catch (error) {
+      console.error("Error fetching slots:", error);
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  });
+
+  // ========================================
+  // PUBLIC BOOKING ROUTES
+  // ========================================
+
   
   // Public booking home page
   app.get('/booking/:publicLink', async (req, res) => {
@@ -2343,6 +2533,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // END PUBLIC BOOKING ROUTES
   // ========================================
 
+  // Get current user
+  // Debug endpoint to check session
+  app.get('/api/debug-session', isAuthenticated, async (req: any, res) => {
+    res.json({
+      session: req.session ? {
+        passport: req.session.passport,
+        cookie: req.session.cookie
+      } : null,
+      user: req.user ? {
+        id: req.user.id,
+        username: req.user.username || req.user.name,
+        userType: req.user.userType,
+        accessLevel: req.user.accessLevel,
+        role: req.user.role,
+        keys: Object.keys(req.user)
+      } : null,
+      isAuthenticated: req.isAuthenticated()
+    });
+  });
+
+  app.get('/api/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      
+      console.log('\n[GET /api/user] ===== REQUEST =====');
+      console.log('[GET /api/user] req.session.passport.user:', JSON.stringify(req.session?.passport?.user, null, 2));
+      console.log('[GET /api/user] req.user completo:', JSON.stringify(user, null, 2));
+      
+      // VERIFICAÇÃO CRÍTICA: Se a sessão tem userType 'staff', SEMPRE carregar staff da tabela
+      // Isso é a fonte de verdade - a sessão sempre tem os dados corretos
+      const sessionUser = req.session?.passport?.user;
+      
+      if (sessionUser && typeof sessionUser === 'object' && sessionUser.userType === 'staff') {
+        console.log('[GET /api/user] ✅ Sessão indica STAFF - carregando da tabela staff (ID:', sessionUser.id, ')');
+        const { db } = await import('./db');
+        const { staff } = await import('@shared/schema');
+        const { eq } = await import('drizzle-orm');
+        
+        const [staffMember] = await db
+          .select()
+          .from(staff)
+          .where(eq(staff.id, sessionUser.id))
+          .limit(1);
+        
+        if (staffMember) {
+          console.log('[GET /api/user] ✅ Staff encontrado - retornando dados de staff');
+          const staffData = {
+            id: staffMember.id,
+            username: staffMember.username,
+            name: staffMember.name,
+            email: staffMember.email,
+            role: staffMember.role || 'therapist',
+            accessLevel: staffMember.accessLevel || 'staff',
+            userType: 'staff',
+            userId: staffMember.userId,
+            companyId: staffMember.companyId,
+            isActive: staffMember.isActive !== undefined ? staffMember.isActive : true,
+          };
+          console.log('[GET /api/user] Dados de staff a retornar:', JSON.stringify(staffData, null, 2));
+          res.json(staffData);
+          return;
+        } else {
+          console.log('[GET /api/user] ❌ Staff não encontrado na tabela para id:', sessionUser.id);
+        }
+      } else {
+        console.log('[GET /api/user] ⚠️ sessionUser não é staff:', {
+          exists: !!sessionUser,
+          type: typeof sessionUser,
+          userType: sessionUser?.userType,
+          id: sessionUser?.id
+        });
+      }
+      
+      // VERIFICAÇÃO PRINCIPAL: Se user.userType === 'staff', SEMPRE retornar dados de staff
+      // Isso garante que mesmo se houver algum problema no deserializeUser,
+      // o endpoint sempre retornará os dados corretos baseado no userType
+      if (user && user.userType === 'staff') {
+        console.log('[GET /api/user] ✅ User é STAFF - retornando dados de staff');
+        res.json({
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          role: user.role || 'therapist', // 'therapist', 'receptionist', 'manager' (função)
+          accessLevel: user.accessLevel || 'staff', // 'admin' ou 'staff' (nível de acesso)
+          userType: 'staff',
+          userId: user.userId, // Admin ID that owns this staff
+          companyId: user.companyId,
+          isActive: user.isActive !== undefined ? user.isActive : true,
+        });
+        return;
+      }
+      
+      // Se não tem userType definido, verificar pela estrutura do objeto
+      // Staff tem 'name' mas não tem 'firstName'/'lastName'
+      // Admin tem 'firstName'/'lastName' mas não tem 'name'
+      if (user && user.name && !user.firstName && !user.lastName) {
+        console.log('[GET /api/user] ✅ Detectado como STAFF pela estrutura (tem name, não tem firstName/lastName)');
+        res.json({
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          role: user.role || 'therapist',
+          accessLevel: user.accessLevel || 'staff',
+          userType: 'staff',
+          userId: user.userId,
+          companyId: user.companyId,
+          isActive: user.isActive !== undefined ? user.isActive : true,
+        });
+        return;
+      }
+      
+      // Admin user (from users table)
+      console.log('[GET /api/user] ⚠️ User é ADMIN - retornando dados de admin');
+      res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        accessLevel: 'admin', // Admin sempre tem acesso total
+        userType: user.userType || 'admin',
+        parentUserId: user.parentUserId,
+        companyId: user.companyId,
+        isActive: user.isActive,
+        firstName: user.firstName,
+        lastName: user.lastName
+      });
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      res.status(500).json({ message: "Failed to fetch current user" });
+    }
+  });
+
+  // Debug endpoint to check req.user in isAdmin middleware
+  app.get('/api/debug-auth', isAuthenticated, isAdmin, async (req: any, res) => {
+    res.json({
+      message: "Admin access confirmed",
+      user: {
+        id: req.user?.id,
+        username: req.user?.username,
+        role: req.user?.role,
+        companyId: req.user?.companyId,
+        parentUserId: req.user?.parentUserId
+      }
+    });
+  });
+
   // Update user profile (including banner URLs)
   app.put('/api/user/profile', isAuthenticated, async (req: any, res) => {
     try {
@@ -2496,70 +2834,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Notifications
-  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const items = await fetchUserNotifications(userId);
-      res.json(items);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      res.status(500).json({ message: 'Failed to fetch notifications' });
-    }
-  });
-
-  app.post('/api/notifications/mark-read', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const updatedCount = await markAllNotificationsRead(userId);
-      res.json({ updated: updatedCount });
-    } catch (error) {
-      console.error('Error marking notifications as read:', error);
-      res.status(500).json({ message: 'Failed to mark notifications as read' });
-    }
-  });
-
-  app.post('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const notificationId = parseInt(req.params.id, 10);
-
-      if (Number.isNaN(notificationId)) {
-        return res.status(400).json({ message: 'Invalid notification id' });
-      }
-
-      const now = new Date();
-      const [updated] = await db
-        .update(notifications)
-        .set({
-          status: 'read',
-          isRead: true,
-          readAt: now,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(notifications.id, notificationId),
-            eq(notifications.userId, userId),
-          ),
-        )
-        .returning();
-
-      if (!updated) {
-        return res.status(404).json({ message: 'Notification not found' });
-      }
-
-      res.json(updated);
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      res.status(500).json({ message: 'Failed to update notification' });
-    }
-  });
+  // Notification routes — server/routes/notifications.ts
+  const { registerNotificationRoutes } = await import("./routes/notifications");
+  registerNotificationRoutes(app);
 
   // Dashboard stats
   app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = getEffectiveUserId(req);
       const stats = await storage.getDashboardStats(userId);
       res.json(stats);
     } catch (error) {
@@ -2568,2295 +2850,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client routes
-  app.get('/api/clients', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const clients = await storage.getClients(userId);
-      res.json(clients);
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-      res.status(500).json({ message: "Failed to fetch clients" });
-    }
-  });
+    // Staff Users Management routes — server/routes/staff-users.ts
+  const { registerStaffUserRoutes } = await import('./routes/staff-users');
+  registerStaffUserRoutes(app);
 
-  app.get('/api/clients/:clientId/appointments', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const clientId = parseInt(req.params.clientId);
-      const appointments = await storage.getClientAppointments(userId, clientId);
-      res.json(appointments);
-    } catch (error) {
-      console.error("Error fetching client appointments:", error);
-      res.status(500).json({ message: "Failed to fetch client appointments" });
-    }
-  });
+    // Client routes — server/routes/clients.ts
+  const { registerClientRoutes } = await import("./routes/clients");
+  registerClientRoutes(app);
 
-  app.post('/api/clients', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const clientData = insertClientSchema.parse({ ...req.body, userId });
-      const client = await storage.createClient(clientData);
-      res.json(client);
-    } catch (error) {
-      console.error("Error creating client:", error);
-      res.status(500).json({ message: "Failed to create client" });
-    }
-  });
+  // Service routes — server/routes/services.ts
+  const { registerServiceRoutes } = await import("./routes/services");
+  registerServiceRoutes(app);
 
-  app.put('/api/clients/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const updates = insertClientSchema.partial().parse(req.body);
-      const client = await storage.updateClient(id, updates);
-      res.json(client);
-    } catch (error) {
-      console.error("Error updating client:", error);
-      res.status(500).json({ message: "Failed to update client" });
-    }
-  });
+  // Appointment + Clinical records routes — server/routes/appointments.ts
+  const { registerAppointmentRoutes } = await import('./routes/appointments');
+  registerAppointmentRoutes(app);
 
-  // Service routes
-  app.get('/api/services', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const services = await storage.getServices(userId);
-      res.json(services);
-    } catch (error) {
-      console.error("Error fetching services:", error);
-      res.status(500).json({ message: "Failed to fetch services" });
-    }
-  });
+  // object storage routes — server/routes/object-storage.ts
+  const { registerObjectStorageRoutes } = await import("./routes/object-storage");
+  registerObjectStorageRoutes(app);
 
-  app.post('/api/services', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const serviceData = insertServiceSchema.parse({ ...req.body, userId });
-      const service = await storage.createService(serviceData);
-      res.json(service);
-    } catch (error) {
-      console.error("Error creating service:", error);
-      res.status(500).json({ message: "Failed to create service" });
-    }
-  });
+  // public API + client booking routes — server/routes/public.ts
+  const { registerPublicRoutes } = await import("./routes/public");
+  registerPublicRoutes(app);
 
-  // Appointment routes
-  app.get('/api/appointments', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const date = req.query.date ? new Date(req.query.date as string) : undefined;
-      const appointments = await storage.getAppointments(userId, date);
-      res.json(appointments);
-    } catch (error) {
-      console.error("Error fetching appointments:", error);
-      res.status(500).json({ message: "Failed to fetch appointments" });
-    }
-  });
 
-  app.get('/api/appointments/all', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const appointments = await storage.getAppointments(userId);
-      res.json(appointments);
-    } catch (error) {
-      console.error("Error fetching all appointments:", error);
-      res.status(500).json({ message: "Failed to fetch appointments" });
-    }
-  });
+  // procedures routes — server/routes/procedures.ts
+  const { registerProcedureRoutes } = await import("./routes/procedures");
+  registerProcedureRoutes(app);
 
-  app.get('/api/appointments/:date', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      // Parse date string (YYYY-MM-DD) and create date in local timezone
-      const dateStr = req.params.date;
-      const [year, month, day] = dateStr.split('-').map(Number);
-      const date = new Date(year, month - 1, day); // month is 0-indexed
-      console.log(`📅 API: Fetching appointments for date: ${dateStr} -> ${date.toISOString()}`);
-      const appointments = await storage.getAppointments(userId, date);
-      console.log(`📅 API: Found ${appointments.length} appointments for ${dateStr}`);
-      res.json(appointments);
-    } catch (error) {
-      console.error("Error fetching appointments by date:", error);
-      res.status(500).json({ message: "Failed to fetch appointments" });
-    }
-  });
+  // integrations routes — server/routes/integrations.ts
+  const { registerIntegrationRoutes } = await import("./routes/integrations");
+  registerIntegrationRoutes(app);
 
-  // Helper function to check appointment conflicts
-  async function checkAppointmentConflict(
-    userId: number,
-    staffId: number | null | undefined,
-    appointmentDate: Date,
-    durationMinutes: number,
-    excludeAppointmentId?: number
-  ): Promise<{ hasConflict: boolean; conflictingAppointment?: any }> {
-    try {
-      const startTime = new Date(appointmentDate);
-      const endTime = new Date(startTime.getTime() + durationMinutes * 60000);
-      
-      console.log('🔍 Checking conflict for:', {
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-        durationMinutes,
-        staffId,
-        userId
-      });
-      
-      // Get all appointments for the user
-      const appointments = await storage.getAppointments(userId);
-      console.log('📅 Total appointments found:', appointments.length);
-      
-      // Filter appointments for same staff (or any staff if staffId is null)
-      const relevantAppointments = appointments.filter((apt: any) => {
-        // Skip the appointment being updated
-        if (excludeAppointmentId && apt.id === excludeAppointmentId) {
-          console.log('⏭️ Skipping appointment being updated:', apt.id);
-          return false;
-        }
-        
-        // Skip cancelled appointments
-        if (apt.status === 'cancelled') {
-          console.log('⏭️ Skipping cancelled appointment:', apt.id);
-          return false;
-        }
-        
-        // If staffId provided, only check that staff's appointments
-        if (staffId && apt.staffId !== staffId) {
-          console.log('⏭️ Skipping different staff appointment:', apt.id, 'staff:', apt.staffId, 'requested:', staffId);
-          return false;
-        }
+  // campaigns routes — server/routes/campaigns.ts
+  const { registerCampaignRoutes } = await import("./routes/campaigns");
+  registerCampaignRoutes(app);
 
-        // Only check appointments for the same date
-        const aptDate = new Date(apt.appointmentDate);
-        const requestDate = new Date(appointmentDate);
-        
-        // Simple date comparison (same day)
-        const aptDateStr = aptDate.toISOString().split('T')[0];
-        const requestDateStr = requestDate.toISOString().split('T')[0];
-        
-        if (aptDateStr !== requestDateStr) {
-          console.log('⏭️ Skipping different date appointment:', apt.id, 'aptDate:', aptDateStr, 'requestDate:', requestDateStr);
-          return false;
-        }
-        
-        return true;
-      });
-      
-      console.log('🎯 Relevant appointments to check:', relevantAppointments.length);
-      
-      // Check for time overlap
-      for (const apt of relevantAppointments) {
-        const aptStart = new Date(apt.appointmentDate);
-        const aptDuration = apt.totalDuration || apt.duration || 60;
-        const aptEnd = new Date(aptStart.getTime() + aptDuration * 60000);
-        
-        console.log('🕐 Checking appointment:', {
-          id: apt.id,
-          start: aptStart.toISOString(),
-          end: aptEnd.toISOString(),
-          duration: aptDuration,
-          status: apt.status
-        });
-        
-        // Check if times overlap (more precise logic)
-        // Two appointments conflict if one starts before the other ends
-        const hasOverlap = (startTime < aptEnd && endTime > aptStart);
-        
-        if (hasOverlap) {
-          console.log('⚠️ CONFLICT FOUND!', {
-            newStart: startTime.toISOString(),
-            newEnd: endTime.toISOString(),
-            existingStart: aptStart.toISOString(),
-            existingEnd: aptEnd.toISOString(),
-            appointmentId: apt.id,
-            clientName: apt.client?.name
-          });
-          return { hasConflict: true, conflictingAppointment: apt };
-        }
-      }
-      
-      console.log('✅ No conflicts found');
-      return { hasConflict: false };
-    } catch (error) {
-      console.error('❌ Error in checkAppointmentConflict:', error);
-      return { hasConflict: false }; // Allow on error to not block user
-    }
-  }
+  // banners routes — server/routes/banners.ts
+  const { registerBannerRoutes } = await import("./routes/banners");
+  registerBannerRoutes(app);
 
-  // Check availability endpoint
-  app.post('/api/appointments/check-availability', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { appointmentDate, duration, staffId } = req.body;
-      
-      console.log('📅 Checking availability:', { appointmentDate, duration, staffId, userId });
-      
-      if (!appointmentDate || !duration) {
-        console.log('❌ Missing required fields');
-        return res.status(400).json({ message: 'appointmentDate and duration are required' });
-      }
-      
-      const conflict = await checkAppointmentConflict(
-        userId,
-        staffId ? parseInt(staffId) : null,
-        new Date(appointmentDate),
-        parseInt(duration)
-      );
-      
-      console.log('🔍 Conflict check result:', conflict);
-      
-      if (conflict.hasConflict) {
-        console.log('⚠️ Conflict found!');
-        return res.json({
-          available: false,
-          conflictingAppointment: {
-            id: conflict.conflictingAppointment.id,
-            clientName: conflict.conflictingAppointment.client?.name,
-            time: conflict.conflictingAppointment.appointmentDate,
-            duration: conflict.conflictingAppointment.totalDuration || conflict.conflictingAppointment.duration
-          }
-        });
-      }
-      
-      console.log('✅ No conflict - available!');
-      res.json({ available: true });
-    } catch (error) {
-      console.error("❌ Error checking availability:", error);
-      res.status(500).json({ message: "Failed to check availability" });
-    }
-  });
+  // packages routes — server/routes/packages.ts
+  const { registerPackageRoutes } = await import("./routes/packages");
+  registerPackageRoutes(app);
 
-  app.post('/api/appointments', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Validate image data if present
-      const { beforeImages = [], afterImages = [], ...restData } = req.body;
-      
-      // Validate image arrays
-      const validateImages = (images: any[], type: string) => {
-        if (!Array.isArray(images)) {
-          throw new Error(`${type} must be an array`);
-        }
-        return images.filter(img => typeof img === 'string' && img.startsWith('data:image/'));
-      };
-      
-      const validBeforeImages = validateImages(beforeImages, 'beforeImages');
-      const validAfterImages = validateImages(afterImages, 'afterImages');
-      
-      // Convert appointmentDate string to Date object
-      const appointmentDate = restData.appointmentDate ? new Date(restData.appointmentDate) : undefined;
-      
-      // Check for appointment conflicts
-      if (appointmentDate) {
-        const duration = restData.duration || 60;
-        const conflict = await checkAppointmentConflict(
-          userId,
-          restData.staffId ? parseInt(restData.staffId) : null,
-          appointmentDate,
-          duration
-        );
-        
-        if (conflict.hasConflict) {
-          return res.status(409).json({
-            message: 'Time slot not available',
-            conflictingAppointment: {
-              clientName: conflict.conflictingAppointment.client?.name,
-              time: conflict.conflictingAppointment.appointmentDate
-            }
-          });
-        }
-      }
-      
-      // Calculate total amount based on service/procedure price
-      let totalAmount = 0;
-      if (restData.serviceType === 'procedure') {
-        const procedure = await procedureStorage.getProcedure(restData.serviceId, userId);
-        totalAmount = parseFloat(procedure?.price || '0');
-      } else {
-        const services = await storage.getServices(userId);
-        const selectedService = services.find(s => s.id === restData.serviceId);
-        totalAmount = parseFloat(selectedService?.price || '0');
-      }
-      
-      const appointmentData = insertAppointmentSchema.parse({ 
-        ...restData, 
-        appointmentDate,
-        userId,
-        totalAmount: totalAmount.toString(),
-        paidAmount: '0',
-        paymentStatus: 'pending',
-        beforeImages: validBeforeImages,
-        afterImages: validAfterImages
-      });
-      
-      const appointment = await storage.createAppointment(appointmentData);
-      res.json(appointment);
-    } catch (error) {
-      console.error("Error creating appointment:", error);
-      res.status(500).json({ message: "Failed to create appointment" });
-    }
-  });
+  // loyalty-settings routes — server/routes/loyalty-settings.ts
+  const { registerLoyaltySettingsRoutes } = await import("./routes/loyalty-settings");
+  registerLoyaltySettingsRoutes(app);
 
-  app.put('/api/appointments/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const id = parseInt(req.params.id);
-      const updates = insertAppointmentSchema.partial().parse(req.body);
-      
-      // If appointment is being marked as completed, deduct materials from inventory
-      if (updates.status === 'completed') {
-        const appointments = await storage.getAppointments(userId);
-        const appointment = appointments.find(a => a.id === id);
-        
-        if (appointment && appointment.service && appointment.service.name) {
-          const procedures = await procedureStorage.getProcedures(userId);
-          const matchingProcedure = procedures.find(p => 
-            p.name.toLowerCase() === appointment.service.name.toLowerCase()
-          );
-          
-          if (matchingProcedure) {
-            await procedureStorage.deductMaterialsForProcedure(matchingProcedure.id, userId);
-          }
-        }
-      }
-      
-      const appointment = await storage.updateAppointment(id, updates);
-      res.json(appointment);
-    } catch (error) {
-      console.error("Error updating appointment:", error);
-      res.status(500).json({ message: "Failed to update appointment" });
-    }
-  });
+  // sales routes — server/routes/sales.ts
+  const { registerSaleRoutes } = await import("./routes/sales");
+  registerSaleRoutes(app);
 
-  // New route for multiple procedures appointments
-  app.post('/api/appointments/with-procedures', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { procedureIds, clientId, appointmentDate, staffId, notes, status = 'pending' } = req.body;
+  // products routes — server/routes/products.ts
+  const { registerProductRoutes } = await import("./routes/products");
+  registerProductRoutes(app);
 
-      if (!Array.isArray(procedureIds) || procedureIds.length === 0) {
-        return res.status(400).json({ message: 'procedureIds must be a non-empty array' });
-      }
+  // staff routes — server/routes/staff.ts
+  const { registerStaffRoutes } = await import("./routes/staff");
+  registerStaffRoutes(app);
 
-      if (!clientId || !appointmentDate) {
-        return res.status(400).json({ message: 'clientId and appointmentDate are required' });
-      }
+  // financial routes — server/routes/financial.ts
+  const { registerFinancialRoutes } = await import("./routes/financial");
+  registerFinancialRoutes(app);
 
-      // Calculate total duration from procedures and check for conflicts
-      const procedures = await procedureStorage.getProcedures(userId);
-      const selectedProcedures = procedures.filter((p: any) => procedureIds.includes(p.id));
-      const totalDuration = selectedProcedures.reduce((sum: number, p: any) => sum + (p.duration || 60), 0);
-      
-      // Check for appointment conflicts
-      const conflict = await checkAppointmentConflict(
-        userId,
-        staffId ? parseInt(staffId) : null,
-        new Date(appointmentDate),
-        totalDuration
-      );
-      
-      if (conflict.hasConflict) {
-        return res.status(409).json({
-          message: 'Time slot not available',
-          conflictingAppointment: {
-            clientName: conflict.conflictingAppointment.client?.name,
-            time: conflict.conflictingAppointment.appointmentDate
-          }
-        });
-      }
+  // reports routes — server/routes/reports.ts
+  const { registerReportsRoutes } = await import("./routes/reports");
+  registerReportsRoutes(app);
 
-      const appointmentData = {
-        userId,
-        clientId: parseInt(clientId),
-        appointmentDate: new Date(appointmentDate),
-        staffId: staffId ? parseInt(staffId) : undefined,
-        status,
-        notes: notes || '',
-        paidAmount: '0',
-        paymentStatus: 'pending' as const,
-        beforeImages: [],
-        afterImages: [],
-      };
+  // vouchers routes — server/routes/vouchers.ts
+  const { registerVoucherRoutes } = await import("./routes/vouchers");
+  registerVoucherRoutes(app);
 
-      const result = await storage.createAppointmentWithProcedures(
-        appointmentData,
-        procedureIds.map((id: any) => parseInt(id)),
-        userId
-      );
+  // inventory routes — server/routes/inventory.ts
+  const { registerInventoryRoutes } = await import("./routes/inventory");
+  registerInventoryRoutes(app);
 
-      // Automatically deduct materials from inventory
-      await storage.deductMaterialsForAppointment(result.appointment.id, userId);
+  // analytics routes — server/routes/analytics.ts
+  const { registerAnalyticsRoutes } = await import("./routes/analytics");
+  registerAnalyticsRoutes(app);
 
-      res.json(result);
-    } catch (error) {
-      console.error("Error creating appointment with procedures:", error);
-      res.status(500).json({ message: "Failed to create appointment with procedures" });
-    }
-  });
+  // clinical records routes — server/routes/clinical.ts
+  const { registerClinicalRecordRoutes } = await import("./routes/clinical");
+  registerClinicalRecordRoutes(app);
 
-  // Get appointment with all procedures
-  app.get('/api/appointments/:id/with-procedures', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const appointmentId = parseInt(req.params.id);
+  // consumptions routes — server/routes/consumptions.ts
+  const { registerConsumptionsRoutes } = await import("./routes/consumptions");
+  registerConsumptionsRoutes(app);
 
-      const result = await storage.getAppointmentWithProcedures(appointmentId, userId);
+  // legacy payment route — server/routes/payments.ts
+  const { registerLegacyPaymentRoutes } = await import("./routes/payments");
+  registerLegacyPaymentRoutes(app);
 
-      if (!result) {
-        return res.status(404).json({ message: 'Appointment not found' });
-      }
-
-      res.json(result);
-    } catch (error) {
-      console.error("Error fetching appointment with procedures:", error);
-      res.status(500).json({ message: "Failed to fetch appointment" });
-    }
-  });
-
-  // Record payment for appointment
-  app.post('/api/appointments/:id/payment', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const appointmentId = parseInt(req.params.id);
-      const { amount, fullPayment } = req.body;
-      
-      // Get the appointment
-      const appointments = await storage.getAppointments(userId);
-      const appointment = appointments.find(a => a.id === appointmentId);
-      
-      if (!appointment) {
-        return res.status(404).json({ message: 'Appointment not found' });
-      }
-      
-      const totalAmount = parseFloat(appointment.totalAmount || '0');
-      const currentPaid = parseFloat(appointment.paidAmount || '0');
-      
-      // Check if appointment is already fully paid
-      if (currentPaid >= totalAmount && totalAmount > 0) {
-        return res.status(400).json({ 
-          message: 'Appointment is already fully paid',
-          currentPaid,
-          totalAmount 
-        });
-      }
-      
-      const paymentAmount = fullPayment ? (totalAmount - currentPaid) : parseFloat(amount);
-      
-      // Validate payment amount
-      if (paymentAmount <= 0) {
-        return res.status(400).json({ message: 'Payment amount must be greater than zero' });
-      }
-      
-      // Check if payment exceeds outstanding balance
-      const outstandingBalance = totalAmount - currentPaid;
-      if (paymentAmount > outstandingBalance) {
-        return res.status(400).json({ 
-          message: `Payment amount (${paymentAmount}) exceeds outstanding balance (${outstandingBalance})`,
-          outstandingBalance,
-          paymentAmount 
-        });
-      }
-      
-      const newPaidAmount = currentPaid + paymentAmount;
-      
-      // Update appointment payment status
-      let paymentStatus = 'partial';
-      if (newPaidAmount >= totalAmount) {
-        paymentStatus = 'paid';
-      }
-      
-      // Update appointment
-      const updatedAppointment = await storage.updateAppointment(appointmentId, {
-        paidAmount: newPaidAmount.toString(),
-        paymentStatus,
-      });
-      
-      // Create financial transaction
-      const serviceDescription = appointment.allProcedures && appointment.allProcedures.length > 0
-        ? appointment.allProcedures.map((p: any) => p.name).join(', ')
-        : appointment.service.name;
-      
-      await storage.createTransaction({
-        userId,
-        clientId: appointment.clientId,
-        appointmentId,
-        type: 'income',
-        description: `Payment for ${serviceDescription} - ${appointment.client.name}`,
-        amount: paymentAmount.toString(),
-        transactionDate: new Date().toISOString().split('T')[0],
-        category: 'Service Payment',
-        isPaid: true,
-      });
-      
-      res.json(updatedAppointment);
-    } catch (error) {
-      console.error('Error recording payment:', error);
-      res.status(500).json({ message: 'Failed to record payment' });
-    }
-  });
-
-  // Clinical records routes
-  app.get('/api/clinical-records', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
-      const records = await storage.getClinicalRecords(userId, clientId);
-      res.json(records);
-    } catch (error) {
-      console.error("Error fetching clinical records:", error);
-      res.status(500).json({ message: "Failed to fetch clinical records" });
-    }
-  });
-
-  app.post('/api/clinical-records', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const recordData = insertClinicalRecordSchema.parse({ ...req.body, userId });
-      const record = await storage.createClinicalRecord(recordData);
-      res.json(record);
-    } catch (error) {
-      console.error("Error creating clinical record:", error);
-      res.status(500).json({ message: "Failed to create clinical record" });
-    }
-  });
-
-  // Transaction routes
-  app.get('/api/transactions', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
-      const transactions = await storage.getTransactions(userId, startDate, endDate);
-      res.json(transactions);
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-      res.status(500).json({ message: "Failed to fetch transactions" });
-    }
-  });
-
-  app.post('/api/transactions', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const transactionData = insertTransactionSchema.parse({ ...req.body, userId });
-      const transaction = await storage.createTransaction(transactionData);
-      res.json(transaction);
-    } catch (error) {
-      console.error("Error creating transaction:", error);
-      res.status(500).json({ message: "Failed to create transaction" });
-    }
-  });
-
-  // Message routes
-  app.get('/api/messages', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const messages = await storage.getMessages(userId);
-      res.json(messages);
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      res.status(500).json({ message: "Failed to fetch messages" });
-    }
-  });
-
-  app.post('/api/messages', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const messageData = insertMessageSchema.parse({ ...req.body, userId });
-      const message = await storage.createMessage(messageData);
-      res.json(message);
-    } catch (error) {
-      console.error("Error creating message:", error);
-      res.status(500).json({ message: "Failed to create message" });
-    }
-  });
-
-  // Feedback routes
-  app.get('/api/feedback', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const feedback = await storage.getFeedback(userId);
-      res.json(feedback);
-    } catch (error) {
-      console.error("Error fetching feedback:", error);
-      res.status(500).json({ message: "Failed to fetch feedback" });
-    }
-  });
-
-  app.post('/api/feedback', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const feedbackData = insertFeedbackSchema.parse({ ...req.body, userId });
-      const feedback = await storage.createFeedback(feedbackData);
-      res.json(feedback);
-    } catch (error) {
-      console.error("Error creating feedback:", error);
-      res.status(500).json({ message: "Failed to create feedback" });
-    }
-  });
-
-  // Inventory routes
-  app.get('/api/inventory', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const inventory = await storage.getInventory(userId);
-      res.json(inventory);
-    } catch (error) {
-      console.error("Error fetching inventory:", error);
-      res.status(500).json({ message: "Failed to fetch inventory" });
-    }
-  });
-
-  app.post('/api/inventory', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const itemData = insertInventorySchema.parse({ ...req.body, userId });
-      const item = await storage.createInventoryItem(itemData);
-      res.json(item);
-    } catch (error) {
-      console.error("Error creating inventory item:", error);
-      res.status(500).json({ message: "Failed to create inventory item" });
-    }
-  });
-
-  app.put('/api/inventory/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const updates = insertInventorySchema.partial().parse(req.body);
-      const item = await storage.updateInventoryItem(id, updates);
-      res.json(item);
-    } catch (error) {
-      console.error("Error updating inventory item:", error);
-      res.status(500).json({ message: "Failed to update inventory item" });
-    }
-  });
-
-  // Products routes
-  app.get('/api/products', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      console.log('📦 GET /api/products - userId:', userId);
-      
-      const allProducts = await db
-        .select()
-        .from(products)
-        .where(eq(products.userId, userId))
-        .orderBy(desc(products.createdAt));
-      
-      console.log(`📦 Found ${allProducts.length} products for userId ${userId}`);
-      if (allProducts.length > 0) {
-        console.log('📦 First product:', allProducts[0]);
-      }
-      
-      res.json(allProducts);
-    } catch (error: any) {
-      console.error("❌ Error fetching products:", error);
-      console.error("Error message:", error.message);
-      res.status(500).json({ message: "Failed to fetch products" });
-    }
-  });
-
-  app.post('/api/products', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      console.log('📦 POST /api/products - Received data:', req.body);
-      console.log('📦 userId:', userId);
-      
-      const productData = insertProductSchema.parse({ ...req.body, userId });
-      console.log('📦 Validated productData:', productData);
-      
-      const [newProduct] = await db.insert(products).values(productData as any).returning();
-      console.log('✅ Product inserted:', newProduct);
-      
-      res.json(newProduct);
-    } catch (error: any) {
-      console.error("❌ Error creating product:", error);
-      console.error("Error details:", error.message);
-      if (error.issues) {
-        console.error("Validation issues:", error.issues);
-      }
-      res.status(500).json({ message: "Failed to create product", error: error.message });
-    }
-  });
-
-  app.put('/api/products/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const userId = req.user.id;
-      const updates = updateProductSchema.parse(req.body);
-      
-      const [updatedProduct] = await db
-        .update(products)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(and(
-          eq(products.id, id),
-          eq(products.userId, userId)
-        ))
-        .returning();
-      
-      if (!updatedProduct) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      
-      res.json(updatedProduct);
-    } catch (error) {
-      console.error("Error updating product:", error);
-      res.status(500).json({ message: "Failed to update product" });
-    }
-  });
-
-  app.delete('/api/products/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const userId = req.user.id;
-      
-      await db
-        .delete(products)
-        .where(and(
-          eq(products.id, id),
-          eq(products.userId, userId)
-        ));
-      
-      res.json({ success: true, message: "Product deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting product:", error);
-      res.status(500).json({ message: "Failed to delete product" });
-    }
-  });
-
-  // Loyalty package routes
-  app.get('/api/loyalty-packages', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const packages = await storage.getLoyaltyPackages(userId);
-      res.json(packages);
-    } catch (error) {
-      console.error("Error fetching loyalty packages:", error);
-      res.status(500).json({ message: "Failed to fetch loyalty packages" });
-    }
-  });
-
-  app.post('/api/loyalty-packages', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const packageData = insertLoyaltyPackageSchema.parse({ ...req.body, userId });
-      const loyaltyPackage = await storage.createLoyaltyPackage(packageData);
-      res.json(loyaltyPackage);
-    } catch (error) {
-      console.error("Error creating loyalty package:", error);
-      res.status(500).json({ message: "Failed to create loyalty package" });
-    }
-  });
-
-  app.get('/api/client-packages', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const clientPackages = await storage.getClientPackages(userId);
-      res.json(clientPackages);
-    } catch (error) {
-      console.error("Error fetching client packages:", error);
-      res.status(500).json({ message: "Failed to fetch client packages" });
-    }
-  });
-
-  // Staff routes
-  app.get('/api/staff', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const staff = await storage.getStaff(userId);
-      res.json(staff);
-    } catch (error) {
-      console.error("Error fetching staff:", error);
-      res.status(500).json({ message: "Failed to fetch staff" });
-    }
-  });
-
-  app.post('/api/staff', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const staffData = insertStaffSchema.parse({ ...req.body, userId });
-      const staff = await storage.createStaff(staffData);
-      res.json(staff);
-    } catch (error) {
-      console.error("Error creating staff:", error);
-      res.status(500).json({ message: "Failed to create staff" });
-    }
-  });
-
-  app.put('/api/staff/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const staffId = parseInt(req.params.id);
-      const staffData = insertStaffSchema.omit({ userId: true }).parse(req.body);
-      const updatedStaff = await storage.updateStaff(staffId, userId, staffData);
-      res.json(updatedStaff);
-    } catch (error) {
-      console.error("Error updating staff:", error);
-      res.status(500).json({ message: "Failed to update staff" });
-    }
-  });
-
-  app.delete('/api/staff/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const staffId = parseInt(req.params.id);
-      await storage.deleteStaff(staffId, userId);
-      res.json({ message: "Staff member deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting staff:", error);
-      res.status(500).json({ message: "Failed to delete staff" });
-    }
-  });
-
-  // Staff schedules routes
-  app.get('/api/staff-schedules', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const schedules = await storage.getStaffSchedules(userId);
-      res.json(schedules);
-    } catch (error) {
-      console.error("Error fetching staff schedules:", error);
-      res.status(500).json({ message: "Failed to fetch staff schedules" });
-    }
-  });
-
-  app.post('/api/staff-schedules', isAuthenticated, async (req: any, res) => {
-    try {
-      const scheduleData = insertStaffScheduleSchema.parse(req.body);
-      const schedule = await storage.createStaffSchedule(scheduleData);
-      res.json(schedule);
-    } catch (error) {
-      console.error("Error creating staff schedule:", error);
-      res.status(500).json({ message: "Failed to create staff schedule" });
-    }
-  });
-
-  // Payslip routes
-  app.get('/api/payslip', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const staffId = req.query.staffId ? parseInt(req.query.staffId as string) : undefined;
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
-
-      const payslipData = await storage.getPayslipData(userId, staffId, startDate, endDate);
-      res.json(payslipData);
-    } catch (error) {
-      console.error("Error fetching payslip data:", error);
-      res.status(500).json({ message: "Failed to fetch payslip data" });
-    }
-  });
-
-  // Marketing campaigns routes
-  app.get('/api/marketing-campaigns', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const campaigns = await storage.getMarketingCampaigns(userId);
-      res.json(campaigns);
-    } catch (error) {
-      console.error("Error fetching marketing campaigns:", error);
-      res.status(500).json({ message: "Failed to fetch marketing campaigns" });
-    }
-  });
-
-  app.post('/api/marketing-campaigns', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const campaignData = insertMarketingCampaignSchema.parse({ ...req.body, userId });
-      const campaign = await storage.createMarketingCampaign(campaignData);
-      res.json(campaign);
-    } catch (error) {
-      console.error("Error creating marketing campaign:", error);
-      res.status(500).json({ message: "Failed to create marketing campaign" });
-    }
-  });
-
-
-
-  // Analytics routes
-  app.get('/api/analytics', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const dateRange = req.query.dateRange as string;
-      const analytics = await storage.getAnalytics(userId, dateRange);
-      res.json(analytics);
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-      res.status(500).json({ message: "Failed to fetch analytics" });
-    }
-  });
-
-  // Business hours routes
-  app.get('/api/business-hours', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const hours = await storage.getBusinessHours(userId);
-      res.json(hours);
-    } catch (error) {
-      console.error("Error fetching business hours:", error);
-      res.status(500).json({ message: "Failed to fetch business hours" });
-    }
-  });
-
-  app.post('/api/business-hours', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { hours } = req.body;
-      
-      if (!Array.isArray(hours)) {
-        return res.status(400).json({ message: "Hours must be an array" });
-      }
-      
-      const hoursArray = hours.map((hour: any) => ({
-        ...hour,
-        userId,
-      }));
-      const savedHours = await storage.upsertBusinessHours(hoursArray);
-      res.json(savedHours);
-    } catch (error) {
-      console.error("Error saving business hours:", error);
-      res.status(500).json({ message: "Failed to save business hours" });
-    }
-  });
-
-  // Object storage routes for photo upload
-  app.post('/api/objects/upload', isAuthenticated, async (req, res) => {
-    try {
-      console.log('Getting upload URL for user:', req.user?.claims?.sub);
-      const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      console.log('Generated upload URL:', uploadURL);
-      res.json({ uploadURL });
-    } catch (error) {
-      console.error('Error getting upload URL:', error);
-      res.status(500).json({ message: 'Failed to get upload URL', error: error.message });
-    }
-  });
-
-  app.put('/api/profile-image', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { profileImageUrl } = req.body;
-      
-      if (!profileImageUrl) {
-        return res.status(400).json({ message: 'Profile image URL is required' });
-      }
-
-      const objectStorageService = new ObjectStorageService();
-      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
-        profileImageUrl,
-        {
-          owner: userId,
-          visibility: "public",
-        },
-      );
-
-      // Update user profile with new image URL
-      await storage.updateUserProfileImage(userId, objectPath);
-      
-      res.json({ message: 'Profile image updated successfully', objectPath });
-    } catch (error) {
-      console.error('Error updating profile image:', error);
-      res.status(500).json({ message: 'Failed to update profile image' });
-    }
-  });
-
-  app.put('/api/hero-image', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { heroImageUrl } = req.body;
-      
-      console.log('Updating hero image for user:', userId, 'with URL:', heroImageUrl);
-      
-      if (!heroImageUrl) {
-        return res.status(400).json({ message: 'Hero image URL is required' });
-      }
-
-      const objectStorageService = new ObjectStorageService();
-      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
-        heroImageUrl,
-        {
-          owner: userId,
-          visibility: "public",
-        },
-      );
-
-      console.log('Object path after ACL policy:', objectPath);
-
-      // Update user profile with new hero image URL
-      await storage.updateUserHeroImage(userId, objectPath);
-      
-      console.log('Hero image updated successfully in database');
-      res.json({ message: 'Hero image updated successfully', objectPath });
-    } catch (error) {
-      console.error('Error updating hero image:', error);
-      res.status(500).json({ message: 'Failed to update hero image', error: error.message });
-    }
-  });
-
-  app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
-    const userId = req.user?.claims?.sub;
-    const objectStorageService = new ObjectStorageService();
-    try {
-      const objectFile = await objectStorageService.getObjectEntityFile(
-        req.path,
-      );
-      const canAccess = await objectStorageService.canAccessObjectEntity({
-        objectFile,
-        userId: userId,
-        requestedPermission: "READ" as any,
-      });
-      if (!canAccess) {
-        return res.sendStatus(401);
-      }
-      objectStorageService.downloadObject(objectFile, res);
-    } catch (error) {
-      console.error("Error checking object access:", error);
-      if (error instanceof ObjectNotFoundError) {
-        return res.sendStatus(404);
-      }
-      return res.sendStatus(500);
-    }
-  });
-
-  // Public API routes for client access (no authentication required)
-
-
-  app.post('/api/public/company/:publicLink/booking', async (req, res) => {
-    try {
-      const { publicLink } = req.params;
-      const bookingData = req.body;
-      
-      // Get company by public link
-      const company = await storage.getUserByPublicLink(publicLink);
-      if (!company) {
-        return res.status(404).json({ message: 'Company not found' });
-      }
-
-      // Create or find client
-      let client = await db.select().from(clients)
-        .where(and(
-          eq(clients.email, bookingData.email),
-          eq(clients.userId, company.id)
-        ));
-
-      if (client.length === 0) {
-        // Create new client
-        const [newClient] = await db.insert(clients).values({
-          userId: company.id,
-          name: bookingData.name,
-          email: bookingData.email,
-          phone: bookingData.phone,
-          birthDate: bookingData.dateOfBirth || null,
-        }).returning();
-        client = [newClient];
-      }
-
-      // Create appointment request (pending status) - using procedure instead of service
-      const appointmentData = {
-        userId: company.id,
-        clientId: client[0].id,
-        serviceId: parseInt(bookingData.serviceId), // This will be procedure ID
-        serviceType: 'procedure' as const, // Mark as procedure type
-        appointmentDate: new Date(bookingData.preferredDate),
-        startTime: bookingData.preferredTime,
-        endTime: bookingData.preferredTime, // Will be calculated based on procedure duration
-        status: 'pending' as const,
-        notes: bookingData.notes || '',
-      };
-
-      console.log('Creating appointment with data:', appointmentData);
-      const appointment = await storage.createAppointment(appointmentData);
-      console.log('Appointment created:', appointment);
-
-      res.json({ 
-        message: 'Booking request submitted successfully',
-        appointmentId: appointment.id 
-      });
-    } catch (error) {
-      console.error("Error creating booking:", error);
-      res.status(500).json({ message: "Failed to create booking request" });
-    }
-  });
-
-  // Public company info endpoint
-  app.get('/api/public/company/:publicLink', async (req, res) => {
-    try {
-      const { publicLink } = req.params;
-      
-      // Find company by public link
-      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
-      
-      if (!company) {
-        return res.status(404).json({ message: "Company not found" });
-      }
-
-      // Return public company information
-      res.json({
-        clinicName: company.clinicName,
-        clinicAddress: company.clinicAddress,
-        clinicPhone: company.clinicPhone,
-        clinicWhatsapp: company.clinicWhatsapp,
-        email: company.email,
-        profileImageUrl: company.profileImageUrl,
-        heroImageUrl: company.heroImageUrl,
-        publicLink: company.publicLink,
-        specialties: company.specialties
-      });
-    } catch (error) {
-      console.error("Error fetching company info:", error);
-      res.status(500).json({ message: "Failed to fetch company information" });
-    }
-  });
-
-  // Find user by email endpoint
-  app.get('/api/public/user-by-email/:email', async (req, res) => {
-    try {
-      const { email } = req.params;
-      
-      // Find user by email
-      const [user] = await db.select().from(users).where(eq(users.email, email));
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Return public user information
-      res.json({
-        id: user.id,
-        clinicName: user.clinicName,
-        clinicAddress: user.clinicAddress,
-        clinicPhone: user.clinicPhone,
-        clinicWhatsapp: user.clinicWhatsapp,
-        email: user.email,
-        profileImageUrl: user.profileImageUrl,
-        heroImageUrl: user.heroImageUrl,
-        publicLink: user.publicLink,
-        specialties: user.specialties
-      });
-    } catch (error) {
-      console.error("Error fetching user by email:", error);
-      res.status(500).json({ message: "Failed to fetch user information" });
-    }
-  });
-
-  // Public procedures endpoint (replacing services for client booking)
-  app.get('/api/public/procedures/:publicLink', async (req, res) => {
-    try {
-      const { publicLink } = req.params;
-      
-      // Find company by public link
-      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
-      
-      if (!company) {
-        return res.status(404).json({ message: "Company not found" });
-      }
-
-      // Get procedures instead of services
-      const procedures = await procedureStorage.getProcedures(company.id.toString());
-      res.json(procedures);
-    } catch (error) {
-      console.error("Error fetching procedures:", error);
-      res.status(500).json({ message: "Failed to fetch procedures" });
-    }
-  });
-
-  // Public business hours endpoint
-  app.get('/api/public/business-hours/:publicLink', async (req, res) => {
-    try {
-      const { publicLink } = req.params;
-      
-      // Find company by public link
-      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
-      
-      if (!company) {
-        return res.status(404).json({ message: "Company not found" });
-      }
-
-      // Get business hours for this company
-      const businessHours = await storage.getBusinessHours(company.id.toString());
-      res.json(businessHours);
-    } catch (error) {
-      console.error("Error fetching business hours:", error);
-      res.status(500).json({ message: "Failed to fetch business hours" });
-    }
-  });
-
-  // Public staff endpoint (for client booking professional selection)
-  app.get('/api/public/staff/:publicLink', async (req, res) => {
-    try {
-      const { publicLink } = req.params;
-      
-      // Find company by public link
-      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
-      
-      if (!company) {
-        return res.status(404).json({ message: "Company not found" });
-      }
-
-      // Get staff members for this company
-      const staff = await storage.getStaff(company.id.toString());
-      res.json(staff.map(member => ({
-        id: member.id,
-        name: member.name,
-        specialties: Array.isArray(member.specialties) ? member.specialties : [],
-        profileImage: null // Will be added later when staff upload photos
-      })));
-    } catch (error) {
-      console.error("Error fetching staff:", error);
-      res.status(500).json({ message: "Failed to fetch staff" });
-    }
-  });
-
-
-  // Public appointment booking endpoint
-  app.post('/api/public/appointments/:publicLink', async (req, res) => {
-    try {
-      const { publicLink } = req.params;
-
-      const {
-        name,
-        phone,
-        email,
-        notes,
-        selectedServices,
-        selectedProfessional,
-        selectedDate,
-        selectedTime
-      } = req.body;
-
-
-
-      // Validate required fields
-      if (!name || !phone || !email || !selectedServices || !selectedProfessional || !selectedDate || !selectedTime) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-
-      if (!selectedServices.length) {
-        return res.status(400).json({ message: "Please select at least one service" });
-      }
-      
-      // Find company by public link
-      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
-      
-      if (!company) {
-        return res.status(404).json({ message: "Company not found" });
-      }
-
-      // Create client if not exists
-      let client = await db.select().from(clients).where(
-        and(
-          eq(clients.userId, company.id),
-          eq(clients.email, email)
-        )
-      ).limit(1);
-
-      if (client.length === 0) {
-        const [newClient] = await db.insert(clients).values({
-          userId: company.id,
-          name,
-          phone,
-          email
-        }).returning();
-        client = [newClient];
-      }
-
-      // Calculate total duration and price from selected services
-      const serviceIds = selectedServices.map((id: string) => parseInt(id)).filter(id => !isNaN(id));
-      
-      if (serviceIds.length === 0) {
-        return res.status(400).json({ message: "No valid services selected" });
-      }
-
-      const selectedProcedures = await db.select().from(procedures).where(
-        and(
-          eq(procedures.userId, company.id),
-          inArray(procedures.id, serviceIds)
-        )
-      );
-
-      if (selectedProcedures.length === 0) {
-        return res.status(400).json({ message: "Selected procedures not found" });
-      }
-
-      const appointmentDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
-      const professionalId = parseInt(selectedProfessional);
-      
-      if (isNaN(professionalId)) {
-        return res.status(400).json({ message: "Invalid professional selection" });
-      }
-
-      // Create appointment data
-      const appointmentData = {
-        userId: company.id,
-        clientId: client[0].id,
-        staffId: professionalId,
-        appointmentDate: appointmentDateTime,
-        status: 'pending' as const,
-        notes: notes || ''
-      };
-
-      // Use the new multi-procedure system
-      const result = await storage.createAppointmentWithProcedures(
-        appointmentData,
-        serviceIds,
-        company.id
-      );
-
-      const appointment = result.appointment;
-
-      // Automatically deduct materials from inventory
-      await storage.deductMaterialsForAppointment(appointment.id, company.id.toString());
-
-      res.json({ 
-        success: true, 
-        appointmentId: appointment.id,
-        message: "Appointment request submitted successfully" 
-      });
-    } catch (error: any) {
-      console.error("Error creating appointment:", error);
-      console.error("Error details:", error.message, error.stack);
-      res.status(500).json({ 
-        message: "Failed to create appointment",
-        error: error.message 
-      });
-    }
-  });
-
-  // ==============================================
-  // CLIENT AUTHENTICATION ROUTES (Multi-tenant)
-  // ==============================================
-
-  // Client registration
-  app.post('/api/client/register/:publicLink', async (req, res) => {
-    try {
-      const { publicLink } = req.params;
-      const { name, email, phone, password } = req.body;
-
-      // Validate required fields
-      if (!name || !email || !password) {
-        return res.status(400).json({ message: 'Name, email, and password are required' });
-      }
-
-      // Find company by public link
-      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
-      
-      if (!company) {
-        return res.status(404).json({ message: 'Salon not found' });
-      }
-
-      // Check if client already exists with this email for this salon
-      const existingClient = await db.select().from(clients).where(
-        and(
-          eq(clients.email, email),
-          eq(clients.userId, company.id)
-        )
-      ).limit(1);
-
-      if (existingClient.length > 0) {
-        if (existingClient[0].password) {
-          return res.status(400).json({ message: 'An account with this email already exists. Please login.' });
-        } else {
-          // Client exists but no password - update with password
-          const hashedPassword = hashPassword(password);
-          const [updatedClient] = await db
-            .update(clients)
-            .set({ 
-              password: hashedPassword,
-              phone: phone || existingClient[0].phone,
-              name: name || existingClient[0].name
-            })
-            .where(eq(clients.id, existingClient[0].id))
-            .returning();
-
-          return res.json({ 
-            success: true,
-            message: 'Account activated successfully',
-            client: {
-              id: updatedClient.id,
-              name: updatedClient.name,
-              email: updatedClient.email,
-              phone: updatedClient.phone
-            }
-          });
-        }
-      }
-
-      // Create new client with password
-      const hashedPassword = hashPassword(password);
-      const [newClient] = await db.insert(clients).values({
-        userId: company.id,
-        name,
-        email,
-        phone: phone || '',
-        password: hashedPassword,
-        isActive: true
-      }).returning();
-
-      res.json({ 
-        success: true,
-        message: 'Account created successfully',
-        client: {
-          id: newClient.id,
-          name: newClient.name,
-          email: newClient.email,
-          phone: newClient.phone
-        }
-      });
-    } catch (error: any) {
-      console.error('Client registration error:', error);
-      res.status(500).json({ 
-        message: 'Failed to create account',
-        error: error.message 
-      });
-    }
-  });
-
-  // Client login
-  app.post('/api/client/login/:publicLink', async (req, res, next) => {
-    try {
-      const { publicLink } = req.params;
-      const { email, password } = req.body;
-
-      // Find company by public link
-      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
-      
-      if (!company) {
-        return res.status(404).json({ message: 'Salon not found' });
-      }
-
-      // Add salonId to req.body for passport strategy
-      req.body.salonId = company.id;
-
-      // Use passport client strategy
-      passport.authenticate('client-local', (err: any, user: any, info: any) => {
-        if (err) {
-          console.error('Client login error:', err);
-          return res.status(500).json({ message: 'Login failed' });
-        }
-
-        if (!user) {
-          return res.status(401).json({ message: info?.message || 'Invalid credentials' });
-        }
-
-        req.logIn(user, (err) => {
-          if (err) {
-            console.error('Session error:', err);
-            return res.status(500).json({ message: 'Failed to create session' });
-          }
-
-          res.json({
-            success: true,
-            message: 'Login successful',
-            client: {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              phone: user.phone,
-              salonId: user.userId
-            }
-          });
-        });
-      })(req, res, next);
-    } catch (error: any) {
-      console.error('Client login error:', error);
-      res.status(500).json({ 
-        message: 'Failed to login',
-        error: error.message 
-      });
-    }
-  });
-
-  // Get current logged-in client
-  app.get('/api/client/me', isClientAuthenticated, async (req: any, res) => {
-    try {
-      const client = req.user;
-      res.json({
-        id: client.id,
-        name: client.name,
-        email: client.email,
-        phone: client.phone,
-        salonId: client.userId,
-        loyaltyPoints: client.loyaltyPoints,
-        lastLogin: client.lastLogin
-      });
-    } catch (error) {
-      console.error('Error fetching client info:', error);
-      res.status(500).json({ message: 'Failed to fetch client info' });
-    }
-  });
-
-  // Client logout
-  app.post('/api/client/logout', (req: any, res) => {
-    req.logout((err: any) => {
-      if (err) {
-        return res.status(500).json({ message: 'Logout failed' });
-      }
-      res.json({ success: true, message: 'Logged out successfully' });
-    });
-  });
-
-  // Get client's appointments
-  app.get('/api/client/appointments', isClientAuthenticated, async (req: any, res) => {
-    try {
-      const clientId = req.user.id;
-      const salonId = req.user.userId;
-
-      // Get all appointments for this client at this salon
-      const clientAppointments = await db
-        .select({
-          id: appointments.id,
-          appointmentDate: appointments.appointmentDate,
-          status: appointments.status,
-          notes: appointments.notes,
-          totalPrice: appointments.totalPrice,
-          totalDuration: appointments.totalDuration,
-          procedureCount: appointments.procedureCount,
-          staffId: appointments.staffId,
-          createdAt: appointments.createdAt
-        })
-        .from(appointments)
-        .where(
-          and(
-            eq(appointments.clientId, clientId),
-            eq(appointments.userId, salonId)
-          )
-        )
-        .orderBy(desc(appointments.appointmentDate));
-
-      // Get staff info and procedures for each appointment
-      const appointmentsWithDetails = await Promise.all(
-        clientAppointments.map(async (apt) => {
-          // Get staff info
-          let staffInfo = null;
-          if (apt.staffId) {
-            const [staffMember] = await db
-              .select({ id: staff.id, name: staff.name })
-              .from(staff)
-              .where(eq(staff.id, apt.staffId))
-              .limit(1);
-            staffInfo = staffMember || null;
-          }
-
-          // Get procedures
-          const aptProcedures = await db
-            .select({
-              id: appointmentProcedures.id,
-              procedureName: appointmentProcedures.procedureName,
-              procedureCategory: appointmentProcedures.procedureCategory,
-              price: appointmentProcedures.price,
-              duration: appointmentProcedures.duration,
-              order: appointmentProcedures.order
-            })
-            .from(appointmentProcedures)
-            .where(eq(appointmentProcedures.appointmentId, apt.id))
-            .orderBy(appointmentProcedures.order);
-
-          return {
-            ...apt,
-            staff: staffInfo,
-            procedures: aptProcedures
-          };
-        })
-      );
-
-      res.json(appointmentsWithDetails);
-    } catch (error) {
-      console.error('Error fetching client appointments:', error);
-      res.status(500).json({ message: 'Failed to fetch appointments' });
-    }
-  });
-
-  // Cancel appointment (client can only cancel their own)
-  app.put('/api/client/appointments/:id/cancel', isClientAuthenticated, async (req: any, res) => {
-    try {
-      const appointmentId = parseInt(req.params.id);
-      const clientId = req.user.id;
-      const salonId = req.user.userId;
-
-      // Verify appointment belongs to this client
-      const [appointment] = await db
-        .select()
-        .from(appointments)
-        .where(
-          and(
-            eq(appointments.id, appointmentId),
-            eq(appointments.clientId, clientId),
-            eq(appointments.userId, salonId)
-          )
-        )
-        .limit(1);
-
-      if (!appointment) {
-        return res.status(404).json({ message: 'Appointment not found' });
-      }
-
-      if (appointment.status === 'cancelled' || appointment.status === 'completed') {
-        return res.status(400).json({ 
-          message: `Cannot cancel appointment with status: ${appointment.status}` 
-        });
-      }
-
-      // Update appointment status
-      const [updated] = await db
-        .update(appointments)
-        .set({ status: 'cancelled' })
-        .where(eq(appointments.id, appointmentId))
-        .returning();
-
-      res.json({ 
-        success: true,
-        message: 'Appointment cancelled successfully',
-        appointment: updated
-      });
-    } catch (error) {
-      console.error('Error cancelling appointment:', error);
-      res.status(500).json({ message: 'Failed to cancel appointment' });
-    }
-  });
-
-  // Procedures routes
-  app.get('/api/procedures', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const procedures = await procedureStorage.getProcedures(userId);
-      res.json(procedures);
-    } catch (error) {
-      console.error("Error fetching procedures:", error);
-      res.status(500).json({ message: "Failed to fetch procedures" });
-    }
-  });
-
-  app.post('/api/procedures', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const procedureData = insertProcedureSchema.parse({ ...req.body, userId });
-      const procedure = await procedureStorage.createProcedure(userId, procedureData);
-      res.json(procedure);
-    } catch (error) {
-      console.error("Error creating procedure:", error);
-      res.status(500).json({ message: "Failed to create procedure" });
-    }
-  });
-
-  app.put('/api/procedures/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const userId = req.user.id;
-      const updates = updateProcedureSchema.parse(req.body);
-      const procedure = await procedureStorage.updateProcedure(id, userId, updates);
-      res.json(procedure);
-    } catch (error) {
-      console.error("Error updating procedure:", error);
-      res.status(500).json({ message: "Failed to update procedure" });
-    }
-  });
-
-  // Public booked slots endpoint for client booking
-  app.get('/api/public/booked-slots/:publicLink/:date', async (req, res) => {
-    try {
-      const { publicLink, date } = req.params;
-      
-      // Find company by public link
-      const [company] = await db.select().from(users).where(eq(users.publicLink, publicLink));
-      
-      if (!company) {
-        return res.status(404).json({ message: "Company not found" });
-      }
-
-      // Get booked appointments for the selected date
-      const selectedDate = new Date(date);
-      const startOfDay = new Date(selectedDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(selectedDate);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      const bookedAppointments = await db
-        .select({
-          appointmentDate: appointments.appointmentDate,
-          duration: appointments.duration,
-        })
-        .from(appointments)
-        .where(
-          and(
-            eq(appointments.userId, company.id),
-            gte(appointments.appointmentDate, startOfDay),
-            lte(appointments.appointmentDate, endOfDay),
-            or(
-              eq(appointments.status, 'confirmed'),
-              eq(appointments.status, 'scheduled')
-            )
-          )
-        );
-
-      res.json(bookedAppointments);
-    } catch (error) {
-      console.error("Error fetching booked slots:", error);
-      res.status(500).json({ message: "Failed to fetch booked slots" });
-    }
-  });
-
-  // API endpoint to deduct materials when appointment is completed
-  app.post('/api/appointments/:id/complete', isAuthenticated, async (req: any, res) => {
-    try {
-      const appointmentId = parseInt(req.params.id);
-      const userId = req.user.id;
-      const { procedureId } = req.body;
-
-      // Update appointment status to completed
-      await storage.updateAppointment(appointmentId, { status: 'completed' });
-
-      // If procedure ID is provided, deduct materials
-      if (procedureId) {
-        await procedureStorage.deductMaterialsForProcedure(procedureId, userId);
-      }
-
-      res.json({ message: 'Appointment completed and materials deducted successfully' });
-    } catch (error) {
-      console.error("Error completing appointment:", error);
-      res.status(500).json({ message: "Failed to complete appointment" });
-    }
-  });
-
-  // Integrations routes
-  app.get('/api/integrations', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const userIntegrations = await db
-        .select()
-        .from(integrations)
-        .where(eq(integrations.userId, userId))
-        .orderBy(desc(integrations.createdAt));
-      
-      res.json(userIntegrations);
-    } catch (error) {
-      console.error("Error fetching integrations:", error);
-      res.status(500).json({ message: "Failed to fetch integrations" });
-    }
-  });
-
-  app.post('/api/integrations', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const validatedData = insertIntegrationSchema.parse(req.body);
-      
-      const [newIntegration] = await db
-        .insert(integrations)
-        .values({
-          ...validatedData,
-          userId,
-        })
-        .returning();
-      
-      res.status(201).json(newIntegration);
-    } catch (error) {
-      console.error("Error creating integration:", error);
-      res.status(500).json({ message: "Failed to create integration" });
-    }
-  });
-
-  app.delete('/api/integrations/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const integrationId = parseInt(req.params.id);
-      
-      await db
-        .delete(integrations)
-        .where(
-          and(
-            eq(integrations.id, integrationId),
-            eq(integrations.userId, userId)
-          )
-        );
-      
-      res.json({ message: 'Integration deleted successfully' });
-    } catch (error) {
-      console.error("Error deleting integration:", error);
-      res.status(500).json({ message: "Failed to delete integration" });
-    }
-  });
-
-  app.patch('/api/integrations/:id/test-payload', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const integrationId = parseInt(req.params.id);
-      const { testPayload } = req.body;
-      
-      const [updated] = await db
-        .update(integrations)
-        .set({ testPayload })
-        .where(
-          and(
-            eq(integrations.id, integrationId),
-            eq(integrations.userId, userId)
-          )
-        )
-        .returning();
-      
-      res.json(updated);
-    } catch (error) {
-      console.error("Error updating test payload:", error);
-      res.status(500).json({ message: "Failed to update test payload" });
-    }
-  });
-
-  app.post('/api/integrations/:id/test', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const integrationId = parseInt(req.params.id);
-      
-      const [integration] = await db
-        .select()
-        .from(integrations)
-        .where(
-          and(
-            eq(integrations.id, integrationId),
-            eq(integrations.userId, userId)
-          )
-        );
-
-      if (!integration) {
-        return res.status(404).json({ message: "Integration not found" });
-      }
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      // Apply authentication based on type
-      if (integration.authType === 'Bearer' && integration.authData) {
-        headers['Authorization'] = `Bearer ${integration.authData}`;
-      } else if (integration.authType === 'Basic' && integration.username && integration.password) {
-        const credentials = Buffer.from(`${integration.username}:${integration.password}`).toString('base64');
-        headers['Authorization'] = `Basic ${credentials}`;
-      } else if (integration.authType === 'API Key' && integration.authData) {
-        headers['X-API-Key'] = integration.authData;
-      } else if (integration.authData) {
-        // Custom auth - try to parse as JSON for headers
-        try {
-          const customHeaders = JSON.parse(integration.authData);
-          Object.assign(headers, customHeaders);
-        } catch {
-          headers['Authorization'] = integration.authData;
-        }
-      }
-
-      const payload = integration.testPayload ? JSON.parse(integration.testPayload) : {};
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
-
-      const response = await fetch(integration.url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      const responseText = await response.text();
-      let responseData;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch {
-        responseData = responseText;
-      }
-
-      res.json({
-        success: true,
-        status: response.status,
-        statusText: response.statusText,
-        data: responseData,
-      });
-    } catch (error: any) {
-      console.error("Error testing integration:", error);
-      res.status(500).json({ 
-        success: false,
-        message: error.message || "Failed to test integration",
-        error: error.toString(),
-      });
-    }
-  });
-
-  // Test route for inactive clients detection (development only)
-  app.post('/api/test/inactive-clients', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      console.log('[Test] Running inactive clients detection for user:', userId);
-      
-      await storage.populateInactiveClients(userId);
-      const inactiveClients = await storage.getInactiveClients(userId);
-      
-      console.log('[Test] Found', inactiveClients.length, 'inactive clients');
-      res.json({ 
-        success: true, 
-        count: inactiveClients.length,
-        inactiveClients 
-      });
-    } catch (error) {
-      console.error("Error testing inactive clients detection:", error);
-      res.status(500).json({ message: "Failed to test inactive clients detection" });
-    }
-  });
-
-  // Test route for appointment reminders (development only)
-  app.post('/api/test/appointment-reminders', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      console.log('[Test] Running appointment reminders task for user:', userId);
-      
-      await storage.populateAppointmentReminders(userId);
-      const reminders = await storage.getAppointmentReminders(userId, 0); // status = 0 (pending)
-      
-      console.log('[Test] Found', reminders.length, 'pending appointment reminders');
-      res.json({ 
-        success: true, 
-        count: reminders.length,
-        reminders 
-      });
-    } catch (error) {
-      console.error("Error testing appointment reminders:", error);
-      res.status(500).json({ message: "Failed to test appointment reminders" });
-    }
-  });
-
-  // Campaign routes
-  app.get('/api/campaigns', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const campaigns = await storage.getCampaigns(userId);
-      res.json(campaigns);
-    } catch (error) {
-      console.error("Error fetching campaigns:", error);
-      res.status(500).json({ message: "Failed to fetch campaigns" });
-    }
-  });
-
-  app.post('/api/campaigns', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const campaignData = insertCampaignSchema.parse(req.body);
-      const campaign = await storage.createCampaign(userId, campaignData);
-      res.json(campaign);
-    } catch (error) {
-      console.error("Error creating campaign:", error);
-      res.status(500).json({ message: "Failed to create campaign" });
-    }
-  });
-
-  app.get('/api/campaigns/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const campaignId = parseInt(req.params.id);
-      const campaign = await storage.getCampaign(campaignId, userId);
-      
-      if (!campaign) {
-        return res.status(404).json({ message: "Campaign not found" });
-      }
-      
-      res.json(campaign);
-    } catch (error) {
-      console.error("Error fetching campaign:", error);
-      res.status(500).json({ message: "Failed to fetch campaign" });
-    }
-  });
-
-  app.post('/api/campaigns/:id/send', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const campaignId = parseInt(req.params.id);
-      
-      // Verificar se a campanha pertence ao usuário
-      const campaign = await storage.getCampaign(campaignId, userId);
-      if (!campaign) {
-        return res.status(404).json({ message: "Campaign not found" });
-      }
-      
-      // Enviar a campanha
-      await storage.sendCampaign(campaignId);
-      
-      res.json({ message: "Campaign sent successfully" });
-    } catch (error) {
-      console.error("Error sending campaign:", error);
-      res.status(500).json({ message: "Failed to send campaign" });
-    }
-  });
-
-  app.delete('/api/campaigns/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const campaignId = parseInt(req.params.id);
-      
-      // Verificar se a campanha pertence ao usuário
-      const campaign = await storage.getCampaign(campaignId, userId);
-      if (!campaign) {
-        return res.status(404).json({ message: "Campaign not found" });
-      }
-      
-      await storage.deleteCampaign(campaignId, userId);
-      res.json({ message: "Campaign deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting campaign:", error);
-      res.status(500).json({ message: "Failed to delete campaign" });
-    }
-  });
-
-  // Banner routes (only for admin)
-  app.get('/api/banners', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const banners = await storage.getBanners(userId);
-      res.json(banners);
-    } catch (error) {
-      console.error("Error fetching banners:", error);
-      res.status(500).json({ message: "Failed to fetch banners" });
-    }
-  });
-
-  app.get('/api/banners/active', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const banner = await storage.getActiveBanner(userId);
-      res.json(banner);
-    } catch (error) {
-      console.error("Error fetching active banner:", error);
-      res.status(500).json({ message: "Failed to fetch active banner" });
-    }
-  });
-
-  app.get('/api/banners/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const bannerId = parseInt(req.params.id);
-      const banners = await storage.getBanners(userId);
-      const banner = banners.find(b => b.id === bannerId);
-      
-      if (!banner) {
-        return res.status(404).json({ message: "Banner not found" });
-      }
-      
-      res.json(banner);
-    } catch (error) {
-      console.error("Error fetching banner:", error);
-      res.status(500).json({ message: "Failed to fetch banner" });
-    }
-  });
-
-  app.post('/api/banners', isAuthenticated, async (req: any, res) => {
-    try {
-      // Verificar se é admin
-      if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: "Only admins can create banners" });
-      }
-
-      const userId = req.user.id;
-      const bannerData = insertBannerSchema.parse({
-        ...req.body,
-        userId,
-      });
-      const banner = await storage.createBanner(bannerData);
-      res.json(banner);
-    } catch (error) {
-      console.error("Error creating banner:", error);
-      res.status(500).json({ message: "Failed to create banner" });
-    }
-  });
-
-  app.put('/api/banners/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      // Verificar se é admin
-      if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: "Only admins can update banners" });
-      }
-
-      const userId = req.user.id;
-      const bannerId = parseInt(req.params.id);
-      
-      // Verificar se o banner pertence ao usuário
-      const banners = await storage.getBanners(userId);
-      const banner = banners.find(b => b.id === bannerId);
-      
-      if (!banner) {
-        return res.status(404).json({ message: "Banner not found" });
-      }
-
-      const bannerData = insertBannerSchema.partial().parse(req.body);
-      const updatedBanner = await storage.updateBanner(bannerId, bannerData);
-      res.json(updatedBanner);
-    } catch (error) {
-      console.error("Error updating banner:", error);
-      res.status(500).json({ message: "Failed to update banner" });
-    }
-  });
-
-  app.delete('/api/banners/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      // Verificar se é admin
-      if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: "Only admins can delete banners" });
-      }
-
-      const userId = req.user.id;
-      const bannerId = parseInt(req.params.id);
-      
-      // Verificar se o banner pertence ao usuário
-      const banners = await storage.getBanners(userId);
-      const banner = banners.find(b => b.id === bannerId);
-      
-      if (!banner) {
-        return res.status(404).json({ message: "Banner not found" });
-      }
-      
-      await storage.deleteBanner(bannerId);
-      res.json({ message: "Banner deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting banner:", error);
-      res.status(500).json({ message: "Failed to delete banner" });
-    }
-  });
-
-  // Public route for login banner (no authentication required)
-  app.get('/api/public/login-banner', async (req, res) => {
-    try {
-      const banner = await storage.getPublicLoginBanner();
-      res.json(banner);
-    } catch (error) {
-      console.error("Error fetching public login banner:", error);
-      res.status(500).json({ message: "Failed to fetch login banner" });
-    }
-  });
-
-  // Package routes
-  app.get('/api/packages', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const packagesList = await storage.getPackages(userId);
-      res.json(packagesList);
-    } catch (error) {
-      console.error("Error fetching packages:", error);
-      res.status(500).json({ message: "Failed to fetch packages" });
-    }
-  });
-
-  app.get('/api/packages/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const packageId = parseInt(req.params.id);
-      const packageData = await storage.getPackage(packageId, userId);
-      
-      if (!packageData) {
-        return res.status(404).json({ message: "Package not found" });
-      }
-      
-      res.json(packageData);
-    } catch (error) {
-      console.error("Error fetching package:", error);
-      res.status(500).json({ message: "Failed to fetch package" });
-    }
-  });
-
-  app.post('/api/packages', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const packageData = insertPackageSchema.parse({
-        ...req.body,
-        userId,
-      });
-      const newPackage = await storage.createPackage(packageData);
-      res.json(newPackage);
-    } catch (error: any) {
-      console.error("Error creating package:", error);
-      res.status(500).json({ message: error.message || "Failed to create package" });
-    }
-  });
-
-  app.put('/api/packages/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const packageId = parseInt(req.params.id);
-      
-      // Verify package belongs to user
-      const existingPackage = await storage.getPackage(packageId, userId);
-      if (!existingPackage) {
-        return res.status(404).json({ message: "Package not found" });
-      }
-
-      const packageData = insertPackageSchema.partial().parse(req.body);
-      const updatedPackage = await storage.updatePackage(packageId, packageData);
-      res.json(updatedPackage);
-    } catch (error: any) {
-      console.error("Error updating package:", error);
-      res.status(500).json({ message: error.message || "Failed to update package" });
-    }
-  });
-
-  app.delete('/api/packages/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const packageId = parseInt(req.params.id);
-      
-      // Verify package belongs to user
-      const existingPackage = await storage.getPackage(packageId, userId);
-      if (!existingPackage) {
-        return res.status(404).json({ message: "Package not found" });
-      }
-      
-      await storage.deletePackage(packageId);
-      res.json({ message: "Package deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting package:", error);
-      res.status(500).json({ message: "Failed to delete package" });
-    }
-  });
-
-  // Loyalty Settings routes
-  app.get('/api/loyalty-settings', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const settings = await storage.getLoyaltySettings(userId);
-      res.json(settings);
-    } catch (error) {
-      console.error("Error fetching loyalty settings:", error);
-      res.status(500).json({ message: "Failed to fetch loyalty settings" });
-    }
-  });
-
-  app.post('/api/loyalty-settings', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const settingsData = insertLoyaltySettingsSchema.parse(req.body);
-      const settings = await storage.upsertLoyaltySettings(userId, settingsData);
-      res.json(settings);
-    } catch (error: any) {
-      console.error("Error saving loyalty settings:", error);
-      res.status(500).json({ message: error.message || "Failed to save loyalty settings" });
-    }
-  });
-
-  app.put('/api/loyalty-settings', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const settingsData = insertLoyaltySettingsSchema.partial().parse(req.body);
-      const settings = await storage.upsertLoyaltySettings(userId, settingsData);
-      res.json(settings);
-    } catch (error: any) {
-      console.error("Error updating loyalty settings:", error);
-      res.status(500).json({ message: error.message || "Failed to update loyalty settings" });
-    }
-  });
-
-  // Calculate loyalty points for a client
-  app.get('/api/loyalty-points/:clientId', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const clientId = parseInt(req.params.clientId);
-      const points = await storage.calculateClientLoyaltyPoints(clientId, userId);
-      res.json({ points });
-    } catch (error) {
-      console.error("Error calculating loyalty points:", error);
-      res.status(500).json({ message: "Failed to calculate loyalty points" });
-    }
-  });
+  // fiscal routes — server/routes/fiscal.ts
+  const { registerFiscalRoutes } = await import('./routes/fiscal');
+  registerFiscalRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

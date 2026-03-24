@@ -8,6 +8,8 @@ import {
   appointmentProcedures,
   clinicalRecords,
   transactions,
+  sales,
+  products,
   campaigns,
   messages,
   feedback,
@@ -17,6 +19,8 @@ import {
   procedures,
   staff,
   staffSchedules,
+  appointmentStaff,
+  staffProcedures,
   notifications,
   marketingCampaigns,
   banners,
@@ -24,6 +28,7 @@ import {
   loyaltySettings,
   payments,
   socialMediaPosts,
+  procedureProducts,
   type User,
   type UpsertUser,
   type Client,
@@ -38,6 +43,8 @@ import {
   type InsertClinicalRecord,
   type Transaction,
   type InsertTransaction,
+  type Sale,
+  type InsertSale,
   type Campaign,
   type InsertCampaign,
   type Message,
@@ -56,11 +63,17 @@ import {
   type InsertStaff,
   type StaffSchedule,
   type InsertStaffSchedule,
+  type AppointmentStaff,
+  type InsertAppointmentStaff,
+  type StaffProcedure,
+  type InsertStaffProcedure,
   type Notification,
   type InsertNotification,
   type NotificationMetadata,
   type MarketingCampaign,
   type InsertMarketingCampaign,
+  type AppointmentProduct,
+  type InsertAppointmentProduct,
 
   type Payment,
   type InsertPayment,
@@ -75,9 +88,11 @@ import {
   type InsertPackage,
   type LoyaltySettings,
   type InsertLoyaltySettings,
+  appointmentProducts
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, desc, asc, gte, lte, sql, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, or, desc, asc, gte, lte, lt, sql, inArray, isNotNull, not } from "drizzle-orm";
+import { pool } from "./db";
 import session from "express-session";
 
 // Interface for storage operations
@@ -104,18 +119,21 @@ export interface IStorage {
   createService(service: InsertService): Promise<Service>;
   
   // Appointment operations
-  getAppointments(userId: number, date?: Date): Promise<(Appointment & { client: Client; service: any })[]>;
+  getAppointments(userId: number, date?: Date, staffId?: number): Promise<(Appointment & { client: Client; service: any })[]>;
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment>;
+  addAppointmentProduct(data: InsertAppointmentProduct): Promise<AppointmentProduct>;
+  removeAppointmentProduct(id: number): Promise<void>;
   
   // Clinical records operations
-  getClinicalRecords(userId: string, clientId?: number): Promise<(ClinicalRecord & { client: Client })[]>;
+  // Clinical records operations
+  getClinicalRecords(userId: number, clientId?: number): Promise<(ClinicalRecord & { client: Client })[]>;
   createClinicalRecord(record: InsertClinicalRecord): Promise<ClinicalRecord>;
-  
+   
   // Transaction operations
-  getTransactions(userId: string, startDate?: Date, endDate?: Date): Promise<(Transaction & { client?: Client })[]>;
+  getTransactions(userId: number, startDate?: Date, endDate?: Date): Promise<(Transaction & { client?: Client })[]>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
-  getDashboardStats(userId: string): Promise<{
+  getDashboardStats(userId: number): Promise<{
     todayAppointments: number;
     dailyRevenue: string;
     activeClients: number;
@@ -126,55 +144,25 @@ export interface IStorage {
   }>;
   
   // Message operations
-  getMessages(userId: string): Promise<(Message & { client?: Client })[]>;
+  getMessages(userId: number): Promise<(Message & { client?: Client })[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   
   // Feedback operations
-  getFeedback(userId: string): Promise<(Feedback & { client: Client })[]>;
+  getFeedback(userId: number): Promise<(Feedback & { client: Client })[]>;
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
   
   // Inventory operations
-  getInventory(userId: string): Promise<Inventory[]>;
+  getInventory(userId: number): Promise<Inventory[]>;
   createInventoryItem(item: InsertInventory): Promise<Inventory>;
   updateInventoryItem(id: number, item: Partial<InsertInventory>): Promise<Inventory>;
   
   // Loyalty operations
-  getLoyaltyPackages(userId: string): Promise<LoyaltyPackage[]>;
+  getLoyaltyPackages(userId: number): Promise<LoyaltyPackage[]>;
   createLoyaltyPackage(packageData: InsertLoyaltyPackage): Promise<LoyaltyPackage>;
-  getClientPackages(userId: string): Promise<(ClientPackage & { client: Client; package: LoyaltyPackage })[]>;
-  
-  // Staff operations
-  getStaff(userId: string): Promise<Staff[]>;
-  createStaff(staff: InsertStaff): Promise<Staff>;
-  getStaffSchedules(userId: string): Promise<StaffSchedule[]>;
-  createStaffSchedule(schedule: InsertStaffSchedule): Promise<StaffSchedule>;
-  
-  // Payslip operations
-  getPayslipData(userId: string, staffId?: number, startDate?: Date, endDate?: Date): Promise<Array<{
-    staffId: number;
-    staffName: string;
-    totalDuration: number;
-    appointmentCount: number;
-    procedures: Array<{
-      procedureName: string;
-      procedureCategory: string;
-      count: number;
-      totalDuration: number;
-    }>;
-    appointments: Array<{
-      id: number;
-      appointmentDate: Date;
-      clientName: string;
-      procedures: Array<{
-        procedureName: string;
-        duration: number;
-      }>;
-      totalDuration: number;
-    }>;
-  }>>;
-  
+  getClientPackages(userId: number): Promise<(ClientPackage & { client: Client; package: LoyaltyPackage })[]>;
+ 
   // Marketing operations
-  getMarketingCampaigns(userId: string): Promise<MarketingCampaign[]>;
+  getMarketingCampaigns(userId: number): Promise<MarketingCampaign[]>;
   createMarketingCampaign(campaign: InsertMarketingCampaign): Promise<MarketingCampaign>;
   
   // Banner operations
@@ -200,14 +188,25 @@ export interface IStorage {
   calculateClientLoyaltyPoints(clientId: number, userId: number): Promise<number>;
   
   // Analytics operations
-  getAnalytics(userId: string, dateRange?: string): Promise<any>;
+  getAnalytics(userId: number, dateRange?: string): Promise<any>;
   
   // Business hours operations
-  getBusinessHours(userId: string): Promise<BusinessHours[]>;
+  getBusinessHours(userId: number): Promise<BusinessHours[]>;
   upsertBusinessHours(hours: InsertBusinessHours[]): Promise<BusinessHours[]>;
   
   // Profile operations
-  updateUserProfileImage(userId: string, profileImageUrl: string): Promise<void>;
+  updateUserProfileImage(userId: number, profileImageUrl: string): Promise<void>;
+  
+  // Sales operations
+  getSales(userId: number, startDate?: Date, endDate?: Date): Promise<(Sale & { client?: Client })[]>;
+  getSale(id: number, userId: number): Promise<(Sale & { client?: Client }) | null>;
+  createSale(sale: InsertSale): Promise<Sale>;
+  deleteSale(id: number, userId: number): Promise<void>;
+
+
+  // Availability operations
+  getStaffSchedule(staffId: number): Promise<StaffSchedule[]>;
+  getAppointmentsByDate(staffId: number, date: Date): Promise<Appointment[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -283,6 +282,98 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(clients.createdAt));
   }
 
+  async updateAppointmentWithProcedures(
+    id: number,
+    appointmentData: any,
+    procedureIds: number[],
+    procedureStaffMap: Record<number, number>,
+    userId: number
+  ): Promise<any> {
+    // 1. Update basic appointment data
+    const [updatedAppointment] = await db
+      .update(appointments)
+      .set({
+        ...appointmentData,
+        updatedAt: new Date()
+      })
+      .where(and(eq(appointments.id, id), eq(appointments.userId, userId)))
+      .returning();
+
+    if (!updatedAppointment) {
+      throw new Error("Appointment not found");
+    }
+
+    // 2. Clear existing procedures
+    await db
+      .delete(appointmentProcedures)
+      .where(eq(appointmentProcedures.appointmentId, id));
+
+    // 3. Insert new procedures with staff assignments
+    const allProcedures = await db
+      .select()
+      .from(procedures)
+      .where(inArray(procedures.id, procedureIds));
+
+    // Create a map for easy lookup
+    const procedureMap = new Map(allProcedures.map(p => [p.id, p]));
+
+    const procedureInserts = procedureIds.map((procId, index) => {
+      const proc = procedureMap.get(procId);
+      if (!proc) return null;
+
+      // Determine staffId for this procedure:
+      // 1. Explicit mapping from frontend
+      // 2. Appointment main staffId (fallback)
+      const staffId = procedureStaffMap[procId] || appointmentData.staffId;
+
+      return {
+        appointmentId: id,
+        procedureName: proc.name,
+        procedureCategory: proc.category,
+        price: proc.price,
+        duration: proc.duration,
+        staffId: staffId || null,
+        order: index,
+        materials: proc.materials // Snapshot current materials
+      };
+    }).filter(Boolean);
+
+    let insertedProcedures: any[] = [];
+    if (procedureInserts.length > 0) {
+      insertedProcedures = await db
+        .insert(appointmentProcedures)
+        .values(procedureInserts as any)
+        .returning();
+    }
+
+    // 4. Update secondary staff assignments in appointment_staff table
+    await db.delete(appointmentStaff).where(eq(appointmentStaff.appointmentId, id));
+
+    // Calculate unique staff involved (excluding main staffId)
+    const uniqueStaffIds = new Set<number>();
+    procedureIds.forEach(procId => {
+       const sId = procedureStaffMap[procId];
+       if (sId && sId !== appointmentData.staffId) {
+         uniqueStaffIds.add(sId);
+       }
+    });
+
+    if (uniqueStaffIds.size > 0) {
+      const staffInserts = Array.from(uniqueStaffIds).map(staffId => ({
+        appointmentId: id,
+        staffId,
+        role: 'secondary' as const
+      }));
+      
+      await db.insert(appointmentStaff).values(staffInserts);
+    }
+
+    return {
+      appointment: updatedAppointment,
+      procedures: insertedProcedures
+    };
+  }
+
   async getClient(id: number, userId: number): Promise<Client | undefined> {
     const [client] = await db
       .select()
@@ -317,7 +408,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Service operations
-  async getServices(userId: string): Promise<Service[]> {
+  // Service operations
+  async getServices(userId: number): Promise<Service[]> {
     return await db
       .select()
       .from(services)
@@ -331,144 +423,250 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Appointment operations
-  async getAppointments(userId: string, date?: Date): Promise<(Appointment & { client: Client; service: any })[]> {
-    // First get appointments with clients
-    let appointmentQuery = db
-      .select({
-        id: appointments.id,
-        userId: appointments.userId,
-        clientId: appointments.clientId,
-        serviceId: appointments.serviceId,
-        serviceType: appointments.serviceType,
-        selectedProcedures: appointments.selectedProcedures,
-        appointmentDate: appointments.appointmentDate,
-        duration: appointments.duration,
-        status: appointments.status,
-        notes: appointments.notes,
-        totalAmount: appointments.totalAmount,
-        totalPrice: appointments.totalPrice,
-        totalDuration: appointments.totalDuration,
-        procedureCount: appointments.procedureCount,
-        paidAmount: appointments.paidAmount,
-        paymentStatus: appointments.paymentStatus,
-        beforeImages: appointments.beforeImages,
-        afterImages: appointments.afterImages,
-        staffId: appointments.staffId,
-        createdAt: appointments.createdAt,
-        client: clients,
-      })
-      .from(appointments)
-      .innerJoin(clients, eq(appointments.clientId, clients.id));
 
-    let whereConditions = [eq(appointments.userId, userId)];
-    
-    if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      whereConditions.push(
-        gte(appointments.appointmentDate, startOfDay),
-        lte(appointments.appointmentDate, endOfDay)
-      );
-    }
 
-    if (whereConditions.length > 1) {
-      appointmentQuery = appointmentQuery.where(and(...whereConditions));
-    } else {
-      appointmentQuery = appointmentQuery.where(whereConditions[0]);
-    }
-    const appointmentsWithClients = await appointmentQuery.orderBy(asc(appointments.appointmentDate));
-    
-    console.log(`📅 Storage: Found ${appointmentsWithClients.length} appointments for date ${date ? date.toISOString() : 'all'}`);
-    if (date && appointmentsWithClients.length > 0) {
-      console.log(`📅 Storage: Sample appointments:`, appointmentsWithClients.slice(0, 3).map((a: any) => ({
-        id: a.id,
-        appointmentDate: a.appointmentDate,
-        staffId: a.staffId,
-        clientId: a.clientId
-      })));
-    }
-    
-    // Now fetch services and procedures for each appointment
-    const result = [];
-    for (const appointment of appointmentsWithClients) {
-      let service;
-      let allProcedures = [];
-      let calculatedTotal = '0';
+
+
+  // Appointment operations
+  async getAppointments(userId: number, date?: Date, staffId?: number): Promise<(Appointment & { client: Client; service: any })[]> {
+    try {
+      // First get appointments with clients
+      let appointmentQuery = db
+        .select({
+          id: appointments.id,
+          userId: appointments.userId,
+          clientId: appointments.clientId,
+          serviceId: appointments.serviceId,
+          serviceType: appointments.serviceType,
+          selectedProcedures: appointments.selectedProcedures,
+          appointmentDate: appointments.appointmentDate,
+          duration: appointments.duration,
+          status: appointments.status,
+          notes: appointments.notes,
+          totalAmount: appointments.totalAmount,
+          totalPrice: appointments.totalPrice,
+          waitlist: appointments.waitlist,
+          totalDuration: appointments.totalDuration,
+          procedureCount: appointments.procedureCount,
+          paidAmount: appointments.paidAmount,
+          paymentStatus: appointments.paymentStatus,
+          beforeImages: appointments.beforeImages,
+          afterImages: appointments.afterImages,
+          staffId: appointments.staffId,
+          createdAt: appointments.createdAt,
+          client: clients,
+        })
+        .from(appointments)
+        .innerJoin(clients, eq(appointments.clientId, clients.id));
+
+      let whereConditions = [eq(appointments.userId, userId)];
       
-      // First, try to get procedures from appointment_procedures table (new multi-procedure system)
-      const appointmentProceduresData = await db
-        .select()
-        .from(appointmentProcedures)
-        .where(eq(appointmentProcedures.appointmentId, appointment.id))
-        .orderBy(appointmentProcedures.order);
-      
-      if (appointmentProceduresData.length > 0) {
-        // New system: use appointment_procedures table
-        allProcedures = appointmentProceduresData.map(ap => ({
-          id: ap.procedureId,
-          name: ap.procedureName,
-          category: ap.procedureCategory,
-          price: ap.price,
-          duration: ap.duration,
-        }));
-        // Use the first procedure as the main service for backward compatibility
-        service = allProcedures[0];
-        // Calculate total from appointment_procedures
-        calculatedTotal = allProcedures.reduce((sum, proc) => sum + parseFloat(proc.price || '0'), 0).toFixed(2);
-      } else if (appointment.serviceType === 'procedure') {
-        // Fallback to old system for backward compatibility
-        if (appointment.selectedProcedures && Array.isArray(appointment.selectedProcedures) && appointment.selectedProcedures.length > 0) {
-          const procedureIds = appointment.selectedProcedures.map((id: string) => parseInt(id)).filter(id => !isNaN(id));
-          if (procedureIds.length > 0) {
-            allProcedures = await db
-              .select()
-              .from(procedures)
-              .where(and(
-                eq(procedures.userId, userId),
-                inArray(procedures.id, procedureIds)
-              ));
-            service = allProcedures[0] || null;
-            calculatedTotal = allProcedures.reduce((sum, proc) => sum + parseFloat(proc.price || '0'), 0).toFixed(2);
-          }
-        } else if (appointment.serviceId) {
-          // Fallback: fetch from procedures table using serviceId
-          const [procedure] = await db
-            .select()
-            .from(procedures)
-            .where(and(
-              eq(procedures.id, appointment.serviceId),
-              eq(procedures.userId, userId)
-            ));
-          service = procedure || null;
-          allProcedures = service ? [service] : [];
-          calculatedTotal = service?.price || '0';
-        }
-      } else if (appointment.serviceId) {
-        // Fetch from services table (default)
-        const [serviceRecord] = await db
-          .select()
-          .from(services)
-          .where(and(
-            eq(services.id, appointment.serviceId),
-            eq(services.userId, userId)
-          ));
-        service = serviceRecord;
-        calculatedTotal = service?.price || '0';
+      // Filter by staffId if provided (for staff users)
+      // staffId here is the staff.id (from staff table, not users.id)
+      // We need to find appointments where:
+      // 1. appointments.staffId matches the staff.id
+      // 2. OR appointment_procedures.staff_id matches the staff.id
+      // 3. OR appointment_staff.staff_id matches the staff.id
+      if (staffId !== undefined && staffId !== null) {
+        whereConditions.push(
+          or(
+            // Check if appointments.staffId matches this staff
+            sql`${appointments.staffId} = ${staffId}`,
+            // Check if appointment_procedures has this staff assigned
+            sql`EXISTS (
+              SELECT 1 FROM appointment_procedures ap 
+              WHERE ap.appointment_id = ${appointments.id}::integer 
+              AND ap.staff_id = ${staffId}
+            )`,
+            // Also check appointment_staff table (many-to-many relationship)
+            sql`EXISTS (
+              SELECT 1 FROM appointment_staff ast
+              WHERE ast.appointment_id = ${appointments.id}::integer 
+              AND ast.staff_id = ${staffId}
+            )`
+          )
+        );
       }
       
-      result.push({
-        ...appointment,
-        service: service || { id: appointment.serviceId || 0, name: 'Unknown Service', category: 'Unknown', price: '0' },
-        allProcedures: allProcedures,
-        // Use totalPrice (new field) if available, otherwise totalAmount, otherwise calculated total from procedures
-        totalAmount: appointment.totalPrice || appointment.totalAmount || calculatedTotal
+      if (date) {
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        whereConditions.push(
+          gte(appointments.appointmentDate, startOfDay),
+          lte(appointments.appointmentDate, endOfDay)
+        );
+      }
+
+      if (whereConditions.length > 1) {
+        appointmentQuery = appointmentQuery.where(and(...whereConditions));
+      } else {
+        appointmentQuery = appointmentQuery.where(whereConditions[0]!);
+      }
+      
+      const appointmentsWithClients = await appointmentQuery.orderBy(asc(appointments.appointmentDate));
+      
+      // Now fetch services and procedures for each appointment
+      const result = [];
+      for (const appointment of appointmentsWithClients) {
+        try {
+          // Guard clause for invalid appointment
+          if (!appointment) {
+            console.warn("[getAppointments] Skiping null/undefined appointment in loop");
+            continue;
+          }
+
+          let service;
+          let allProcedures = [];
+          let calculatedTotal = '0';
+          
+          // First, try to get procedures from appointment_procedures table (new multi-procedure system)
+          let appointmentProceduresData = [];
+           try {
+             appointmentProceduresData = await db
+              .select()
+              .from(appointmentProcedures)
+              .where(eq(appointmentProcedures.appointmentId, appointment.id))
+              .orderBy(asc(appointmentProcedures.order));
+          } catch (err) {
+             console.warn(`[getAppointments] Error fetching protocols for apt ${appointment.id}:`, err);
+          }
+          
+          if (appointmentProceduresData && appointmentProceduresData.length > 0) {
+            // New system: use appointment_procedures table
+            allProcedures = appointmentProceduresData.map(ap => ({
+              id: ap.procedureId,
+              name: ap.procedureName,
+              category: ap.procedureCategory,
+              price: ap.price,
+              duration: ap.duration,
+              staffId: ap.staffId, // Include staffId for each procedure
+            }));
+            // Use the first procedure as the main service for backward compatibility
+            service = allProcedures[0];
+            // Calculate total from appointment_procedures
+            calculatedTotal = allProcedures.reduce((sum: number, proc: any) => sum + parseFloat(proc.price || '0'), 0).toFixed(2);
+          } else if (appointment.serviceType === 'procedure') {
+            // Fallback to old system for backward compatibility
+            if (appointment.selectedProcedures && Array.isArray(appointment.selectedProcedures) && appointment.selectedProcedures.length > 0) {
+              const procedureIds = appointment.selectedProcedures.map((id: string) => parseInt(id)).filter(id => !isNaN(id));
+              if (procedureIds.length > 0) {
+                allProcedures = await db
+                  .select()
+                  .from(procedures)
+                  .where(and(
+                    eq(procedures.userId, userId),
+                    inArray(procedures.id, procedureIds)
+                  ));
+                service = allProcedures[0] || null;
+                calculatedTotal = allProcedures.reduce((sum: number, proc: any) => sum + parseFloat(proc.price || '0'), 0).toFixed(2);
+              }
+            } else if (appointment.serviceId) {
+              // Fallback: fetch from procedures table using serviceId
+              const [procedure] = await db
+                .select()
+                .from(procedures)
+                .where(and(
+                  eq(procedures.id, appointment.serviceId),
+                  eq(procedures.userId, userId)
+                ));
+              service = procedure || null;
+              allProcedures = service ? [service] : [];
+              calculatedTotal = service?.price || '0';
+            }
+          } else if (appointment.serviceId) {
+            // Fetch from services table (default)
+            const [serviceRecord] = await db
+              .select()
+              .from(services)
+              .where(and(
+                eq(services.id, appointment.serviceId),
+                eq(services.userId, userId)
+              ));
+            service = serviceRecord;
+            calculatedTotal = service?.price || '0';
+          }
+          
+          // Get associated staff members
+          let allStaff = [];
+          try {
+            allStaff = await this.getAppointmentStaff(appointment.id);
+          } catch (error: any) {
+            // If table doesn't exist, use fallback
+            if (error.code === '42P01' || error.message?.includes('não existe') || error.message?.includes('does not exist')) {
+              console.warn('Table appointment_staff does not exist. Please run migrate-appointment-staff-table.sql');
+              // Fallback: use appointment.staffId if available
+              if (appointment.staffId) {
+                const [staffMember] = await db
+                  .select()
+                  .from(staff)
+                  .where(eq(staff.id, appointment.staffId));
+                if (staffMember) {
+                  allStaff = [{
+                    id: staffMember.id,
+                    name: staffMember.name,
+                    role: staffMember.role,
+                    email: staffMember.email,
+                    phone: staffMember.phone,
+                    isPrimary: true,
+                    appointmentRole: 'main',
+                  }];
+                }
+              }
+            } else {
+              console.warn('Could not fetch appointment staff:', error);
+            }
+          }
+
+          // Fetch Appointment Products
+          let productsData = [];
+          try {
+            productsData = await db
+              .select({
+                id: appointmentProducts.id, // ID of the junction record for removal
+                productId: appointmentProducts.productId,
+                quantity: appointmentProducts.quantity,
+                // We should get product details
+                productName: products.name,
+                productPrice: products.price,
+                unit: products.unit
+              })
+              .from(appointmentProducts)
+              .innerJoin(products, eq(appointmentProducts.productId, products.id))
+              .where(eq(appointmentProducts.appointmentId, appointment.id));
+          } catch (err) {
+            console.warn(`[getAppointments] Error fetching products for apt ${appointment.id}:`, err);
+          }
+
+          result.push({
+            ...appointment,
+            service: service || { id: appointment.serviceId || 0, name: 'Unknown Service', category: 'Unknown', price: '0' },
+            allProcedures: allProcedures,
+            allStaff: allStaff,
+            appointmentProducts: productsData,
+            // Use totalPrice (new field) if available, otherwise totalAmount, otherwise calculated total from procedures
+            totalAmount: appointment.totalPrice || appointment.totalAmount || calculatedTotal
+          });
+        } catch (innerError) {
+          console.error(`[getAppointments] Error processing individual appointment ${appointment?.id}:`, innerError);
+        }
+      }
+      
+      return result as (Appointment & { client: Client; service: any })[];
+    } catch (error: any) {
+      console.error("[Storage] Error in getAppointments:", error);
+      console.error("[Storage] Error details:", {
+        userId,
+        date,
+        staffId,
+        errorMessage: error.message,
+        errorStack: error.stack,
+        errorCode: error.code
       });
+      throw error; // Re-throw to be handled by the route
     }
-    
-    return result as (Appointment & { client: Client; service: any })[];
   }
 
   async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
@@ -477,12 +675,135 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment> {
-    const [updatedAppointment] = await db
+    // Simple and direct update - only update fields that are provided
+    const updateData: any = {};
+    
+    // Only include fields that are explicitly provided (not undefined)
+    if (appointment.status !== undefined) updateData.status = appointment.status;
+    if (appointment.notes !== undefined) updateData.notes = appointment.notes;
+    if (appointment.paidAmount !== undefined) updateData.paidAmount = appointment.paidAmount;
+    if (appointment.paymentStatus !== undefined) updateData.paymentStatus = appointment.paymentStatus;
+    if (appointment.totalAmount !== undefined) updateData.totalAmount = appointment.totalAmount;
+    if (appointment.totalPrice !== undefined) updateData.totalPrice = appointment.totalPrice;
+    if (appointment.totalDuration !== undefined) updateData.totalDuration = appointment.totalDuration;
+    if (appointment.beforeImages !== undefined) updateData.beforeImages = appointment.beforeImages;
+    if (appointment.afterImages !== undefined) updateData.afterImages = appointment.afterImages;
+    if (appointment.appointmentDate !== undefined) {
+      // Handle both Date objects and string dates
+      updateData.appointmentDate = appointment.appointmentDate instanceof Date 
+        ? appointment.appointmentDate 
+        : new Date(appointment.appointmentDate);
+    }
+    if (appointment.clientId !== undefined) updateData.clientId = appointment.clientId;
+    if (appointment.staffId !== undefined) updateData.staffId = appointment.staffId;
+    if (appointment.procedureCount !== undefined) updateData.procedureCount = appointment.procedureCount;
+    if (appointment.waitlist !== undefined) updateData.waitlist = appointment.waitlist;
+    
+    // If nothing to update, return current appointment
+    if (Object.keys(updateData).length === 0) {
+      const [current] = await db.select().from(appointments).where(eq(appointments.id, id));
+      if (!current) throw new Error(`Appointment ${id} not found`);
+      return current;
+    }
+    
+    // Simple update with returning
+    const [updated] = await db
       .update(appointments)
-      .set(appointment as any)
+      .set(updateData)
       .where(eq(appointments.id, id))
       .returning();
-    return updatedAppointment;
+    
+    if (!updated) {
+      throw new Error(`Failed to update appointment ${id}`);
+    }
+    
+    return updated;
+  }
+
+  // Appointment Product Operations
+  async addAppointmentProduct(data: InsertAppointmentProduct): Promise<AppointmentProduct> {
+    // 1. Insert the product link
+    const [newProductLink] = await db
+      .insert(appointmentProducts)
+      .values(data)
+      .returning();
+
+    // 2. Decrement product stock
+    await db
+      .update(products)
+      .set({
+        currentStock: sql`${products.currentStock} - ${data.quantity || 1}`
+      })
+      .where(eq(products.id, data.productId));
+
+    // 3. Update Appointment Total Price
+    const appointmentId = data.appointmentId;
+    const [appointment] = await db
+      .select()
+      .from(appointments)
+      .where(eq(appointments.id, appointmentId));
+    
+    if (appointment) {
+      const currentTotal = parseFloat(appointment.totalPrice || appointment.totalAmount || '0');
+      const quantity = data.quantity || 1;
+      const productTotal = parseFloat(data.price.toString()) * quantity;
+      const newTotal = (currentTotal + productTotal).toFixed(2);
+      
+      await db
+        .update(appointments)
+        .set({ 
+          totalPrice: newTotal,
+          // Also update totalAmount as it might be used interchangeably in some places
+          totalAmount: newTotal 
+        })
+        .where(eq(appointments.id, appointmentId));
+    }
+
+    return newProductLink;
+  }
+
+  async removeAppointmentProduct(id: number): Promise<void> {
+    // 1. Get the product link to know what we are removing
+    const [productLink] = await db
+      .select()
+      .from(appointmentProducts)
+      .where(eq(appointmentProducts.id, id));
+
+    if (!productLink) return;
+
+    // 2. Delete the product link
+    await db
+      .delete(appointmentProducts)
+      .where(eq(appointmentProducts.id, id));
+
+    // 3. Increment product stock (restore stock)
+    await db
+      .update(products)
+      .set({
+        currentStock: sql`${products.currentStock} + ${productLink.quantity}`
+      })
+      .where(eq(products.id, productLink.productId));
+
+    // 4. Update Appointment Total Price
+    const appointmentId = productLink.appointmentId;
+    const [appointment] = await db
+      .select()
+      .from(appointments)
+      .where(eq(appointments.id, appointmentId));
+    
+    if (appointment) {
+      const currentTotal = parseFloat(appointment.totalPrice || appointment.totalAmount || '0');
+      const productTotal = parseFloat(productLink.price.toString()) * productLink.quantity;
+      const newTotal = Math.max(0, currentTotal - productTotal).toFixed(2);
+      
+      await db
+        .update(appointments)
+        .set({ 
+          totalPrice: newTotal,
+          totalAmount: newTotal 
+        })
+        .where(eq(appointments.id, appointmentId));
+    }
   }
 
   // Multiple procedures support
@@ -497,7 +818,9 @@ export class DatabaseStorage implements IStorage {
   async createAppointmentWithProcedures(
     appointmentData: Omit<InsertAppointment, 'totalPrice' | 'totalDuration' | 'procedureCount'>,
     procedureIds: number[],
-    userId: number
+    userId: number,
+    staffIds?: number[],
+    procedureStaffMap?: Record<number, number> // Map of procedureId -> staffId
   ): Promise<{ appointment: Appointment; procedures: AppointmentProcedure[] }> {
     // Fetch all procedures to create snapshots
     const proceduresList = await db
@@ -529,9 +852,10 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     // Create appointment_procedures records with snapshots
-    const appointmentProceduresData: InsertAppointmentProcedure[] = proceduresList.map((proc, index) => ({
+    const appointmentProceduresData: InsertAppointmentProcedure[] = proceduresList.map((proc: any, index: number) => ({
       appointmentId: newAppointment.id,
       procedureId: proc.id,
+      staffId: procedureStaffMap?.[proc.id] || (staffIds && staffIds.length > 0 ? staffIds[0] : undefined), // Use procedure-specific staff or first staff
       order: index,
       procedureName: proc.name,
       procedureCategory: proc.category,
@@ -544,6 +868,12 @@ export class DatabaseStorage implements IStorage {
       .insert(appointmentProcedures)
       .values(appointmentProceduresData)
       .returning();
+
+    // Update client's datahr (data e hora do último agendamento)
+    await db
+      .update(clients)
+      .set({ datahr: newAppointment.appointmentDate })
+      .where(eq(clients.id, appointmentData.clientId));
 
     return { appointment: newAppointment, procedures: createdProcedures };
   }
@@ -572,20 +902,102 @@ export class DatabaseStorage implements IStorage {
 
     // Get appointment procedures
     const proceduresList = await db
-      .select()
+      .select({
+        id: appointmentProcedures.id,
+        appointmentId: appointmentProcedures.appointmentId,
+        procedureId: appointmentProcedures.procedureId,
+        staffId: appointmentProcedures.staffId,
+        order: appointmentProcedures.order,
+        procedureName: appointmentProcedures.procedureName,
+        procedureCategory: appointmentProcedures.procedureCategory,
+        price: appointmentProcedures.price,
+        duration: appointmentProcedures.duration,
+        materials: appointmentProcedures.materials,
+        createdAt: appointmentProcedures.createdAt,
+      })
       .from(appointmentProcedures)
       .where(eq(appointmentProcedures.appointmentId, appointmentId))
       .orderBy(asc(appointmentProcedures.order));
 
+    // Get unique staff IDs from procedures
+    const staffIds = proceduresList
+      .map((p: any) => p.staffId)
+      .filter((id: any): id is number => id !== null && id !== undefined);
+
+    // Fetch all staff members in one query
+    const staffMembers = staffIds.length > 0
+      ? await db
+          .select({
+            id: staff.id,
+            name: staff.name,
+            username: staff.username,
+          })
+          .from(staff)
+          .where(inArray(staff.id, staffIds))
+      : [];
+
+    // Create a map for quick lookup
+    const staffMap = new Map(staffMembers.map((s: any) => [s.id, s]));
+
+    // Enrich procedures with staff names
+    const enrichedProcedures = proceduresList.map((proc: any) => {
+      const enrichedProc: any = { ...proc };
+      
+      if (proc.staffId) {
+        const staffMember = staffMap.get(proc.staffId);
+        if (staffMember) {
+          enrichedProc.staffName = staffMember.name || staffMember.username || 'Staff sem nome';
+        } else {
+          enrichedProc.staffName = 'Não atribuído';
+        }
+      } else {
+        enrichedProc.staffName = 'Não atribuído';
+      }
+      
+      return enrichedProc;
+    });
+
+    // Get appointment products
+    const productsData = await db
+      .select({
+        id: appointmentProducts.id,
+        appointmentId: appointmentProducts.appointmentId,
+        productId: appointmentProducts.productId,
+        quantity: appointmentProducts.quantity,
+        price: appointmentProducts.price,
+        originalPrice: appointmentProducts.originalPrice,
+        productName: products.name,
+        productUnit: products.unit,
+      })
+      .from(appointmentProducts)
+      .leftJoin(products, eq(appointmentProducts.productId, products.id))
+      .where(eq(appointmentProducts.appointmentId, appointmentId));
+
+    // Get appointment payments
+    const paymentsData = await db
+      .select({
+        id: payments.id,
+        amount: payments.amount,
+        method: payments.method,
+        status: payments.status,
+        processedAt: payments.processedAt,
+        createdAt: payments.createdAt,
+      })
+      .from(payments)
+      .where(eq(payments.appointmentId, appointmentId))
+      .orderBy(payments.createdAt);
+
     return {
       appointment: appointmentData.appointment,
-      procedures: proceduresList,
+      procedures: enrichedProcedures,
       client: appointmentData.client,
+      appointmentProducts: productsData,
+      appointmentPayments: paymentsData,
     };
   }
 
   // Clinical records operations
-  async getClinicalRecords(userId: string, clientId?: number): Promise<(ClinicalRecord & { client: Client })[]> {
+  async getClinicalRecords(userId: number, clientId?: number): Promise<(ClinicalRecord & { client: Client })[]> {
     let query = db
       .select({
         id: clinicalRecords.id,
@@ -642,7 +1054,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Transaction operations
-  async getTransactions(userId: string, startDate?: Date, endDate?: Date): Promise<(Transaction & { client?: Client })[]> {
+  async getTransactions(userId: number, startDate?: Date, endDate?: Date): Promise<(Transaction & { client?: Client })[]> {
     let query = db
       .select({
         id: transactions.id,
@@ -699,7 +1111,7 @@ export class DatabaseStorage implements IStorage {
     return newTransaction;
   }
 
-  async getDashboardStats(userId: string): Promise<{
+  async getDashboardStats(userId: number): Promise<{
     todayAppointments: number;
     dailyRevenue: string;
     activeClients: number;
@@ -716,29 +1128,31 @@ export class DatabaseStorage implements IStorage {
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-    // Today's appointments
+    // Get today's appointments count
+
+    
+    // Get today's appointments count
     const [todayAppointmentsResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(appointments)
-      .where(
-        and(
-          eq(appointments.userId, userId),
-          gte(appointments.appointmentDate, today),
-          lte(appointments.appointmentDate, tomorrow)
-        )
-      );
+      .where(and(
+        eq(appointments.userId, userId),
+        gte(appointments.appointmentDate, today),
+        lt(appointments.appointmentDate, tomorrow)
+      ));
 
-    // Daily revenue from transactions
+    // Get today's revenue (from transactions)
     const [dailyTransactionsResult] = await db
-      .select({ total: sql<string>`coalesce(sum(amount), 0)` })
+      .select({ 
+        total: sql<string>`coalesce(sum(amount), 0)` 
+      })
       .from(transactions)
-      .where(
-        and(
-          eq(transactions.userId, userId),
-          eq(transactions.type, "income"),
-          eq(transactions.transactionDate, today.toISOString().split('T')[0])
-        )
-      );
+      .where(and(
+        eq(transactions.userId, userId),
+        eq(transactions.type, 'income'),
+        gte(transactions.transactionDate, today.toISOString().split('T')[0]),
+        lte(transactions.transactionDate, today.toISOString().split('T')[0])
+      ));
 
     // Daily revenue from appointments (using new totalPrice field)
     const [dailyAppointmentsResult] = await db
@@ -753,8 +1167,21 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
+    // Daily revenue from sales
+    const [dailySalesResult] = await db
+      .select({ total: sql<string>`coalesce(sum(cast(total as decimal)), 0)` })
+      .from(sales)
+      .where(
+        and(
+          eq(sales.userId, userId),
+          eq(sales.saleDate, today.toISOString().split('T')[0])
+        )
+      );
+
     // Total daily revenue
-    const dailyRevenue = parseFloat(dailyTransactionsResult.total || "0") + parseFloat(dailyAppointmentsResult.total || "0");
+    const dailyRevenue = parseFloat(dailyTransactionsResult.total || "0") + 
+                         parseFloat(dailyAppointmentsResult.total || "0") + 
+                         parseFloat(dailySalesResult.total || "0");
 
     // Active clients
     const [activeClientsResult] = await db
@@ -799,6 +1226,18 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
+    // Monthly revenue from sales
+    const [monthlySalesResult] = await db
+      .select({ total: sql<string>`coalesce(sum(cast(total as decimal)), 0)` })
+      .from(sales)
+      .where(
+        and(
+          eq(sales.userId, userId),
+          gte(sales.saleDate, startOfMonth.toISOString().split('T')[0]),
+          lte(sales.saleDate, endOfMonth.toISOString().split('T')[0])
+        )
+      );
+
     // Monthly expenses
     const [monthlyExpensesResult] = await db
       .select({ total: sql<string>`coalesce(sum(amount), 0)` })
@@ -812,7 +1251,9 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    const monthlyRevenue = parseFloat(monthlyRevenueResult.total || "0") + parseFloat(monthlyAppointmentsResult.total || "0");
+    const monthlyRevenue = parseFloat(monthlyRevenueResult.total || "0") + 
+                          parseFloat(monthlyAppointmentsResult.total || "0") + 
+                          parseFloat(monthlySalesResult.total || "0");
     const monthlyExpenses = parseFloat(monthlyExpensesResult.total) || 0;
     const netProfit = monthlyRevenue - monthlyExpenses;
 
@@ -821,14 +1262,14 @@ export class DatabaseStorage implements IStorage {
       dailyRevenue: dailyRevenue.toFixed(2),
       activeClients: activeClientsResult.count || 0,
       satisfaction: parseFloat(satisfactionResult.avg || "0").toFixed(1),
-      monthlyRevenue: monthlyRevenueResult.total || "0",
+      monthlyRevenue: monthlyRevenue.toFixed(2),
       monthlyExpenses: monthlyExpensesResult.total || "0",
       netProfit: netProfit.toString(),
     };
   }
 
   // Message operations
-  async getMessages(userId: string): Promise<(Message & { client?: Client })[]> {
+  async getMessages(userId: number): Promise<(Message & { client?: Client })[]> {
     return await db
       .select({
         id: messages.id,
@@ -856,7 +1297,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Feedback operations
-  async getFeedback(userId: string): Promise<(Feedback & { client: Client })[]> {
+  async getFeedback(userId: number): Promise<(Feedback & { client: Client })[]> {
     return await db
       .select({
         id: feedback.id,
@@ -880,7 +1321,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Inventory operations
-  async getInventory(userId: string): Promise<Inventory[]> {
+  async getInventory(userId: number): Promise<Inventory[]> {
     return await db
       .select()
       .from(inventory)
@@ -903,7 +1344,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Loyalty operations
-  async getLoyaltyPackages(userId: string): Promise<LoyaltyPackage[]> {
+  async getLoyaltyPackages(userId: number): Promise<LoyaltyPackage[]> {
     return await db
       .select()
       .from(loyaltyPackages)
@@ -916,7 +1357,7 @@ export class DatabaseStorage implements IStorage {
     return newPackage;
   }
 
-  async getClientPackages(userId: string): Promise<(ClientPackage & { client: Client; package: LoyaltyPackage })[]> {
+  async getClientPackages(userId: number): Promise<(ClientPackage & { client: Client; package: LoyaltyPackage })[]> {
     return await db
       .select({
         id: clientPackages.id,
@@ -940,12 +1381,159 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Staff operations
-  async getStaff(userId: string): Promise<Staff[]> {
+  async getStaff(userId: number): Promise<Staff[]> {
     return await db
       .select()
       .from(staff)
-      .where(eq(staff.userId, userId))
+      .where(and(eq(staff.userId, userId), eq(staff.isActive, true)))
       .orderBy(asc(staff.name));
+  }
+
+  // Get staff members who can perform specific procedures
+  async getStaffByProcedures(userId: number, procedureIds: number[]): Promise<Staff[]> {
+    if (procedureIds.length === 0) {
+      // If no procedures selected, return all active staff
+      return await db
+        .select()
+        .from(staff)
+        .where(and(eq(staff.userId, userId), eq(staff.isActive, true)))
+        .orderBy(asc(staff.name));
+    }
+
+    try {
+      // Get staff IDs that can perform at least one of the selected procedures
+      const staffIds = await db
+        .selectDistinct({ staffId: staffProcedures.staffId })
+        .from(staffProcedures)
+        .innerJoin(staff, eq(staffProcedures.staffId, staff.id))
+        .where(and(
+          inArray(staffProcedures.procedureId, procedureIds),
+          eq(staff.userId, userId),
+          eq(staff.isActive, true)
+        ));
+
+      if (staffIds.length === 0) {
+        return [];
+      }
+
+      return await db
+        .select()
+        .from(staff)
+        .where(and(
+          inArray(staff.id, staffIds.map((s: any) => s.staffId)),
+          eq(staff.userId, userId),
+          eq(staff.isActive, true)
+        ))
+        .orderBy(asc(staff.name));
+    } catch (error: any) {
+      // Table might not exist yet, return all staff
+      console.warn('Could not filter staff by procedures (table may not exist yet):', error?.message);
+      return await db
+        .select()
+        .from(staff)
+        .where(and(eq(staff.userId, userId), eq(staff.isActive, true)))
+        .orderBy(asc(staff.name));
+    }
+  }
+
+  // Get procedures associated with a staff member
+  async getStaffProcedures(staffId: number, userId: number): Promise<any[]> {
+    try {
+      return await db
+        .select({
+          id: procedures.id,
+          name: procedures.name,
+          category: procedures.category,
+          duration: procedures.duration,
+          price: procedures.price,
+        })
+        .from(staffProcedures)
+        .innerJoin(procedures, eq(staffProcedures.procedureId, procedures.id))
+        .where(and(
+          eq(staffProcedures.staffId, staffId),
+          eq(procedures.userId, userId),
+          eq(procedures.isActive, true)
+        ))
+        .orderBy(asc(procedures.name));
+    } catch (error: any) {
+      console.warn('Could not fetch staff procedures (table may not exist yet):', error?.message);
+      return [];
+    }
+  }
+
+  // Associate procedures with a staff member
+  async setStaffProcedures(staffId: number, procedureIds: number[], userId: number): Promise<void> {
+    try {
+      // Verify staff belongs to user
+      const [staffMember] = await db
+        .select()
+        .from(staff)
+        .where(and(eq(staff.id, staffId), eq(staff.userId, userId)));
+
+      if (!staffMember) {
+        throw new Error('Staff member not found or does not belong to user');
+      }
+
+      // Verify all procedures belong to user
+      if (procedureIds.length > 0) {
+        const validProcedures = await db
+          .select()
+          .from(procedures)
+          .where(and(
+            inArray(procedures.id, procedureIds),
+            eq(procedures.userId, userId)
+          ));
+
+        if (validProcedures.length !== procedureIds.length) {
+          throw new Error('Some procedures are invalid or do not belong to user');
+        }
+      }
+
+      // Delete existing associations
+      await db
+        .delete(staffProcedures)
+        .where(eq(staffProcedures.staffId, staffId));
+
+      // Create new associations
+      if (procedureIds.length > 0) {
+        const associations = procedureIds.map(procedureId => ({
+          staffId,
+          procedureId,
+        }));
+
+        await db
+          .insert(staffProcedures)
+          .values(associations);
+      }
+    } catch (error: any) {
+      console.warn('Could not set staff procedures (table may not exist yet):', error?.message);
+      throw error;
+    }
+  }
+
+  // Get staff associated with an appointment
+  async getAppointmentStaff(appointmentId: number): Promise<any[]> {
+    try {
+      return await db
+        .select({
+          id: staff.id,
+          name: staff.name,
+          role: staff.role,
+          email: staff.email,
+          phone: staff.phone,
+          companyId: staff.companyId, // Include company_id for permission filtering
+          company_id: staff.companyId, // Alias for compatibility
+          isPrimary: appointmentStaff.isPrimary,
+          appointmentRole: appointmentStaff.role,
+        })
+        .from(appointmentStaff)
+        .innerJoin(staff, eq(appointmentStaff.staffId, staff.id))
+        .where(eq(appointmentStaff.appointmentId, appointmentId))
+        .orderBy(desc(appointmentStaff.isPrimary), asc(staff.name));
+    } catch (error: any) {
+      console.warn('Could not fetch appointment staff (table may not exist yet):', error?.message);
+      return [];
+    }
   }
 
   async createStaff(staffData: InsertStaff): Promise<Staff> {
@@ -953,7 +1541,7 @@ export class DatabaseStorage implements IStorage {
     return newStaff;
   }
 
-  async updateStaff(staffId: number, userId: string, staffData: Omit<InsertStaff, 'userId'>): Promise<Staff> {
+  async updateStaff(staffId: number, userId: number, staffData: Omit<InsertStaff, 'userId'>): Promise<Staff> {
     const [updatedStaff] = await db
       .update(staff)
       .set(staffData)
@@ -962,11 +1550,11 @@ export class DatabaseStorage implements IStorage {
     return updatedStaff;
   }
 
-  async deleteStaff(staffId: number, userId: string): Promise<void> {
+  async deleteStaff(staffId: number, userId: number): Promise<void> {
     await db.delete(staff).where(and(eq(staff.id, staffId), eq(staff.userId, userId)));
   }
 
-  async getStaffSchedules(userId: string): Promise<StaffSchedule[]> {
+  async getStaffSchedules(userId: number): Promise<StaffSchedule[]> {
     const results = await db
       .select({
         id: staffSchedules.id,
@@ -992,7 +1580,7 @@ export class DatabaseStorage implements IStorage {
 
   // Payslip operations
   async getPayslipData(
-    userId: string,
+    userId: number,
     staffId?: number,
     startDate?: Date,
     endDate?: Date
@@ -1020,16 +1608,14 @@ export class DatabaseStorage implements IStorage {
   }>> {
     const userIdNum = typeof userId === 'string' ? parseInt(userId) : userId;
     
-    // Build where conditions
+    // Debug logging
+    console.log(`[Payslip Debug] Starting getPayslipData with userId: ${userIdNum}, staffId: ${staffId}, startDate: ${startDate}, endDate: ${endDate}`);
+    
+    // Build where conditions - we filter by staff at procedure level, not appointment level
     const whereConditions = [
       eq(appointments.userId, userIdNum),
       eq(appointments.status, 'completed'),
-      isNotNull(appointments.staffId),
     ];
-
-    if (staffId) {
-      whereConditions.push(eq(appointments.staffId, staffId));
-    }
 
     if (startDate) {
       const start = new Date(startDate);
@@ -1043,18 +1629,18 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(lte(appointments.appointmentDate, end));
     }
 
-    // Get all completed appointments with staff
+    // Get all completed appointments (we'll filter by staff at procedure level)
     const completedAppointments = await db
       .select({
         appointment: appointments,
-        staff: staff,
         client: clients,
       })
       .from(appointments)
-      .innerJoin(staff, eq(appointments.staffId, staff.id))
       .innerJoin(clients, eq(appointments.clientId, clients.id))
       .where(and(...whereConditions))
       .orderBy(asc(appointments.appointmentDate));
+
+    console.log(`[Payslip Debug] Found ${completedAppointments.length} completed appointments for userId ${userIdNum}`);
 
     // Group by staff
     const staffMap = new Map<number, {
@@ -1080,23 +1666,8 @@ export class DatabaseStorage implements IStorage {
       }>;
     }>();
 
-    // Process each appointment
-    for (const { appointment, staff: staffMember, client } of completedAppointments) {
-      const staffId = appointment.staffId!;
-      
-      if (!staffMap.has(staffId)) {
-        staffMap.set(staffId, {
-          staffId: staffId,
-          staffName: staffMember.name,
-          totalDuration: 0,
-          appointmentCount: 0,
-          procedures: new Map(),
-          appointments: [],
-        });
-      }
-
-      const staffData = staffMap.get(staffId)!;
-
+    // Process each appointment and group by staff from procedures AND appointment_staff
+    for (const { appointment, client } of completedAppointments) {
       // Get appointment procedures from database
       const appointmentProceduresData = await db
         .select()
@@ -1104,90 +1675,199 @@ export class DatabaseStorage implements IStorage {
         .where(eq(appointmentProcedures.appointmentId, appointment.id))
         .orderBy(appointmentProcedures.order);
 
-      // Calculate appointment duration (use totalDuration if available, otherwise sum procedures)
-      let appointmentDuration = appointment.totalDuration || 0;
-      if (appointmentDuration === 0 && appointmentProceduresData.length > 0) {
-        appointmentDuration = appointmentProceduresData.reduce((sum, ap) => sum + (ap.duration || 0), 0);
+      // Get staff associated with this appointment from appointment_staff table
+      const appointmentStaffData = await db
+        .select({
+          staffId: appointmentStaff.staffId,
+          isPrimary: appointmentStaff.isPrimary,
+          role: appointmentStaff.role,
+        })
+        .from(appointmentStaff)
+        .where(eq(appointmentStaff.appointmentId, appointment.id));
+
+      // Debug logging
+      if (appointmentProceduresData.length > 0) {
+        const staffIdsInProcedures = appointmentProceduresData.map(ap => ap.staffId).filter(id => id !== null);
+        console.log(`[Payslip Debug] Appointment ${appointment.id}: Found ${appointmentProceduresData.length} procedures with staffIds:`, staffIdsInProcedures);
       }
-      if (appointmentDuration === 0) {
-        appointmentDuration = appointment.duration || 0;
+      if (appointmentStaffData.length > 0) {
+        const staffIdsInAppointmentStaff = appointmentStaffData.map(as => as.staffId);
+        console.log(`[Payslip Debug] Appointment ${appointment.id}: Found ${appointmentStaffData.length} staff in appointment_staff:`, staffIdsInAppointmentStaff);
       }
 
-      staffData.totalDuration += appointmentDuration;
-      staffData.appointmentCount += 1;
+      // If no procedures and no staff, skip this appointment
+      if (appointmentProceduresData.length === 0 && appointmentStaffData.length === 0) {
+        continue;
+      }
 
-      // Process procedures
-      const appointmentProceduresList: Array<{ procedureName: string; duration: number }> = [];
+      // Group procedures by staffId
+      // IMPORTANT: Each procedure should have its own staffId in appointment_procedures table
+      // We don't use appointment.staffId as fallback to avoid grouping procedures from different staff incorrectly
+      const proceduresByStaff = new Map<number, typeof appointmentProceduresData>();
       
       for (const ap of appointmentProceduresData) {
-        appointmentProceduresList.push({
-          procedureName: ap.procedureName,
-          duration: ap.duration || 0,
-        });
-
-        const procedureKey = `${ap.procedureName}_${ap.procedureCategory}`;
-        if (!staffData.procedures.has(procedureKey)) {
-          staffData.procedures.set(procedureKey, {
-            procedureName: ap.procedureName,
-            procedureCategory: ap.procedureCategory,
-            count: 0,
-            totalDuration: 0,
-          });
+        // Only use the procedure's own staffId, don't fallback to appointment.staffId
+        // This ensures each procedure is correctly attributed to its assigned professional
+        const procedureStaffId = ap.staffId;
+        if (!procedureStaffId) {
+          // Skip procedures without staffId - they should have been assigned during appointment creation
+          console.warn(`[Payslip] Procedure ${ap.procedureName} (id: ${ap.procedureId}) in appointment ${appointment.id} has no staffId assigned`);
+          continue;
         }
-
-        const procedureData = staffData.procedures.get(procedureKey)!;
-        procedureData.count += 1;
-        procedureData.totalDuration += ap.duration || 0;
+        
+        // Filter by requested staffId if provided (only if it's a valid number)
+        if (staffId !== undefined && staffId !== null && procedureStaffId !== staffId) {
+          continue;
+        }
+        
+        if (!proceduresByStaff.has(procedureStaffId)) {
+          proceduresByStaff.set(procedureStaffId, []);
+        }
+        proceduresByStaff.get(procedureStaffId)!.push(ap);
+        console.log(`[Payslip Debug] Added procedure ${ap.procedureName} to staff ${procedureStaffId} for appointment ${appointment.id}`);
       }
 
-      // If no procedures found, try to get from appointment data
-      if (appointmentProceduresList.length === 0 && appointment.serviceType === 'procedure') {
-        // Try to get from old system
-        if (appointment.selectedProcedures && Array.isArray(appointment.selectedProcedures)) {
-          const procedureIds = appointment.selectedProcedures
-            .map((id: string) => parseInt(id))
-            .filter((id: number) => !isNaN(id));
+      // Get all unique staff IDs from both procedures and appointment_staff
+      const allStaffIds = new Set<number>();
+      
+      // Add staff from procedures
+      for (const staffIdFromProc of proceduresByStaff.keys()) {
+        allStaffIds.add(staffIdFromProc);
+      }
+      
+      // Add staff from appointment_staff table
+      for (const as of appointmentStaffData) {
+        // Filter by requested staffId if provided (only if it's a valid number)
+        if (staffId !== undefined && staffId !== null && as.staffId !== staffId) {
+          continue;
+        }
+        allStaffIds.add(as.staffId);
+      }
+
+      // Process each staff member from this appointment
+      for (const currentStaffId of allStaffIds) {
+        // Get or create staff data entry
+        if (!staffMap.has(currentStaffId)) {
+          const [staffMember] = await db
+            .select()
+            .from(staff)
+            .where(eq(staff.id, currentStaffId));
           
-          if (procedureIds.length > 0) {
-            const proceduresList = await db
-              .select()
-              .from(procedures)
-              .where(and(
-                eq(procedures.userId, userIdNum),
-                inArray(procedures.id, procedureIds)
-              ));
-
-            for (const proc of proceduresList) {
-              appointmentProceduresList.push({
-                procedureName: proc.name,
-                duration: proc.duration || 0,
-              });
-
-              const procedureKey = `${proc.name}_${proc.category}`;
-              if (!staffData.procedures.has(procedureKey)) {
-                staffData.procedures.set(procedureKey, {
-                  procedureName: proc.name,
-                  procedureCategory: proc.category,
-                  count: 0,
-                  totalDuration: 0,
-                });
-              }
-
-              const procedureData = staffData.procedures.get(procedureKey)!;
-              procedureData.count += 1;
-              procedureData.totalDuration += proc.duration || 0;
-            }
+          if (!staffMember) {
+            // Log warning but don't skip - we'll use a placeholder name
+            console.warn(`Staff with id ${currentStaffId} not found in staff table for appointment ${appointment.id}. This may indicate data inconsistency.`);
+            // Still create entry with placeholder name to ensure data is included
+            staffMap.set(currentStaffId, {
+              staffId: currentStaffId,
+              staffName: `Staff ID ${currentStaffId}`,
+              totalDuration: 0,
+              appointmentCount: 0,
+              procedures: new Map(),
+              appointments: [],
+            });
+          } else {
+            staffMap.set(currentStaffId, {
+              staffId: currentStaffId,
+              staffName: staffMember.name,
+              totalDuration: 0,
+              appointmentCount: 0,
+              procedures: new Map(),
+              appointments: [],
+            });
           }
         }
+
+        const staffData = staffMap.get(currentStaffId)!;
+
+        // Get procedures for this staff member (if any)
+        const proceduresForThisStaff = proceduresByStaff.get(currentStaffId) || [];
+        
+        // Calculate duration for this staff's procedures
+        // If staff has no specific procedures but is in appointment_staff, use appointment total duration
+        let staffProcedureDuration = 0;
+        if (proceduresForThisStaff.length > 0) {
+          staffProcedureDuration = proceduresForThisStaff.reduce((sum: number, ap: any) => sum + (ap.duration || 0), 0);
+        } else if (appointmentStaffData.some((as: any) => as.staffId === currentStaffId)) {
+          // Staff is in appointment_staff but has no specific procedures
+          // Use appointment total duration or calculate from all procedures
+          if (appointment.totalDuration) {
+            // Distribute duration equally among all staff in appointment_staff
+            const staffCount = appointmentStaffData.length;
+            staffProcedureDuration = Math.round((appointment.totalDuration || 0) / staffCount);
+          } else if (appointmentProceduresData.length > 0) {
+            // If no totalDuration, calculate from procedures
+            const totalProcDuration = appointmentProceduresData.reduce((sum: number, ap: any) => sum + (ap.duration || 0), 0);
+            const staffCount = appointmentStaffData.length;
+            staffProcedureDuration = Math.round(totalProcDuration / staffCount);
+          }
+        }
+
+        staffData.totalDuration += staffProcedureDuration;
+        staffData.appointmentCount += 1;
+
+        // Process procedures
+        const appointmentProceduresList: Array<{ procedureName: string; duration: number }> = [];
+        
+        if (proceduresForThisStaff.length > 0) {
+          // Staff has specific procedures assigned
+          for (const ap of proceduresForThisStaff) {
+            appointmentProceduresList.push({
+              procedureName: ap.procedureName,
+              duration: ap.duration || 0,
+            });
+
+            const procedureKey = `${ap.procedureName}_${ap.procedureCategory}`;
+            if (!staffData.procedures.has(procedureKey)) {
+              staffData.procedures.set(procedureKey, {
+                procedureName: ap.procedureName,
+                procedureCategory: ap.procedureCategory,
+                count: 0,
+                totalDuration: 0,
+              });
+            }
+
+            const procedureData = staffData.procedures.get(procedureKey)!;
+            procedureData.count += 1;
+            procedureData.totalDuration += ap.duration || 0;
+          }
+        } else if (appointmentProceduresData.length > 0) {
+          // Staff is in appointment_staff but has no specific procedures
+          // Include all procedures from the appointment (for reference)
+          // Note: We count the full procedure for each staff member in appointment_staff
+          // This represents their participation in the appointment
+          for (const ap of appointmentProceduresData) {
+            appointmentProceduresList.push({
+              procedureName: ap.procedureName,
+              duration: ap.duration || 0,
+            });
+
+            const procedureKey = `${ap.procedureName}_${ap.procedureCategory}`;
+            if (!staffData.procedures.has(procedureKey)) {
+              staffData.procedures.set(procedureKey, {
+                procedureName: ap.procedureName,
+                procedureCategory: ap.procedureCategory,
+                count: 0,
+                totalDuration: 0,
+              });
+            }
+
+            const procedureData = staffData.procedures.get(procedureKey)!;
+            // Count full procedure for this staff member
+            // This represents their participation in the appointment
+            procedureData.count += 1;
+            procedureData.totalDuration += ap.duration || 0;
+          }
+        }
+
+        staffData.appointments.push({
+          id: appointment.id,
+          appointmentDate: appointment.appointmentDate,
+          clientName: client.name,
+          procedures: appointmentProceduresList,
+          totalDuration: staffProcedureDuration,
+        });
       }
 
-      staffData.appointments.push({
-        id: appointment.id,
-        appointmentDate: appointment.appointmentDate,
-        clientName: client.name,
-        procedures: appointmentProceduresList,
-        totalDuration: appointmentDuration,
-      });
     }
 
     // Convert Map to Array
@@ -1196,11 +1876,14 @@ export class DatabaseStorage implements IStorage {
       procedures: Array.from(staffData.procedures.values()),
     }));
 
+    // Debug logging - show which staff were included in the result
+    console.log(`[Payslip Debug] Final result: Found ${result.length} staff members:`, result.map(s => ({ id: s.staffId, name: s.staffName, appointments: s.appointmentCount })));
+
     return result;
   }
 
   // Marketing operations
-  async getMarketingCampaigns(userId: string): Promise<MarketingCampaign[]> {
+  async getMarketingCampaigns(userId: number): Promise<MarketingCampaign[]> {
     return await db
       .select()
       .from(marketingCampaigns)
@@ -1329,8 +2012,8 @@ export class DatabaseStorage implements IStorage {
 
   async createPackage(packageData: InsertPackage): Promise<Package> {
     // Calculate serviceBalance and moneyBalance from services and products
-    const serviceBalance = (packageData.services || []).reduce((sum, s) => sum + (s.quantity || 0), 0);
-    const moneyBalance = (packageData.products || []).reduce((sum, p) => {
+    const serviceBalance = (packageData.services || []).reduce((sum: number, s: any) => sum + (s.quantity || 0), 0);
+    const moneyBalance = (packageData.products || []).reduce((sum: number, p: any) => {
       const price = parseFloat(p.price?.toString() || '0');
       const quantity = p.quantity || 0;
       return sum + (price * quantity);
@@ -1350,11 +2033,11 @@ export class DatabaseStorage implements IStorage {
     const updateData: any = { ...packageData, updatedAt: new Date() };
     
     if (packageData.services !== undefined) {
-      updateData.serviceBalance = (packageData.services || []).reduce((sum, s) => sum + (s.quantity || 0), 0);
+      updateData.serviceBalance = (packageData.services || []).reduce((sum: number, s: any) => sum + (s.quantity || 0), 0);
     }
     
     if (packageData.products !== undefined) {
-      updateData.moneyBalance = (packageData.products || []).reduce((sum, p) => {
+      updateData.moneyBalance = (packageData.products || []).reduce((sum: number, p: any) => {
         const price = parseFloat(p.price?.toString() || '0');
         const quantity = p.quantity || 0;
         return sum + (price * quantity);
@@ -1464,8 +2147,47 @@ export class DatabaseStorage implements IStorage {
     return calculatedPoints;
   }
 
+  async getStaffSchedule(staffId: number): Promise<StaffSchedule[]> {
+    return await db
+      .select()
+      .from(staffSchedules)
+      .where(and(eq(staffSchedules.staffId, staffId), eq(staffSchedules.isAvailable, true)));
+  }
+
+  async getAppointmentsByDate(staffId: number, date: Date): Promise<Appointment[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Get appointments where the staff is either the main professional or assigned as secondary
+    const staffAppointments = await db
+      .select({
+        appointment: appointments
+      })
+      .from(appointments)
+      .leftJoin(appointmentStaff, eq(appointments.id, appointmentStaff.appointmentId))
+      .where(and(
+        // Filter by date range
+        gte(appointments.appointmentDate, startOfDay),
+        lte(appointments.appointmentDate, endOfDay),
+        // Filter by staff (either direct assignment or via junction table)
+        or(
+          eq(appointments.staffId, staffId),
+          eq(appointmentStaff.staffId, staffId)
+        ),
+        // Exclude cancelled/rejected appointments
+        not(eq(appointments.status, 'cancelled')),
+        not(eq(appointments.status, 'rejected'))
+      ))
+      .groupBy(appointments.id);
+
+    return staffAppointments.map(a => a.appointment);
+  }
+
   // Analytics operations
-  async getAnalytics(userId: string, dateRange?: string): Promise<any> {
+  async getAnalytics(userId: number, dateRange?: string): Promise<any> {
     // For now, return empty analytics data
     // In a real implementation, this would calculate various metrics
     return {
@@ -1488,7 +2210,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Business hours operations
-  async getBusinessHours(userId: string): Promise<BusinessHours[]> {
+  async getBusinessHours(userId: number): Promise<BusinessHours[]> {
     return await db
       .select()
       .from(businessHours)
@@ -1818,7 +2540,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deductMaterialsForAppointment(appointmentId: number, userId: number): Promise<void> {
-    // Get all procedures for this appointment with their materials snapshot
+    // Prioridade: usa appointment_consumptions se existir (quantidades editadas pelo usuário)
+    const consumResult = await pool.query(
+      'SELECT product_id, quantity_used FROM appointment_consumptions WHERE appointment_id = $1',
+      [appointmentId]
+    );
+    const consumRows = consumResult.rows;
+
+    if (consumRows && consumRows.length > 0) {
+      // Usa as quantidades salvas em appointment_consumptions
+      for (const item of consumRows) {
+        const [prod] = await db
+          .select()
+          .from(products)
+          .where(and(eq(products.id, item.product_id as number), eq(products.userId, userId)));
+        const qty = parseFloat(String(item.quantity_used ?? '0'));
+        if (prod && prod.currentStock !== null && prod.currentStock >= qty) {
+          await db
+            .update(products)
+            .set({ currentStock: prod.currentStock - qty })
+            .where(eq(products.id, item.product_id as number));
+        }
+      }
+      return;
+    }
+
+    // Fallback: usa procedure_products (template original)
     const proceduresList = await db
       .select()
       .from(appointmentProcedures)
@@ -1826,58 +2573,56 @@ export class DatabaseStorage implements IStorage {
 
     if (!proceduresList || proceduresList.length === 0) return;
 
-    // Process each procedure's materials
     for (const proc of proceduresList) {
-      if (!proc.materials || (proc.materials as any[]).length === 0) continue;
+      if (!proc.procedureId) continue;
 
-      // Deduct each material from inventory
-      for (const material of proc.materials as any[]) {
-        const [currentMaterial] = await db
+      const items = await db
+        .select()
+        .from(procedureProducts)
+        .where(eq(procedureProducts.procedureId, proc.procedureId));
+
+      for (const item of items) {
+        const [prod] = await db
           .select()
-          .from(inventory)
-          .where(and(
-            eq(inventory.id, material.materialId),
-            eq(inventory.userId, userId)
-          ));
+          .from(products)
+          .where(and(eq(products.id, item.productId), eq(products.userId, userId)));
 
-        if (currentMaterial && currentMaterial.currentStock !== null && currentMaterial.currentStock >= material.quantity) {
+        if (prod && prod.currentStock !== null && prod.currentStock >= parseFloat(item.quantity ?? '0')) {
           await db
-            .update(inventory)
-            .set({
-              currentStock: currentMaterial.currentStock - material.quantity
-            })
-            .where(eq(inventory.id, material.materialId));
+            .update(products)
+            .set({ currentStock: prod.currentStock - parseFloat(item.quantity ?? '0') })
+            .where(eq(products.id, item.productId));
         }
       }
     }
   }
 
   // Campaign methods
-  async createCampaign(userId: string, data: InsertCampaign): Promise<Campaign> {
+  async createCampaign(userId: number, data: InsertCampaign): Promise<Campaign> {
     const [campaign] = await db
       .insert(campaigns)
       .values({
         ...data,
-        userId: parseInt(userId),
+        userId: userId,
         updatedAt: new Date(),
       })
       .returning();
     return campaign;
   }
 
-  async getCampaigns(userId: string): Promise<Campaign[]> {
+  async getCampaigns(userId: number): Promise<Campaign[]> {
     return await db
       .select()
       .from(campaigns)
-      .where(eq(campaigns.userId, parseInt(userId)))
+      .where(eq(campaigns.userId, userId))
       .orderBy(desc(campaigns.createdAt));
   }
 
-  async getCampaign(id: number, userId: string): Promise<Campaign | null> {
+  async getCampaign(id: number, userId: number): Promise<Campaign | null> {
     const [campaign] = await db
       .select()
       .from(campaigns)
-      .where(and(eq(campaigns.id, id), eq(campaigns.userId, parseInt(userId))))
+      .where(and(eq(campaigns.id, id), eq(campaigns.userId, userId)))
       .limit(1);
     return campaign || null;
   }
@@ -1972,7 +2717,7 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async deleteCampaign(id: number, userId: string): Promise<void> {
+  async deleteCampaign(id: number, userId: number): Promise<void> {
     // Primeiro deletar mensagens relacionadas
     await db
       .delete(messages)
@@ -1981,7 +2726,145 @@ export class DatabaseStorage implements IStorage {
     // Depois deletar a campanha
     await db
       .delete(campaigns)
-      .where(and(eq(campaigns.id, id), eq(campaigns.userId, parseInt(userId))));
+      .where(and(eq(campaigns.id, id), eq(campaigns.userId, userId)));
+  }
+
+  // Sales operations
+  async getSales(userId: number, startDate?: Date, endDate?: Date): Promise<(Sale & { client?: Client })[]> {
+    let query = db
+      .select({
+        id: sales.id,
+        userId: sales.userId,
+        clientId: sales.clientId,
+        saleDate: sales.saleDate,
+        products: sales.products,
+        subtotal: sales.subtotal,
+        discountPercent: sales.discountPercent,
+        discountAmount: sales.discountAmount,
+        total: sales.total,
+        paymentMethod: sales.paymentMethod,
+        notes: sales.notes,
+        createdAt: sales.createdAt,
+        updatedAt: sales.updatedAt,
+        client: {
+          id: clients.id,
+          name: clients.name,
+          email: clients.email,
+          phone: clients.phone,
+        },
+      })
+      .from(sales)
+      .leftJoin(clients, eq(sales.clientId, clients.id));
+
+    // Construir condições de filtro
+    const conditions = [eq(sales.userId, userId)];
+    
+    if (startDate) {
+      conditions.push(gte(sales.saleDate, startDate.toISOString().split('T')[0]));
+    }
+    if (endDate) {
+      conditions.push(lte(sales.saleDate, endDate.toISOString().split('T')[0]));
+    }
+    
+    query = query.where(and(...conditions)) as any;
+
+    const results = await query.orderBy(desc(sales.saleDate), desc(sales.createdAt));
+    
+    return results.map((r: any) => ({
+      ...r,
+      client: r.client?.id ? r.client : undefined,
+    })) as (Sale & { client?: Client })[];
+  }
+
+  async getSale(id: number, userId: number): Promise<(Sale & { client?: Client }) | null> {
+    const [result] = await db
+      .select({
+        id: sales.id,
+        userId: sales.userId,
+        clientId: sales.clientId,
+        saleDate: sales.saleDate,
+        products: sales.products,
+        subtotal: sales.subtotal,
+        discountPercent: sales.discountPercent,
+        discountAmount: sales.discountAmount,
+        total: sales.total,
+        paymentMethod: sales.paymentMethod,
+        notes: sales.notes,
+        createdAt: sales.createdAt,
+        updatedAt: sales.updatedAt,
+        client: {
+          id: clients.id,
+          name: clients.name,
+          email: clients.email,
+          phone: clients.phone,
+        },
+      })
+      .from(sales)
+      .leftJoin(clients, eq(sales.clientId, clients.id))
+      .where(and(eq(sales.id, id), eq(sales.userId, parseInt(userId))))
+      .limit(1);
+
+    if (!result) return null;
+
+    return {
+      ...result,
+      client: result.client?.id ? result.client : undefined,
+    } as Sale & { client?: Client };
+  }
+
+  async createSale(saleData: InsertSale): Promise<Sale> {
+    const [newSale] = await db
+      .insert(sales)
+      .values({
+        ...saleData,
+        updatedAt: new Date(),
+      } as any)
+      .returning();
+
+    // Atualizar estoque dos produtos vendidos
+    if (saleData.products && Array.isArray(saleData.products)) {
+      for (const product of saleData.products) {
+        await db
+          .update(products)
+          .set({
+            currentStock: sql`${products.currentStock} - ${product.quantity}`,
+          })
+          .where(and(
+            eq(products.id, product.productId),
+            eq(products.userId, parseInt(saleData.userId.toString()))
+          ));
+      }
+    }
+
+    return newSale;
+  }
+
+  async deleteSale(id: number, userId: number): Promise<void> {
+    // Buscar a venda para restaurar o estoque
+    const sale = await this.getSale(id, userId);
+    if (!sale) {
+      throw new Error('Sale not found');
+    }
+
+    // 3. Restaurar estoque
+    if (sale.products && Array.isArray(sale.products)) {
+      for (const product of (sale.products as any[])) {
+        await db
+          .update(products)
+          .set({
+            currentStock: sql`${products.currentStock} + ${product.quantity}`
+          })
+          .where(and(
+            eq(products.id, product.productId),
+            eq(products.userId, parseInt(userId))
+          ));
+      }
+    }
+
+    // Deletar a venda
+    await db
+      .delete(sales)
+      .where(and(eq(sales.id, id), eq(sales.userId, parseInt(userId))));
   }
 }
 
@@ -1989,7 +2872,7 @@ export const storage = new DatabaseStorage();
 
 // Procedure storage
 export const procedureStorage = {
-  async getProcedures(userId: string): Promise<any[]> {
+  async getProcedures(userId: number): Promise<any[]> {
     return await db
       .select()
       .from(procedures)
@@ -1997,7 +2880,7 @@ export const procedureStorage = {
       .orderBy(asc(procedures.name));
   },
 
-  async createProcedure(userId: string, procedure: any): Promise<any> {
+  async createProcedure(userId: number, procedure: any): Promise<any> {
     const [newProcedure] = await db.insert(procedures).values({
       ...procedure,
       userId
@@ -2005,7 +2888,7 @@ export const procedureStorage = {
     return newProcedure;
   },
 
-  async updateProcedure(id: number, userId: string, updates: any): Promise<any> {
+  async updateProcedure(id: number, userId: number, updates: any): Promise<any> {
     const [updatedProcedure] = await db
       .update(procedures)
       .set(updates)
@@ -2014,32 +2897,27 @@ export const procedureStorage = {
     return updatedProcedure;
   },
 
-  async deductMaterialsForProcedure(procedureId: number, userId: string): Promise<void> {
-    // Get the procedure with its required materials
-    const [procedure] = await db
+  async deductMaterialsForProcedure(procedureId: number, userId: number): Promise<void> {
+    // Busca insumos na tabela procedure_products (novo sistema)
+    const items = await db
       .select()
-      .from(procedures)
-      .where(and(eq(procedures.id, procedureId), eq(procedures.userId, userId)));
+      .from(procedureProducts)
+      .where(eq(procedureProducts.procedureId, procedureId));
 
-    if (!procedure || !procedure.materials) return;
+    if (!items || items.length === 0) return;
 
-    // Deduct each material from inventory
-    for (const material of procedure.materials as any[]) {
-      const [currentMaterial] = await db
+    // Desconta de products.current_stock
+    for (const item of items) {
+      const [prod] = await db
         .select()
-        .from(inventory)
-        .where(and(
-          eq(inventory.id, material.materialId),
-          eq(inventory.userId, userId)
-        ));
+        .from(products)
+        .where(and(eq(products.id, item.productId), eq(products.userId, userId)));
 
-      if (currentMaterial && currentMaterial.currentStock && currentMaterial.currentStock >= material.quantity) {
+      if (prod && prod.currentStock !== null && prod.currentStock >= parseFloat(item.quantity ?? '0')) {
         await db
-          .update(inventory)
-          .set({
-            currentStock: currentMaterial.currentStock - material.quantity
-          })
-          .where(eq(inventory.id, material.materialId));
+          .update(products)
+          .set({ currentStock: prod.currentStock - parseFloat(item.quantity ?? '0') })
+          .where(eq(products.id, item.productId));
       }
     }
   }

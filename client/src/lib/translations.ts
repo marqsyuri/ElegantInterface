@@ -22,7 +22,6 @@ type TranslationKey =
   | 'redirecting'
   | 'client_management'
   | 'manage_clients'
-  | 'add_client'
   | 'edit_client'
   | 'save_changes'
   | 'cancel'
@@ -139,6 +138,8 @@ type TranslationKey =
   | 'upload_before_photos'
   | 'upload_after_photos'
   | 'creating'
+  | 'updating'
+  | 'update_appointment'
   | 'please_select_procedure'
   | 'please_select_client'
   | 'please_select_staff'
@@ -454,6 +455,8 @@ type TranslationKey =
   | 'add_transaction'
   | 'new_income'
   | 'new_expense'
+  | 'income'
+  | 'expense'
   | 'amount'
   | 'transaction_date'
   | 'select_category'
@@ -622,7 +625,93 @@ type TranslationKey =
   | 'dashboard_banner'
   | 'enter_image_url'
   | 'save_banner'
-  | 'valid_image_url_required';
+  | 'valid_image_url_required'
+  | 'click_to_upload'
+  | 'jpg_or_png_max_10mb'
+  | 'beauty_therapy_board_registration_placeholder'
+  | 'specialties_label'
+  | 'describe_specialties_placeholder'
+  | 'list_specialties_placeholder'
+  | 'clinic_details'
+  | 'clinic_name_label'
+  | 'business_number'
+  | 'business_phone'
+  | 'complete_address'
+  | 'whatsapp_business'
+  | 'system_information'
+  | 'support_title'
+  | 'need_help_contact_support'
+  | 'contact_support_button'
+  | 'account_title'
+  | 'signed_in_as'
+  | 'sign_out'
+  | 'operating_hours'
+  | 'save_hours'
+  | 'saving_hours'
+  | 'operating_hours_information'
+  | 'operating_hours_description'
+  | 'closing_time'
+  | 'lunch_start'
+  | 'lunch_end'
+  | 'time_parameters'
+  | 'inactivity_timeout_days'
+  | 'inactivity_timeout_description'
+  | 'reminder_time_hours'
+  | 'reminder_time_description'
+  | 'reminder_schedule_configuration'
+  | 'reminder_schedule_description'
+  | 'start_time_for_reminders'
+  | 'select_start_time'
+  | 'start_time_example'
+  | 'end_time_for_reminders'
+  | 'select_end_time'
+  | 'end_time_example'
+  | 'valid_configuration'
+  | 'reminder_example'
+  | 'save_time_settings'
+  | 'team_members_management'
+  | 'loading_team_members'
+  | 'edit_staff_member'
+  | 'no_team_members_yet'
+  | 'add_staff_members_description'
+  | 'go_to_staff_management'
+  | 'team_management'
+  | 'team_management_description'
+  | 'staff_member_updated'
+  | 'staff_member_removed'
+  | 'failed_update_staff'
+  | 'failed_remove_staff'
+  | 'confirm_remove_staff_member'
+  | 'name_label'
+  | 'role_label'
+  | 'phone_label'
+  | 'commission_rate_percent'
+  | 'paid_by_hours_worked'
+  | 'active_label'
+  | 'inactive_label'
+  | 'staff_member_name_placeholder'
+  | 'role_placeholder'
+  | 'email_placeholder'
+  | 'phone_placeholder'
+  | 'ird_number_placeholder'
+  | 'loyalty_settings_description'
+  | 'points_per_dollar_label'
+  | 'discount_per_hundred_points_label'
+  | 'birthday_bonus_points_label'
+  | 'referral_bonus_points_label'
+  | 'bronze_threshold_label'
+  | 'silver_threshold_label'
+  | 'gold_threshold_label'
+  | 'loyalty_settings_saved'
+  | 'failed_save_loyalty_settings'
+  | 'from_team'
+  | 'drop_image_or_click'
+  | 'jpg_png_up_to_10mb'
+  | 'desktop_label'
+  | 'mobile_label'
+  | 'recommended_resolution'
+  | 'optimised_automatically'
+  | 'uploading';
 
 type Translations = Record<TranslationKey, string>;
 
@@ -654,7 +743,7 @@ const translations: Record<string, Translations> = {
     currency: 'Moeda / Currency',
     select_language: 'Selecione o idioma',
     select_currency: 'Selecione a moeda',
-    new_appointment: 'Nova Consulta',
+    new_appointment: 'Novo Agendamento',
     send_message: 'Enviar Mensagem',
     no_appointments_today: 'Nenhum agendamento para hoje',
     logging_in: 'Entrando...',
@@ -762,6 +851,8 @@ const translations: Record<string, Translations> = {
     upload_before_photos: 'Enviar Fotos Antes',
     upload_after_photos: 'Enviar Fotos Depois',
     creating: 'Criando...',
+    updating: 'Atualizando...',
+    update_appointment: 'Atualizar Agendamento',
     please_select_procedure: 'Por favor, selecione pelo menos um procedimento',
     please_select_client: 'Por favor, selecione um cliente',
     please_select_staff: 'Por favor, selecione um membro da equipe',
@@ -1245,6 +1336,94 @@ const translations: Record<string, Translations> = {
     enter_image_url: 'Digite a URL da imagem',
     save_banner: 'Salvar Banner',
     valid_image_url_required: 'Por favor, insira uma URL de imagem válida',
+    click_to_upload: 'Clique para enviar',
+    jpg_or_png_max_10mb: 'JPG ou PNG, máx. 10MB',
+    beauty_therapy_board_registration_placeholder: 'Número de registro do Beauty Therapy Board NZ',
+    specialties_label: 'Especialidades',
+    describe_specialties_placeholder: 'Descreva suas especialidades...',
+    list_specialties_placeholder: 'Liste especialidades e certificações',
+    clinic_details: 'Detalhes da Clínica',
+    clinic_name_label: 'Nome da Clínica',
+    business_number: 'Número de Negócio',
+    business_phone: 'Telefone Comercial',
+    complete_address: 'Endereço Completo',
+    whatsapp_business: 'WhatsApp Business',
+    system_information: 'Informações do Sistema',
+    support_title: 'Suporte',
+    need_help_contact_support: 'Precisa de ajuda? Entre em contato com nossa equipe de suporte para assistência com seu sistema de gestão de clínica.',
+    contact_support_button: 'Contatar Suporte',
+    account_title: 'Conta',
+    signed_in_as: 'Conectado como:',
+    sign_out: 'Sair',
+    operating_hours: 'Horários de Funcionamento',
+    save_hours: 'Salvar Horários',
+    saving_hours: 'Salvando...',
+    operating_hours_information: 'Informações sobre Horários de Funcionamento',
+    operating_hours_description: 'Estes horários serão usados para agendamento de consultas e disponibilidade de reservas de clientes. Os intervalos de almoço são automaticamente excluídos dos horários de consulta disponíveis.',
+    closing_time: 'Horário de Fechamento',
+    lunch_start: 'Início do Intervalo',
+    lunch_end: 'Fim do Intervalo',
+    time_parameters: 'Parâmetros de Tempo',
+    inactivity_timeout_days: 'Tempo de Inatividade (dias)',
+    inactivity_timeout_description: 'Leads sem atividade por X dias serão marcados para acompanhamento',
+    reminder_time_hours: 'Tempo de Lembrete (horas)',
+    reminder_time_description: 'Lembretes serão enviados X horas antes dos agendamentos',
+    reminder_schedule_configuration: 'Configuração de Horário de Lembretes',
+    reminder_schedule_description: 'Defina a janela de tempo para envio de lembretes. Os lembretes serão enviados apenas neste período para respeitar as horas de descanso dos clientes.',
+    start_time_for_reminders: 'Horário de Início dos Lembretes',
+    select_start_time: 'Selecione o horário de início',
+    start_time_example: 'ex: 18:00 - Lembretes começam a ser enviados a partir deste horário',
+    end_time_for_reminders: 'Horário de Fim dos Lembretes',
+    select_end_time: 'Selecione o horário de fim',
+    end_time_example: 'ex: 20:00 - Lembretes param de ser enviados após este horário',
+    valid_configuration: 'Configuração Válida: Lembretes serão enviados entre',
+    reminder_example: 'Exemplo: Com horários',
+    save_time_settings: 'Salvar Configurações de Tempo',
+    team_members_management: 'Gestão de Membros da Equipe',
+    loading_team_members: 'Carregando membros da equipe...',
+    edit_staff_member: 'Editar Membro da Equipe',
+    no_team_members_yet: 'Ainda não há membros da equipe',
+    add_staff_members_description: 'Adicione membros da equipe para gerenciar sua equipe e horários',
+    go_to_staff_management: 'Ir para Gestão de Equipe',
+    team_management: 'Gestão de Equipe',
+    team_management_description: 'Gerencie seus membros da equipe aqui. Você pode editar suas informações, horários e removê-los da equipe. Para gestão completa de equipe incluindo adicionar novos membros, use a página Equipe do menu principal.',
+    staff_member_updated: 'Membro da equipe atualizado com sucesso',
+    staff_member_removed: 'Membro da equipe removido com sucesso',
+    failed_update_staff: 'Falha ao atualizar membro da equipe',
+    failed_remove_staff: 'Falha ao remover membro da equipe',
+    confirm_remove_staff_member: 'Tem certeza que deseja remover',
+    name_label: 'Nome',
+    role_label: 'Função',
+    phone_label: 'Telefone',
+    commission_rate_percent: 'Taxa de Comissão (%)',
+    paid_by_hours_worked: 'Pago por Horas Trabalhadas',
+    active_label: 'Ativo',
+    inactive_label: 'Inativo',
+    staff_member_name_placeholder: 'Nome do membro da equipe',
+    role_placeholder: 'ex: Esteticista Sênior',
+    email_placeholder: 'email@exemplo.com',
+    phone_placeholder: '021 123 4567',
+    ird_number_placeholder: '123-456-789',
+    loyalty_settings_description: 'Configure como os clientes ganham e resgatam pontos de fidelidade.',
+    points_per_dollar_label: 'Pontos por R$ 1,00 gasto',
+    discount_per_hundred_points_label: 'Desconto por Cem Pontos',
+    birthday_bonus_points_label: 'Pontos de Bônus de Aniversário',
+    referral_bonus_points_label: 'Pontos de Bônus de Indicação',
+    bronze_threshold_label: 'Limiar Bronze',
+    silver_threshold_label: 'Limiar Prata',
+    gold_threshold_label: 'Limiar Ouro',
+    loyalty_settings_saved: 'Configurações de fidelidade salvas com sucesso!',
+    failed_save_loyalty_settings: 'Falha ao salvar configurações de fidelidade',
+    income: 'Receita',
+    expense: 'Despesa',
+    from_team: 'da equipe',
+    drop_image_or_click: 'Solte sua imagem aqui ou clique para procurar',
+    jpg_png_up_to_10mb: 'JPG, PNG até 10MB',
+    desktop_label: 'Desktop',
+    mobile_label: 'Mobile',
+    recommended_resolution: 'Recomendado: 1920x600px',
+    optimised_automatically: 'Otimizado automaticamente',
+    uploading: 'Enviando...',
     // Additional common translations
     last_7_days: 'Últimos 7 dias',
     last_30_days: 'Últimos 30 dias',
@@ -1426,6 +1605,8 @@ const translations: Record<string, Translations> = {
     upload_before_photos: 'Upload Before Photos',
     upload_after_photos: 'Upload After Photos',
     creating: 'Creating...',
+    updating: 'Updating...',
+    update_appointment: 'Update Appointment',
     please_select_procedure: 'Please select at least one procedure',
     please_select_client: 'Please select a client',
     please_select_staff: 'Please select a staff member',
@@ -1443,6 +1624,8 @@ const translations: Record<string, Translations> = {
     financial_management: 'Financial Management',
     control_revenue_expenses: 'Control revenue, expenses and cash flow',
     transaction_added: 'Transaction added successfully!',
+    income: 'Income',
+    expense: 'Expense',
     procedure_name_required: 'Procedure name is required',
     category_required: 'Category is required',
     duration_min_15: 'Duration must be at least 15 minutes',
@@ -1910,6 +2093,92 @@ const translations: Record<string, Translations> = {
     enter_image_url: 'Enter image URL',
     save_banner: 'Save Banner',
     valid_image_url_required: 'Please enter a valid image URL',
+    click_to_upload: 'Click to upload',
+    jpg_or_png_max_10mb: 'JPG or PNG, max 10MB',
+    beauty_therapy_board_registration_placeholder: 'Beauty Therapy Board NZ registration number',
+    specialties_label: 'Specialties',
+    describe_specialties_placeholder: 'Describe your specialties...',
+    list_specialties_placeholder: 'List specialties and certifications',
+    clinic_details: 'Clinic Details',
+    clinic_name_label: 'Clinic Name',
+    business_number: 'Business Number',
+    business_phone: 'Business Phone',
+    complete_address: 'Complete Address',
+    whatsapp_business: 'WhatsApp Business',
+    system_information: 'System Information',
+    support_title: 'Support',
+    need_help_contact_support: 'Need help? Contact our support team for assistance with your clinic management system.',
+    contact_support_button: 'Contact Support',
+    account_title: 'Account',
+    signed_in_as: 'Signed in as:',
+    sign_out: 'Sign Out',
+    operating_hours: 'Operating Hours',
+    save_hours: 'Save Hours',
+    saving_hours: 'Saving...',
+    operating_hours_information: 'Operating Hours Information',
+    operating_hours_description: 'These hours will be used for appointment scheduling and client booking availability. Lunch breaks are automatically excluded from available appointment times.',
+    closing_time: 'Closing Time',
+    lunch_start: 'Lunch Start',
+    lunch_end: 'Lunch End',
+    time_parameters: 'Time Parameters',
+    inactivity_timeout_days: 'Inactivity Timeout (days)',
+    inactivity_timeout_description: 'Leads with no activity for X days will be marked for follow-up',
+    reminder_time_hours: 'Reminder Time (hours)',
+    reminder_time_description: 'Reminders will be sent X hours before appointments',
+    reminder_schedule_configuration: 'Reminder Schedule Configuration',
+    reminder_schedule_description: 'Set the time window for sending reminders. Reminders will only be sent within this period to respect clients\' rest hours.',
+    start_time_for_reminders: 'Start Time for Reminders',
+    select_start_time: 'Select start time',
+    start_time_example: 'e.g., 6:00 PM - Reminders start being sent from this time',
+    end_time_for_reminders: 'End Time for Reminders',
+    select_end_time: 'Select end time',
+    end_time_example: 'e.g., 8:00 PM - Reminders stop being sent after this time',
+    valid_configuration: 'Valid Configuration: Reminders will be sent between',
+    reminder_example: 'Example: With hours',
+    save_time_settings: 'Save Time Settings',
+    team_members_management: 'Team Members Management',
+    loading_team_members: 'Loading team members...',
+    edit_staff_member: 'Edit Staff Member',
+    no_team_members_yet: 'No team members yet',
+    add_staff_members_description: 'Add staff members to manage your team and schedules',
+    go_to_staff_management: 'Go to Staff Management',
+    team_management: 'Team Management',
+    team_management_description: 'Manage your team members here. You can edit their information, schedules, and remove them from the team. For full staff management including adding new members, use the Staff page from the main menu.',
+    staff_member_updated: 'Staff member updated successfully',
+    staff_member_removed: 'Staff member removed successfully',
+    failed_update_staff: 'Failed to update staff member',
+    failed_remove_staff: 'Failed to remove staff member',
+    confirm_remove_staff_member: 'Are you sure you want to remove',
+    name_label: 'Name',
+    role_label: 'Role',
+    phone_label: 'Phone',
+    commission_rate_percent: 'Commission Rate (%)',
+    paid_by_hours_worked: 'Paid by Hours Worked',
+    active_label: 'Active',
+    inactive_label: 'Inactive',
+    staff_member_name_placeholder: 'Staff member name',
+    role_placeholder: 'e.g., Senior Aesthetician',
+    email_placeholder: 'email@example.com',
+    phone_placeholder: '021 123 4567',
+    ird_number_placeholder: '123-456-789',
+    loyalty_settings_description: 'Configure how clients earn and redeem loyalty points.',
+    points_per_dollar_label: 'Points per $1.00 spent',
+    discount_per_hundred_points_label: 'Discount per Hundred Points',
+    birthday_bonus_points_label: 'Birthday Bonus Points',
+    referral_bonus_points_label: 'Referral Bonus Points',
+    bronze_threshold_label: 'Bronze Threshold',
+    silver_threshold_label: 'Silver Threshold',
+    gold_threshold_label: 'Gold Threshold',
+    loyalty_settings_saved: 'Loyalty settings saved successfully!',
+    failed_save_loyalty_settings: 'Failed to save loyalty settings',
+    from_team: 'from the team',
+    drop_image_or_click: 'Drop your image here or click to browse',
+    jpg_png_up_to_10mb: 'JPG, PNG up to 10MB',
+    desktop_label: 'Desktop',
+    mobile_label: 'Mobile',
+    recommended_resolution: 'Recommended: 1920x600px',
+    optimised_automatically: 'Optimised automatically',
+    uploading: 'Uploading...',
     // Additional common translations
     last_7_days: 'Last 7 days',
     last_30_days: 'Last 30 days',
@@ -2091,6 +2360,8 @@ const translations: Record<string, Translations> = {
     upload_before_photos: 'Upload Before Photos',
     upload_after_photos: 'Upload After Photos',
     creating: 'Creating...',
+    updating: 'Updating...',
+    update_appointment: 'Update Appointment',
     please_select_procedure: 'Please select at least one procedure',
     please_select_client: 'Please select a client',
     please_select_staff: 'Please select a staff member',
@@ -2308,6 +2579,8 @@ const translations: Record<string, Translations> = {
     upload_before_photos: 'Subir Fotos Antes',
     upload_after_photos: 'Subir Fotos Después',
     creating: 'Creando...',
+    updating: 'Actualizando...',
+    update_appointment: 'Actualizar Cita',
     please_select_procedure: 'Por favor, seleccione al menos un procedimiento',
     please_select_client: 'Por favor, seleccione un cliente',
     please_select_staff: 'Por favor, seleccione un miembro del personal',

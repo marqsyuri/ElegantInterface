@@ -27,28 +27,17 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       const newLanguage = user.language || "pt-BR";
       const newCurrency = user.currency || "BRL";
       
-      console.log('🌍 LocaleContext: Sincronizando com dados do usuário', {
-        userLanguage: user.language,
-        userCurrency: user.currency,
-        newLanguage,
-        newCurrency,
-        currentLanguage: language,
-        currentCurrency: currency
-      });
       
       // Sempre atualizar para garantir sincronização
       if (newLanguage !== language) {
-        console.log('🌍 Atualizando idioma:', newLanguage);
         setLanguageState(newLanguage);
         document.documentElement.lang = newLanguage;
       }
       if (newCurrency !== currency) {
-        console.log('💰 Atualizando moeda:', newCurrency);
         setCurrencyState(newCurrency);
       }
     } else {
       // Resetar para defaults quando usuário faz logout
-      console.log('🔄 Resetando locale para defaults');
       setLanguageState("pt-BR");
       setCurrencyState("BRL");
       document.documentElement.lang = "pt-BR";
@@ -69,13 +58,6 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const formatCurrency = useCallback((amount: number | string): string => {
     const activeCurrency = user?.currency || currency;
     const activeLanguage = user?.language || language;
-    console.log('💰 formatCurrency chamado:', { 
-      amount, 
-      activeCurrency, 
-      activeLanguage,
-      userCurrency: user?.currency,
-      stateCurrency: currency
-    });
     return formatCurrencyUtil(amount, activeCurrency, activeLanguage);
   }, [currency, language, user?.currency, user?.language]);
 

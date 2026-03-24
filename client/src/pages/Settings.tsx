@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit, Image, Monitor, Smartphone, Plug, Plus, FileJson, Play, Timer, AlertCircle, ImageIcon, Gift } from "lucide-react";
+import { HelpCircle, MessageCircle, LogOut, Clock, User, Bell, Upload, Users, Trash2, Edit, Image, Monitor, Smartphone, Plug, Plus, FileJson, Play, Timer, AlertCircle, ImageIcon, Gift, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -62,13 +63,13 @@ const businessHoursFormSchema = z.array(z.object({
 type BusinessHoursFormData = z.infer<typeof businessHoursFormSchema>;
 
 const daysOfWeek = [
-  { value: 'monday', label: 'Monday' },
-  { value: 'tuesday', label: 'Tuesday' },
-  { value: 'wednesday', label: 'Wednesday' },
-  { value: 'thursday', label: 'Thursday' },
-  { value: 'friday', label: 'Friday' },
-  { value: 'saturday', label: 'Saturday' },
-  { value: 'sunday', label: 'Sunday' },
+  { value: 'monday', label: '' }, // Will be translated using t() in component
+  { value: 'tuesday', label: '' },
+  { value: 'wednesday', label: '' },
+  { value: 'thursday', label: '' },
+  { value: 'friday', label: '' },
+  { value: 'saturday', label: '' },
+  { value: 'sunday', label: '' },
 ];
 
 const timeSlots = Array.from({ length: 48 }, (_, i) => {
@@ -96,7 +97,6 @@ export default function Settings() {
   
   // Debug: Log user role
   useEffect(() => {
-    console.log('🔍 Settings - User role:', user?.role, 'User:', user);
   }, [user]);
 
   useEffect(() => {
@@ -124,7 +124,6 @@ export default function Settings() {
 
     const saveBannersMutation = useMutation({
       mutationFn: async (data: { loginBannerUrl?: string; dashboardBannerUrl?: string }) => {
-        console.log("🔵 Saving banner URL:", data);
         try {
           const response = await apiRequest('PUT', '/api/user/profile', data);
           
@@ -138,7 +137,6 @@ export default function Settings() {
           
           // Parse JSON response
           const result = await response.json();
-          console.log("✅ Banner saved, response:", result);
           return result;
         } catch (error: any) {
           console.error("❌ Error in mutationFn:", error);
@@ -150,7 +148,6 @@ export default function Settings() {
         }
       },
       onSuccess: (data) => {
-        console.log("✅ Mutation success, user data:", data);
         queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         queryClient.invalidateQueries({ queryKey: ["/api/public/login-banner"] });
         toast({
@@ -349,13 +346,13 @@ export default function Settings() {
         setEditingStaff(null);
         toast({
           title: "Success",
-          description: "Staff member updated successfully",
+          description: t("staff_member_updated"),
         });
       },
       onError: (error: any) => {
         toast({
           title: "Error", 
-          description: `Failed to update staff member: ${error.message}`,
+          description: `${t("failed_update_staff")}: ${error.message}`,
           variant: "destructive",
         });
       },
@@ -369,20 +366,20 @@ export default function Settings() {
         queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
         toast({
           title: "Success",
-          description: "Staff member removed successfully",
+          description: t("staff_member_removed"),
         });
       },
       onError: (error: any) => {
         toast({
           title: "Error", 
-          description: `Failed to remove staff member: ${error.message}`,
+          description: `${t("failed_remove_staff")}: ${error.message}`,
           variant: "destructive",
         });
       },
     });
 
     const handleRemoveStaff = (staffMember: Staff) => {
-      if (confirm(`Are you sure you want to remove ${staffMember.name} from the team?`)) {
+      if (confirm(`${t("confirm_remove_staff_member")} ${staffMember.name} ${t("from_team") || "da equipe"}?`)) {
         deleteStaffMutation.mutate(staffMember.id);
       }
     };
@@ -409,12 +406,12 @@ export default function Settings() {
     };
 
     if (staffLoading) {
-      return <div className="p-4 text-center text-slate-500">Loading team members...</div>;
+      return <div className="p-4 text-center text-slate-500">{t("loading_team_members")}</div>;
     }
 
     return (
       <div className="space-y-6">
-        <h4 className="font-medium text-slate-900">Team Members Management</h4>
+        <h4 className="font-medium text-slate-900">{t("team_members_management")}</h4>
         
         {(staff as Staff[]).length > 0 ? (
           <div className="space-y-4">
@@ -435,7 +432,7 @@ export default function Settings() {
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {member.isActive ? 'Active' : 'Inactive'}
+                        {member.isActive ? t("active_label") : t("inactive_label")}
                       </span>
                     </div>
                     
@@ -448,7 +445,7 @@ export default function Settings() {
                       </div>
                       {member.specialties && (
                         <div className="mt-1 text-slate-400">
-                          Specialties: {member.specialties}
+                          {t("specialties_label")}: {member.specialties}
                         </div>
                       )}
                     </div>
@@ -465,12 +462,12 @@ export default function Settings() {
                         onClick={() => handleEditStaff(member)}
                       >
                         <Edit className="w-4 h-4 mr-1" />
-                        Edit
+                        {t("edit")}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto p-4">
                       <DialogHeader className="pb-2">
-                        <DialogTitle>Edit Staff Member</DialogTitle>
+                        <DialogTitle>{t("edit_staff_member")}</DialogTitle>
                       </DialogHeader>
                       <div className="max-h-[60vh] overflow-y-auto pr-2">
                         <Form {...editForm}>
@@ -480,9 +477,9 @@ export default function Settings() {
                               name="name"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Name</FormLabel>
+                                  <FormLabel>{t("name_label")}</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Staff member name" {...field} />
+                                    <Input placeholder={t("staff_member_name_placeholder")} {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -494,9 +491,9 @@ export default function Settings() {
                               name="role"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Role</FormLabel>
+                                  <FormLabel>{t("role_label")}</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="e.g., Senior Aesthetician" {...field} />
+                                    <Input placeholder={t("role_placeholder")} {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -508,9 +505,9 @@ export default function Settings() {
                               name="email"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Email</FormLabel>
+                                  <FormLabel>{t("email")}</FormLabel>
                                   <FormControl>
-                                    <Input type="email" placeholder="email@example.com" {...field} />
+                                    <Input type="email" placeholder={t("email_placeholder")} {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -522,9 +519,9 @@ export default function Settings() {
                               name="phone"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Phone</FormLabel>
+                                  <FormLabel>{t("phone_label")}</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="021 123 4567" {...field} />
+                                    <Input placeholder={t("phone_placeholder")} {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -536,9 +533,9 @@ export default function Settings() {
                               name="irdNumber"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>IRD Number</FormLabel>
+                                  <FormLabel>{t("ird_number_required")}</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="123-456-789" {...field} />
+                                    <Input placeholder={t("ird_number_placeholder")} {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -550,9 +547,9 @@ export default function Settings() {
                               name="specialties"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Specialties</FormLabel>
+                                  <FormLabel>{t("specialties_label")}</FormLabel>
                                   <FormControl>
-                                    <Textarea placeholder="List specialties and certifications" {...field} />
+                                    <Textarea placeholder={t("list_specialties_placeholder")} {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -565,7 +562,7 @@ export default function Settings() {
                                 name="commissionRate"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Commission Rate (%)</FormLabel>
+                                    <FormLabel>{t("commission_rate_percent")}</FormLabel>
                                     <FormControl>
                                       <Input
                                         type="number"
@@ -594,7 +591,7 @@ export default function Settings() {
                                         />
                                       </FormControl>
                                       <FormLabel className="!mt-0 cursor-pointer">
-                                        Paid by Hours Worked
+                                        {t("paid_by_hours_worked")}
                                       </FormLabel>
                                     </div>
                                     <FormMessage />
@@ -616,7 +613,7 @@ export default function Settings() {
                                       className="rounded border-slate-300"
                                     />
                                   </FormControl>
-                                  <FormLabel className="text-sm">Active</FormLabel>
+                                  <FormLabel className="text-sm">{t("active_label")}</FormLabel>
                                   <FormMessage />
                                 </FormItem>
                               )}
@@ -630,14 +627,14 @@ export default function Settings() {
                           variant="outline"
                           onClick={() => setEditingStaff(null)}
                         >
-                          Cancel
+                          {t("cancel")}
                         </Button>
                         <Button
                           type="submit"
                           disabled={updateStaffMutation.isPending}
                           onClick={editForm.handleSubmit(onEditSubmit)}
                         >
-                          {updateStaffMutation.isPending ? "Saving..." : "Save Changes"}
+                          {updateStaffMutation.isPending ? t("saving") : t("save_changes")}
                         </Button>
                       </div>
                     </DialogContent>
@@ -651,7 +648,7 @@ export default function Settings() {
                     disabled={deleteStaffMutation.isPending}
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
-                    Remove
+                    {t("remove")}
                   </Button>
                 </div>
               </div>
@@ -660,11 +657,11 @@ export default function Settings() {
         ) : (
           <div className="text-center py-12 bg-slate-50 rounded-lg">
             <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <h5 className="font-medium text-slate-900 mb-2">No team members yet</h5>
-            <p className="text-slate-500 mb-4">Add staff members to manage your team and schedules</p>
+            <h5 className="font-medium text-slate-900 mb-2">{t("no_team_members_yet")}</h5>
+            <p className="text-slate-500 mb-4">{t("add_staff_members_description")}</p>
             <Button variant="outline" onClick={() => window.location.href = '/staff'}>
               <Users className="w-4 h-4 mr-2" />
-              Go to Staff Management
+              {t("go_to_staff_management")}
             </Button>
           </div>
         )}
@@ -673,14 +670,268 @@ export default function Settings() {
           <div className="flex items-start space-x-3">
             <Users className="h-5 w-5 text-blue-600 mt-0.5" />
             <div>
-              <h5 className="font-medium text-blue-900">Team Management</h5>
+              <h5 className="font-medium text-blue-900">{t("team_management")}</h5>
               <p className="text-sm text-blue-700 mt-1">
-                Manage your team members here. You can edit their information, schedules, and remove them from the team. 
-                For full staff management including adding new members, use the Staff page from the main menu.
+                {t("team_management_description")}
               </p>
             </div>
           </div>
         </div>
+
+        {/* Staff Users Section - Usuários que podem fazer login */}
+        <div className="mt-8 pt-8 border-t border-slate-200">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="font-medium text-slate-900">Usuários Staff (Acesso ao Sistema)</h4>
+              <p className="text-sm text-slate-500 mt-1">
+                Crie usuários que podem fazer login no sistema como staff. Eles terão acesso apenas ao menu de Agendamentos.
+              </p>
+            </div>
+            <StaffUserForm />
+          </div>
+
+          <StaffUsersList />
+        </div>
+      </div>
+    );
+  }
+
+  // Staff Users Management Component
+  function StaffUserForm() {
+    const [isOpen, setIsOpen] = useState(false);
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
+
+    const staffUserFormSchema = z.object({
+      username: z.string().min(1, "Username é obrigatório"),
+      email: z.string().email("Email inválido"),
+      password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+    });
+
+    type StaffUserFormData = z.infer<typeof staffUserFormSchema>;
+
+    const form = useForm<StaffUserFormData>({
+      resolver: zodResolver(staffUserFormSchema),
+      defaultValues: {
+        username: "",
+        email: "",
+        password: "",
+        firstName: "",
+        lastName: "",
+      },
+    });
+
+    const createStaffUserMutation = useMutation({
+      mutationFn: async (data: StaffUserFormData) => {
+        const res = await apiRequest('POST', '/api/staff-users', data);
+        return res;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/staff-users'] });
+        form.reset();
+        setIsOpen(false);
+        toast({
+          title: "Sucesso",
+          description: "Usuário staff criado com sucesso!",
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Erro",
+          description: error.message || "Falha ao criar usuário staff",
+          variant: "destructive",
+        });
+      },
+    });
+
+    const onSubmit = (data: StaffUserFormData) => {
+      createStaffUserMutation.mutate(data);
+    };
+
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Criar Usuário Staff
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Usuário Staff</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="nomeusuario" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email *</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="usuario@exemplo.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Senha *</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Mínimo 6 caracteres" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome</FormLabel>
+                      <FormControl>
+                        <Input placeholder="João" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sobrenome</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Silva" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createStaffUserMutation.isPending}>
+                  {createStaffUserMutation.isPending ? "Criando..." : "Criar Usuário"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  function StaffUsersList() {
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
+
+    const { data: staffUsers = [], isLoading } = useQuery({
+      queryKey: ['/api/staff-users'],
+      retry: false,
+    });
+
+    const deleteStaffUserMutation = useMutation({
+      mutationFn: async (id: number) => {
+        await apiRequest('DELETE', `/api/staff-users/${id}`);
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/staff-users'] });
+        toast({
+          title: "Sucesso",
+          description: "Usuário staff removido com sucesso",
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Erro",
+          description: error.message || "Falha ao remover usuário",
+          variant: "destructive",
+        });
+      },
+    });
+
+    if (isLoading) {
+      return <div className="text-center py-4 text-slate-500">Carregando...</div>;
+    }
+
+    if (staffUsers.length === 0) {
+      return (
+        <div className="text-center py-8 bg-slate-50 rounded-lg">
+          <UserCheck className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <p className="text-slate-500">Nenhum usuário staff criado ainda</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {(staffUsers as any[]).map((staffUser: any) => (
+          <div key={staffUser.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-white">
+            <div className="flex items-center space-x-4">
+              <Avatar className="w-10 h-10">
+                <AvatarFallback className="bg-pink-100 text-pink-800">
+                  {staffUser.username[0].toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h5 className="font-medium text-slate-900">{staffUser.username}</h5>
+                  <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200">
+                    Staff
+                  </Badge>
+                </div>
+                <div className="text-sm text-slate-500">
+                  {staffUser.email}
+                  {staffUser.firstName && ` • ${staffUser.firstName} ${staffUser.lastName || ''}`}
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 hover:text-red-800 hover:bg-red-50"
+              onClick={() => {
+                if (confirm(`Tem certeza que deseja remover o usuário ${staffUser.username}?`)) {
+                  deleteStaffUserMutation.mutate(staffUser.id);
+                }
+              }}
+              disabled={deleteStaffUserMutation.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Remover
+            </Button>
+          </div>
+        ))}
       </div>
     );
   }
@@ -739,13 +990,13 @@ export default function Settings() {
         queryClient.invalidateQueries({ queryKey: ["/api/loyalty-settings"] });
         toast({
           title: "Success",
-          description: "Loyalty settings saved successfully!",
+          description: t("loyalty_settings_saved"),
         });
       },
       onError: (error: any) => {
         toast({
           title: "Error",
-          description: `Failed to save loyalty settings: ${error.message}`,
+          description: `${t("failed_save_loyalty_settings")}: ${error.message}`,
           variant: "destructive",
         });
       },
@@ -766,7 +1017,7 @@ export default function Settings() {
             <Gift className="w-6 h-6 text-primary" /> {t("loyalty_program_settings")}
           </CardTitle>
           <p className="text-sm text-slate-600 mt-2">
-            Configure how clients earn and redeem loyalty points.
+            {t("loyalty_settings_description")}
           </p>
         </CardHeader>
         <CardContent>
@@ -778,7 +1029,7 @@ export default function Settings() {
                   name="pointsPerDollar"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Points per $1.00 spent</FormLabel>
+                      <FormLabel>{t("points_per_dollar_label")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -798,7 +1049,7 @@ export default function Settings() {
                   name="discountPerHundredPoints"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Discount per 100 points (NZ$)</FormLabel>
+                      <FormLabel>{t("discount_per_hundred_points_label")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -821,7 +1072,7 @@ export default function Settings() {
                   name="birthdayBonusPoints"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Birthday Bonus Points</FormLabel>
+                      <FormLabel>{t("birthday_bonus_points_label")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -841,7 +1092,7 @@ export default function Settings() {
                   name="referralBonusPoints"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Referral Bonus Points</FormLabel>
+                      <FormLabel>{t("referral_bonus_points_label")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -864,7 +1115,7 @@ export default function Settings() {
                   name="bronzeThreshold"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Bronze Tier Threshold</FormLabel>
+                      <FormLabel>{t("bronze_threshold_label")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -884,7 +1135,7 @@ export default function Settings() {
                   name="silverThreshold"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Silver Tier Threshold</FormLabel>
+                      <FormLabel>{t("silver_threshold_label")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -904,7 +1155,7 @@ export default function Settings() {
                   name="goldThreshold"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Gold Tier Threshold</FormLabel>
+                      <FormLabel>{t("gold_threshold_label")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -1439,9 +1690,7 @@ export default function Settings() {
 
   // Update form when user data changes
   useEffect(() => {
-    console.log('🔄 User data changed:', user);
     if (user) {
-      console.log('✅ Resetting form with user data');
       form.reset({
         email: user.email || "",
         firstName: user.firstName || "",
@@ -1461,7 +1710,6 @@ export default function Settings() {
         currency: user.currency || "BRL",
       });
     } else {
-      console.log('⚠️ No user data available');
     }
   }, [user, form]);
 
@@ -1540,13 +1788,9 @@ export default function Settings() {
   const getUploadUrlMutation = useMutation({
     mutationFn: async () => {
       try {
-        console.log('Making API request to /api/objects/upload');
         const response = await apiRequest('POST', '/api/objects/upload', {});
-        console.log('API response status:', response.status);
-        console.log('API response headers:', Object.fromEntries(response.headers.entries()));
         
         const responseText = await response.text();
-        console.log('Raw response text:', responseText);
         
         let data;
         try {
@@ -1556,7 +1800,6 @@ export default function Settings() {
           throw new Error(`Invalid JSON response: ${responseText}`);
         }
         
-        console.log('Parsed upload response data:', data);
         if (!data || !data.uploadURL) {
           throw new Error(`No upload URL in response: ${JSON.stringify(data)}`);
         }
@@ -1570,15 +1813,12 @@ export default function Settings() {
 
   const handleHeroImageUpload = async (file: File) => {
     try {
-      console.log('Starting hero image upload for file:', file.name);
       
       // Resize and compress image
       const resizedFile = await resizeAndCompressImage(file, 1200, 0.7);
-      console.log('Image resized successfully:', resizedFile.size, 'bytes');
       
       // Get upload URL
       const uploadURL = await getUploadUrlMutation.mutateAsync();
-      console.log('Got upload URL:', uploadURL);
       
       // Upload to object storage
       const uploadResponse = await fetch(uploadURL, {
@@ -1589,7 +1829,6 @@ export default function Settings() {
         }
       });
 
-      console.log('Upload response status:', uploadResponse.status);
 
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text();
@@ -1599,7 +1838,6 @@ export default function Settings() {
 
       // Convert upload URL to object path for saving
       const objectPath = uploadURL.split('?')[0]; // Remove query params
-      console.log('Object path for hero image:', objectPath);
       
       // Update hero image in database
       await heroImageUploadMutation.mutateAsync(objectPath);
@@ -1661,14 +1899,11 @@ export default function Settings() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: UserFormData) => {
-      console.log('Updating profile with data:', data);
       const response = await apiRequest('PUT', '/api/auth/user', data);
       const result = await response.json();
-      console.log('Profile update response:', result);
       return result;
     },
     onSuccess: async (data) => {
-      console.log('Profile updated successfully:', data);
       // Force refetch to get fresh data (not just invalidate)
       await queryClient.refetchQueries({ 
         queryKey: ["/api/user"],
@@ -1829,7 +2064,6 @@ export default function Settings() {
                                     try {
                                       // Get upload URL
                                       const uploadResponse = await apiRequest('POST', '/api/objects/upload');
-                                      console.log('Upload response:', uploadResponse);
                                       
                                       if (!uploadResponse || !uploadResponse.uploadURL) {
                                         throw new Error('No upload URL received from server');
@@ -1850,7 +2084,6 @@ export default function Settings() {
                                       
                                       // Convert upload URL to object path for saving
                                       const objectPath = uploadResponse.uploadURL.split('?')[0]; // Remove query params
-                                      console.log('Object path:', objectPath);
                                       
                                       // Update user profile with new image URL
                                       await apiRequest('PUT', '/api/profile-image', {
@@ -1878,8 +2111,8 @@ export default function Settings() {
                                 <div className="flex flex-col items-center">
                                   <User className="w-8 h-8 text-gray-400 mb-2" />
                                   <Upload className="w-5 h-5 text-gray-400 mb-2" />
-                                  <p className="text-gray-600 font-medium">Click to upload</p>
-                                  <p className="text-sm text-gray-400">JPG or PNG, max 10MB</p>
+                                  <p className="text-gray-600 font-medium">{t("click_to_upload")}</p>
+                                  <p className="text-sm text-gray-400">{t("jpg_or_png_max_10mb")}</p>
                                 </div>
                               </div>
                             </div>
@@ -1936,7 +2169,7 @@ export default function Settings() {
                               <FormItem>
                                 <FormLabel>{t("professional_registration")}</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="Beauty Therapy Board NZ registration number" {...field} />
+                                  <Input placeholder={t("beauty_therapy_board_registration_placeholder")} {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1948,10 +2181,10 @@ export default function Settings() {
                             name="specialties"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Specialties</FormLabel>
+                                <FormLabel>{t("specialties_label")}</FormLabel>
                                 <FormControl>
                                   <Textarea 
-                                    placeholder="Describe your specialties..."
+                                    placeholder={t("describe_specialties_placeholder")}
                                     className="h-20"
                                     {...field} 
                                   />
@@ -1962,16 +2195,16 @@ export default function Settings() {
                           />
 
                           <div className="pt-4">
-                            <h5 className="font-medium text-slate-900 mb-4">Clinic Details</h5>
+                            <h5 className="font-medium text-slate-900 mb-4">{t("clinic_details")}</h5>
                             
                             <FormField
                               control={form.control}
                               name="clinicName"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Clinic Name</FormLabel>
+                                  <FormLabel>{t("clinic_name_label")}</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Clinic name" {...field} />
+                                    <Input placeholder={t("clinic_name_label")} {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -1984,7 +2217,7 @@ export default function Settings() {
                                 name="clinicCnpj"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Business Number</FormLabel>
+                                    <FormLabel>{t("business_number")}</FormLabel>
                                     <FormControl>
                                       <Input placeholder="e.g. NZBN 9429000000000" {...field} />
                                     </FormControl>
@@ -1998,7 +2231,7 @@ export default function Settings() {
                                 name="clinicPhone"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Business Phone</FormLabel>
+                                    <FormLabel>{t("business_phone")}</FormLabel>
                                     <FormControl>
                                       <Input placeholder="09 123 4567" {...field} />
                                     </FormControl>
@@ -2013,7 +2246,7 @@ export default function Settings() {
                               name="clinicAddress"
                               render={({ field }) => (
                                 <FormItem className="mt-4">
-                                  <FormLabel>Complete Address</FormLabel>
+                                  <FormLabel>{t("complete_address")}</FormLabel>
                                   <FormControl>
                                     <Textarea 
                                       placeholder="Street, number, suburb, city, postcode"
@@ -2031,7 +2264,7 @@ export default function Settings() {
                               name="clinicWhatsapp"
                               render={({ field }) => (
                                 <FormItem className="mt-4">
-                                  <FormLabel>WhatsApp Business</FormLabel>
+                                  <FormLabel>{t("whatsapp_business")}</FormLabel>
                                   <FormControl>
                                     <Input placeholder="021 123 4567" {...field} />
                                   </FormControl>
@@ -2101,29 +2334,29 @@ export default function Settings() {
                     </div>
 
                     <div>
-                      <h4 className="font-medium text-slate-900 mb-4">System Information</h4>
+                      <h4 className="font-medium text-slate-900 mb-4">{t("system_information")}</h4>
                       
                       <div className="grid grid-cols-1 gap-4">
                         <div className="p-4 border border-slate-200 rounded-lg">
                           <div className="flex items-center space-x-3 mb-3">
                             <HelpCircle className="h-5 w-5 text-blue-600" />
-                            <h5 className="font-medium text-slate-900">Support</h5>
+                            <h5 className="font-medium text-slate-900">{t("support_title")}</h5>
                           </div>
                           <p className="text-sm text-slate-600 mb-3">
-                            Need help? Contact our support team for assistance with your clinic management system.
+                            {t("need_help_contact_support")}
                           </p>
                           <Button variant="outline" size="sm">
-                            Contact Support
+                            {t("contact_support_button")}
                           </Button>
                         </div>
 
                         <div className="p-4 border border-slate-200 rounded-lg">
                           <div className="flex items-center space-x-3 mb-3">
                             <LogOut className="h-5 w-5 text-red-600" />
-                            <h5 className="font-medium text-slate-900">Account</h5>
+                            <h5 className="font-medium text-slate-900">{t("account_title")}</h5>
                           </div>
                           <p className="text-sm text-slate-600 mb-3">
-                            Signed in as: {getUserName()}
+                            {t("signed_in_as")} {getUserName()}
                           </p>
                           <Button 
                             variant="outline" 
@@ -2131,7 +2364,7 @@ export default function Settings() {
                             onClick={() => logoutMutation.mutate()}
                             disabled={logoutMutation.isPending}
                           >
-                            Sign Out
+                            {t("sign_out")}
                           </Button>
                         </div>
                       </div>
@@ -2142,13 +2375,13 @@ export default function Settings() {
                 <TabsContent value="hours" className="mt-0">
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-slate-900">Operating Hours</h4>
+                      <h4 className="font-medium text-slate-900">{t("operating_hours")}</h4>
                       <Button 
                         onClick={saveBusinessHours}
                         disabled={updateBusinessHoursMutation.isPending}
                         className="bg-green-600 hover:bg-green-700 text-white"
                       >
-                        {updateBusinessHoursMutation.isPending ? 'Saving...' : 'Save Hours'}
+                        {updateBusinessHoursMutation.isPending ? t("saving_hours") : t("save_hours")}
                       </Button>
                     </div>
 
@@ -2157,7 +2390,7 @@ export default function Settings() {
                         <div key={day.value} className="p-4 border border-slate-200 rounded-lg">
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center space-x-3">
-                              <h5 className="font-medium text-slate-900 w-20">{day.label}</h5>
+                              <h5 className="font-medium text-slate-900 w-20">{t(day.value as any)}</h5>
                               <Switch
                                 checked={hoursForm[index]?.isOpen ?? true}
                                 onCheckedChange={(checked) => handleBusinessHoursChange(index, 'isOpen', checked)}
@@ -2193,7 +2426,7 @@ export default function Settings() {
 
                               <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                                  Closing Time
+                                  {t("closing_time")}
                                 </label>
                                 <Select
                                   value={hoursForm[index]?.closeTime || '17:00'}
@@ -2214,7 +2447,7 @@ export default function Settings() {
 
                               <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                                  Lunch Start
+                                  {t("lunch_start")}
                                 </label>
                                 <Select
                                   value={hoursForm[index]?.breakStartTime || '12:00'}
@@ -2235,7 +2468,7 @@ export default function Settings() {
 
                               <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                                  Lunch End
+                                  {t("lunch_end")}
                                 </label>
                                 <Select
                                   value={hoursForm[index]?.breakEndTime || '13:00'}
@@ -2263,10 +2496,9 @@ export default function Settings() {
                       <div className="flex items-start space-x-3">
                         <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
                         <div>
-                          <h5 className="font-medium text-blue-900">Operating Hours Information</h5>
+                          <h5 className="font-medium text-blue-900">{t("operating_hours_information")}</h5>
                           <p className="text-sm text-blue-700 mt-1">
-                            These hours will be used for appointment scheduling and client booking availability. 
-                            Lunch breaks are automatically excluded from available appointment times.
+                            {t("operating_hours_description")}
                           </p>
                         </div>
                       </div>
@@ -2316,10 +2548,10 @@ export default function Settings() {
                             {t("upload_hero_image")}
                           </h3>
                           <p className="text-sm text-slate-600 mb-4">
-                            Drop your image here or click to browse
+                            {t("drop_image_or_click")}
                           </p>
                           <p className="text-xs text-slate-500">
-                            JPG, PNG up to 10MB
+                            {t("jpg_png_up_to_10mb")}
                           </p>
                         </label>
                       </div>
@@ -2329,15 +2561,15 @@ export default function Settings() {
                         <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                           <Monitor className="h-5 w-5 text-slate-600" />
                           <div>
-                            <p className="text-sm font-medium text-slate-900">Desktop</p>
-                            <p className="text-xs text-slate-600">Recommended: 1920x600px</p>
+                            <p className="text-sm font-medium text-slate-900">{t("desktop_label")}</p>
+                            <p className="text-xs text-slate-600">{t("recommended_resolution")}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                           <Smartphone className="h-5 w-5 text-slate-600" />
                           <div>
-                            <p className="text-sm font-medium text-slate-900">Mobile</p>
-                            <p className="text-xs text-slate-600">Optimised automatically</p>
+                            <p className="text-sm font-medium text-slate-900">{t("mobile_label")}</p>
+                            <p className="text-xs text-slate-600">{t("optimised_automatically")}</p>
                           </div>
                         </div>
                       </div>
@@ -2346,7 +2578,7 @@ export default function Settings() {
                       {(heroImageUploadMutation.isPending || getUploadUrlMutation.isPending) && (
                         <div className="flex items-center justify-center py-4">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                          <span className="ml-2 text-sm text-slate-600">Uploading...</span>
+                          <span className="ml-2 text-sm text-slate-600">{t("uploading")}</span>
                         </div>
                       )}
                     </CardContent>
@@ -2363,7 +2595,7 @@ export default function Settings() {
                       <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2 text-lg">
                           <Timer className="h-5 w-5 text-green-600" />
-                          Time Parameters
+                          {t("time_parameters")}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-6">
@@ -2375,7 +2607,7 @@ export default function Settings() {
                             name="inactivityDays"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-slate-900 font-medium">Inactivity Timeout (days)</FormLabel>
+                                <FormLabel className="text-slate-900 font-medium">{t("inactivity_timeout_days")}</FormLabel>
                                 <FormControl>
                                   <Input 
                                     type="number" 
@@ -2388,7 +2620,7 @@ export default function Settings() {
                                   />
                                 </FormControl>
                                 <p className="text-xs text-slate-500">
-                                  Leads with no activity for X days will be marked for follow-up
+                                  {t("inactivity_timeout_description")}
                                 </p>
                                 <FormMessage />
                               </FormItem>
@@ -2401,7 +2633,7 @@ export default function Settings() {
                             name="reminderHours"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-slate-900 font-medium">Reminder Time (hours)</FormLabel>
+                                <FormLabel className="text-slate-900 font-medium">{t("reminder_time_hours")}</FormLabel>
                                 <FormControl>
                                   <Input 
                                     type="number" 
@@ -2414,7 +2646,7 @@ export default function Settings() {
                                   />
                                 </FormControl>
                                 <p className="text-xs text-slate-500">
-                                  Reminders will be sent X hours before appointments
+                                  {t("reminder_time_description")}
                                 </p>
                                 <FormMessage />
                               </FormItem>
@@ -2424,9 +2656,9 @@ export default function Settings() {
 
                         {/* Reminder Time Configuration */}
                         <div className="pt-4 border-t">
-                          <h5 className="font-medium text-slate-900 mb-3">Reminder Schedule Configuration</h5>
+                          <h5 className="font-medium text-slate-900 mb-3">{t("reminder_schedule_configuration")}</h5>
                           <p className="text-sm text-slate-600 mb-4">
-                            Set the time window for sending reminders. Reminders will only be sent within this period to respect clients' rest hours.
+                            {t("reminder_schedule_description")}
                           </p>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2436,11 +2668,11 @@ export default function Settings() {
                               name="reminderStartTime"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-slate-900 font-medium">Start Time for Reminders</FormLabel>
+                                  <FormLabel className="text-slate-900 font-medium">{t("start_time_for_reminders")}</FormLabel>
                                   <Select onValueChange={field.onChange} value={field.value || "18:00"}>
                                     <FormControl>
                                       <SelectTrigger>
-                                        <SelectValue placeholder="Select start time" />
+                                        <SelectValue placeholder={t("select_start_time")} />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -2452,7 +2684,7 @@ export default function Settings() {
                                     </SelectContent>
                                   </Select>
                                   <p className="text-xs text-slate-500">
-                                    e.g., 6:00 PM - Reminders start being sent from this time
+                                    {t("start_time_example")}
                                   </p>
                                   <FormMessage />
                                 </FormItem>
@@ -2465,11 +2697,11 @@ export default function Settings() {
                               name="reminderEndTime"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-slate-900 font-medium">End Time for Reminders</FormLabel>
+                                  <FormLabel className="text-slate-900 font-medium">{t("end_time_for_reminders")}</FormLabel>
                                   <Select onValueChange={field.onChange} value={field.value || "20:00"}>
                                     <FormControl>
                                       <SelectTrigger>
-                                        <SelectValue placeholder="Select end time" />
+                                        <SelectValue placeholder={t("select_end_time")} />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -2481,7 +2713,7 @@ export default function Settings() {
                                     </SelectContent>
                                   </Select>
                                   <p className="text-xs text-slate-500">
-                                    e.g., 8:00 PM - Reminders stop being sent after this time
+                                    {t("end_time_example")}
                                   </p>
                                   <FormMessage />
                                 </FormItem>
@@ -2494,10 +2726,10 @@ export default function Settings() {
                             <AlertCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                             <div className="flex-1">
                               <p className="text-sm font-medium text-green-900">
-                                Valid Configuration: Reminders will be sent between {formatTime(form.watch('reminderStartTime') || '18:00')} and {formatTime(form.watch('reminderEndTime') || '20:00')}
+                                {t("valid_configuration")} {formatTime(form.watch('reminderStartTime') || '18:00')} {t("and")} {formatTime(form.watch('reminderEndTime') || '20:00')}
                               </p>
                               <p className="text-xs text-green-700 mt-1">
-                                Example: With hours {formatTime(form.watch('reminderStartTime') || '18:00')} - {formatTime(form.watch('reminderEndTime') || '20:00')}, reminders will only be sent during this window.
+                                {t("reminder_example")}: {formatTime(form.watch('reminderStartTime') || '18:00')} - {formatTime(form.watch('reminderEndTime') || '20:00')}, {t("reminder_example")}
                               </p>
                             </div>
                           </div>
@@ -2507,7 +2739,7 @@ export default function Settings() {
                             onClick={() => form.handleSubmit(onSubmit)()}
                             className="w-full md:w-auto"
                           >
-                            Save Time Settings
+                            {t("save_time_settings")}
                           </Button>
                         </Form>
                       </CardContent>

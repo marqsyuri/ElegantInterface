@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { 
   Home, 
   Calendar, 
@@ -10,6 +10,8 @@ import {
   ShieldCheck, 
   Stethoscope, 
   Gift, 
+  Tag,
+  BarChart2,
   Settings,
   Sparkles,
   UserCheck,
@@ -31,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useLocale } from "@/contexts/LocaleContext";
+import { useAuth } from "@/hooks/use-auth";
 
 // Tipo para grupo de navegação
 type NavigationGroupType = {
@@ -124,13 +127,47 @@ export default function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isExpanded, toggleExpanded } = useSidebar();
   const { t } = useLocale();
+  const { user } = useAuth();
 
-  const mainItems = useMemo(() => ([
-    { name: t('dashboard_menu'), href: "/", icon: Home, key: 'dashboard' },
-    { name: t('appointments_menu'), href: "/appointments", icon: Calendar, key: 'appointments' },
-  ]), [t]);
+  // Check if user is staff with limited access (accessLevel 'staff')
+  // Staff from staff table with accessLevel 'staff' só vê agendamentos
+  // Staff from staff table with accessLevel 'admin' vê tudo
+  const userAccessLevel = (user as any)?.accessLevel;
+  const userType = (user as any)?.userType;
+  
+  // FORÇA: Se userType é 'staff' e accessLevel é 'staff', SEMPRE ocultar menus
+  // Mesmo se houver dados inconsistentes, priorizar userType e accessLevel
+  let isStaff = userType === 'staff' && userAccessLevel === 'staff';
+  
+  // FORÇA: Se não tem userType mas tem 'name' sem 'firstName', é staff
+  if (!isStaff && (user as any)?.name && !(user as any)?.firstName && !(user as any)?.lastName) {
+    isStaff = true;
+  }
+  
+  // Debug logs
 
-  const navigationGroups = useMemo<NavigationGroupType[]>(() => ([
+  const mainItems = useMemo(() => {
+    // Staff only sees appointments
+    if (isStaff) {
+      return [
+        { name: t('appointments_menu'), href: "/appointments", icon: Calendar, key: 'appointments' },
+      ];
+    }
+    // Admin sees dashboard and appointments
+    return [
+      { name: t('dashboard_menu'), href: "/", icon: Home, key: 'dashboard' },
+      { name: t('appointments_menu'), href: "/appointments", icon: Calendar, key: 'appointments' },
+      { name: t('financial_menu'), href: "/financial-dashboard", icon: CreditCard, key: 'financial' },
+    ];
+  }, [t, isStaff]);
+
+  const navigationGroups = useMemo<NavigationGroupType[]>(() => {
+    // Staff doesn't see any navigation groups
+    if (isStaff) {
+      return [];
+    }
+    // Admin sees all groups
+    return ([
     {
       name: t('registry_menu'),
       icon: FolderOpen,
@@ -139,30 +176,34 @@ export default function Sidebar() {
         { name: t('clients_menu'), href: "/clients", icon: Users, key: 'clients' },
         { name: t('procedures_menu'), href: "/procedures", icon: Sparkles, key: 'procedures' },
         { name: t('products_menu'), href: "/products", icon: Package, key: 'products' },
+        { name: t('inventory_menu'), href: "/materials", icon: ShieldCheck, key: 'materials' },
         { name: t('staff_menu'), href: "/staff", icon: UserCheck, key: 'staff' },
       ]
     },
+    // TODO: Clinical section - Awaiting development
+    // Uncomment when clinical records functionality is ready
+    /*
     {
       name: t('clinical_menu'),
       icon: Stethoscope,
       key: 'clinical',
       items: [
         { name: t('clinical_records_menu'), href: "/clinical", icon: ClipboardList, key: 'clinical_records' },
-        { name: t('inventory_menu'), href: "/materials", icon: ShieldCheck, key: 'materials' },
       ]
     },
+    */
     {
       name: t('management_menu'),
       icon: Briefcase,
       key: 'management',
       items: [
-        { name: t('financial_menu'), href: "/financial", icon: CreditCard, key: 'financial' },
         { name: "Payslip", href: "/payslip", icon: FileText, key: 'payslip' },
-        { name: "Communication", href: "/communication", icon: MessageCircle, key: 'communication' },
-        { name: "Campaigns", href: "/campaigns", icon: Megaphone, key: 'campaigns' },
-            { name: t('loyalty'), href: "/loyalty", icon: Gift, key: 'loyalty' },
-        { name: t('packages_menu'), href: "/packages", icon: Package, key: 'packages' },
-        { name: "Marketing", href: "/marketing", icon: Mail, key: 'marketing' },
+        { name: "Vouchers", href: "/vouchers", icon: Tag, key: 'vouchers' },
+        // { name: "Communication", href: "/communication", icon: MessageCircle, key: 'communication' },
+        // { name: "Campaigns", href: "/campaigns", icon: Megaphone, key: 'campaigns' },
+            // { name: t('loyalty'), href: "/loyalty", icon: Gift, key: 'loyalty' },
+        // { name: t('packages_menu'), href: "/packages", icon: Package, key: 'packages' },
+        // { name: "Marketing", href: "/marketing", icon: Mail, key: 'marketing' },
       ]
     },
     {
@@ -171,11 +212,19 @@ export default function Sidebar() {
       key: 'analytics',
       items: [
         { name: t('analytics_menu'), href: "/analytics", icon: BarChart3, key: 'analytics' },
+        { name: "Relatórios", href: "/reports", icon: BarChart2, key: 'reports' },
       ]
     },
-  ]), [t]);
+  ]);
+  }, [t, isStaff]);
 
-  const settingsItem = useMemo(() => ({ name: t('settings_menu'), href: "/settings", icon: Settings }), [t]);
+  const settingsItem = useMemo(() => {
+    // Staff doesn't see settings
+    if (isStaff) {
+      return null;
+    }
+    return { name: t('settings_menu'), href: "/settings", icon: Settings };
+  }, [t, isStaff]);
 
   return (
     <>
@@ -188,21 +237,23 @@ export default function Sidebar() {
         <Menu className="w-6 h-6 text-white" />
       </button>
 
-      {/* Desktop Expand/Collapse Button */}
-      <button
-        className="fixed top-4 left-4 z-50 hidden lg:block bg-gradient-to-r from-pink-500 to-rose-500 p-2 rounded-xl shadow-lg transition-all duration-300 hover:shadow-pink-500/50 hover:scale-105"
-        style={{ 
-          left: isExpanded ? '260px' : '60px',
-          boxShadow: '0 4px 20px rgba(236, 72, 153, 0.25)'
-        }}
-        onClick={toggleExpanded}
-      >
-        {isExpanded ? (
-          <ChevronLeft className="w-5 h-5 text-white" />
-        ) : (
-          <ChevronRight className="w-5 h-5 text-white" />
-        )}
-      </button>
+      {/* Desktop Expand/Collapse Button - Only for Admin */}
+      {!isStaff && (
+        <button
+          className="fixed top-4 left-4 z-50 hidden lg:block bg-gradient-to-r from-pink-500 to-rose-500 p-2 rounded-xl shadow-lg transition-all duration-300 hover:shadow-pink-500/50 hover:scale-105"
+          style={{ 
+            left: isExpanded ? '260px' : '60px',
+            boxShadow: '0 4px 20px rgba(236, 72, 153, 0.25)'
+          }}
+          onClick={toggleExpanded}
+        >
+          {isExpanded ? (
+            <ChevronLeft className="w-5 h-5 text-white" />
+          ) : (
+            <ChevronRight className="w-5 h-5 text-white" />
+          )}
+        </button>
+      )}
 
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
@@ -216,7 +267,8 @@ export default function Sidebar() {
       <nav className={cn(
         "fixed left-0 top-0 h-screen backdrop-blur-xl bg-white/95 border-r border-pink-100/50 shadow-xl z-40 flex flex-col transition-all duration-300 scrollbar-hide overflow-y-auto",
         // Dynamic width based on expansion state
-        isExpanded ? "w-72" : "w-16 lg:w-16",
+        // For staff, always show expanded (only one item)
+        isStaff ? "w-72" : (isExpanded ? "w-72" : "w-16 lg:w-16"),
         // Desktop: always visible, Mobile: slide in/out
         "lg:translate-x-0",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -237,7 +289,7 @@ export default function Sidebar() {
         {/* Modern Header with Logo */}
         <div className={cn(
           "p-6 border-b border-pink-100 transition-all duration-300",
-          !isExpanded && "p-3"
+          (!isExpanded && !isStaff) && "p-3"
         )}>
           <div className="flex items-center">
             <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl flex items-center justify-center shadow-lg relative overflow-hidden"
@@ -246,7 +298,7 @@ export default function Sidebar() {
               <div className="absolute inset-0 bg-white/20 backdrop-blur-sm"></div>
               <Sparkles className="w-7 h-7 text-white relative z-10 animate-pulse" />
             </div>
-            {isExpanded && (
+            {(isExpanded || isStaff) && (
               <div className="ml-4 transition-opacity duration-300">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent tracking-tight">Estética Pro</h1>
                 <p className="text-sm text-slate-500 font-medium">Professional Beauty System</p>
@@ -307,20 +359,22 @@ export default function Sidebar() {
               })}
             </div>
 
-            {/* Grouped Items - Collapsible */}
-            {isExpanded ? (
-              navigationGroups.map((group) => (
-                <NavigationGroup
-                  key={group.name}
-                  group={group}
-                  location={location}
-                  onNavigate={() => setIsMobileMenuOpen(false)}
-                />
-              ))
-            ) : (
-              // When collapsed, show all items without groups
-              <div className="space-y-2">
-                {navigationGroups.flatMap(group => group.items).map((item) => {
+            {/* Grouped Items - Collapsible - Only for Admin/Staff with admin access */}
+            {!isStaff && navigationGroups.length > 0 && (
+              <>
+                {isExpanded ? (
+                  navigationGroups.map((group) => (
+                    <NavigationGroup
+                      key={group.name}
+                      group={group}
+                      location={location}
+                      onNavigate={() => setIsMobileMenuOpen(false)}
+                    />
+                  ))
+                ) : (
+                  // When collapsed, show all items without groups
+                  <div className="space-y-2">
+                    {navigationGroups.flatMap(group => group.items).map((item) => {
                   const isActive = location === item.href;
                   const Icon = item.icon;
                   
@@ -328,7 +382,7 @@ export default function Sidebar() {
                     <Link key={item.name} href={item.href}>
                       <div 
                         className={cn(
-                          "flex items-center rounded-2xl font-medium transition-all duration-300 cursor-pointer group relative overflow-hidden px-2 py-3 justify-center items-center min-h-[44px] min-w-[44px]",
+                          "flex items-center rounded-2xl font-medium transition-all duration-300 cursor-pointer group relative overflow-hidden px-2 py-3 justify-center min-h-[44px] min-w-[44px]",
                           isActive 
                             ? "text-white bg-gradient-to-r from-pink-500 to-rose-500 shadow-lg scale-[1.02]"
                             : "text-slate-600 hover:text-pink-600 hover:bg-pink-50/80"
@@ -354,9 +408,12 @@ export default function Sidebar() {
                   );
                 })}
               </div>
+                )}
+              </>
             )}
 
             {/* Settings - Always at Bottom */}
+            {settingsItem && (
             <div className="mt-6 pt-4 border-t border-pink-100">
               <Link href={settingsItem.href}>
                 <div 
@@ -392,6 +449,7 @@ export default function Sidebar() {
                 </div>
               </Link>
             </div>
+            )}
           </div>
         </div>
         

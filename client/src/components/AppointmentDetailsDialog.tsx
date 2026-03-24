@@ -1,6 +1,6 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Clock, User, Phone, Mail, FileText, Camera, CheckCircle, XCircle, AlertTriangle, DollarSign, CreditCard } from "lucide-react";
+import { Calendar, Clock, User, Phone, Mail, FileText, Camera, CheckCircle, XCircle, AlertTriangle, DollarSign, CreditCard, Package } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { useLocale } from "@/contexts/LocaleContext";
 import { getDateLocale } from "@/lib/dateLocale";
+import { ProductSearchableSelect, SelectedProduct } from "./ProductSearchableSelect";
+import { useQuery } from "@tanstack/react-query";
 
 interface AppointmentDetailsProps {
   appointment: any;
@@ -23,30 +25,176 @@ interface AppointmentDetailsProps {
 export default function AppointmentDetailsDialog({ appointment, isOpen, onClose }: AppointmentDetailsProps) {
   const [status, setStatus] = useState(appointment?.status || 'pending');
   const [notes, setNotes] = useState(appointment?.notes || '');
+  const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
+  const [totalPaidAmount, setTotalPaidAmount] = useState(appointment?.paidAmount || '0');
   const [paidAmount, setPaidAmount] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const updateAppointmentMutation = useMutation({
-    mutationFn: async (data: { status: string; notes: string }) => {
-      await apiRequest('PUT', `/api/appointments/${appointment.id}`, data);
+    mutationFn: async (data: { status: string; notes: string; products?: any[]; paidAmount?: string }) => {
+      // Simple and direct - just send the data
+      const response = await apiRequest('PUT', `/api/appointments/${appointment.id}`, data);
+      const json = await response.json();
+      return json;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    // Optimistic update - update UI immediately
+    onMutate: async (newData) => {
+      setIsUpdating(true);
+      
+      // Cancel any outgoing refetches to avoid overwriting our optimistic update
+      await queryClient.cancelQueries({ queryKey: ["/api/appointments"] });
+
+      // Snapshot the previous value for all queries
+      const previousQueries = queryClient.getQueriesData({ queryKey: ["/api/appointments"] });
+
+      // Optimistically update all appointment queries
+      queryClient.setQueriesData(
+        { 
+          queryKey: ["/api/appointments"],
+          exact: false
+        }, 
+        (old: any) => {
+          if (!old) return old;
+          if (Array.isArray(old)) {
+            return old.map((apt: any) => 
+              apt.id === appointment.id 
+                ? { 
+                    ...apt, 
+                    status: newData.status, 
+                    notes: newData.notes !== undefined ? newData.notes : apt.notes,
+                    appointmentProducts: newData.products ? newData.products.map(p => ({
+                      productId: p.productId,
+                      quantity: p.quantity,
+                      productName: p.name,
+                      productPrice: p.price.toString()
+                    })) : apt.appointmentProducts
+                  }
+                : apt
+            );
+          }
+          return old;
+        }
+      );
+
+      // Update local state optimistically
+      setStatus(newData.status);
+      if (newData.notes !== undefined) {
+        setNotes(newData.notes);
+      }
+
+      // Return context with snapshot for rollback
+      return { previousQueries };
+    },
+    onSuccess: (updatedAppointment) => {
+      // Update all appointment queries with the server response
+      queryClient.setQueriesData(
+        { 
+          queryKey: ["/api/appointments"],
+          exact: false 
+        },
+        (old: any) => {
+          if (!old) return old;
+          if (Array.isArray(old)) {
+            return old.map((apt: any) => 
+              apt.id === appointment.id 
+                ? { ...apt, ...updatedAppointment }
+                : apt
+            );
+          }
+          return old;
+        }
+      );
+      
+      // Update local state with server response
+      setStatus(updatedAppointment.status || status);
+      setNotes(updatedAppointment.notes !== undefined ? updatedAppointment.notes : notes);
+      if (updatedAppointment.paidAmount !== undefined) {
+          setTotalPaidAmount(updatedAppointment.paidAmount);
+      }
+      if (updatedAppointment.appointmentProducts) {
+        setSelectedProducts(updatedAppointment.appointmentProducts.map((ap: any) => ({
+          productId: ap.productId,
+          quantity: ap.quantity,
+          price: parseFloat(ap.productPrice || '0'),
+          name: ap.productName,
+          unit: ap.unit
+        })));
+      }
+
+      setIsUpdating(false);
       toast({
         title: "Success",
         description: "Appointment updated successfully!",
       });
-      onClose();
     },
-    onError: () => {
+    onError: (error: any, newData, context) => {
+      setIsUpdating(false);
+      
+      // Rollback optimistic update on error
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+        // Rollback local state
+        setStatus(appointment.status || 'pending');
+        setNotes(appointment.notes || '');
+      }
+
+      const errorMessage = error?.message || "Failed to update appointment";
       toast({
         title: "Error",
-        description: "Failed to update appointment",
+        description: errorMessage,
         variant: "destructive",
       });
     },
+    // Always invalidate queries after mutation to ensure data consistency
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    },
   });
+
+  // Sync state when appointment prop changes (only when dialog opens or appointment ID changes)
+  // Use a ref to track the last synced appointment ID to avoid unnecessary updates
+  const lastSyncedAppointmentId = React.useRef<number | null>(null);
+  
+  useEffect(() => {
+    // Only sync when:
+    // 1. Appointment exists
+    // 2. Not currently updating
+    // 3. Dialog is open
+    // 4. Appointment ID changed (new appointment selected)
+    if (appointment && isOpen && !isUpdating) {
+      const appointmentId = appointment.id;
+      const shouldSync = lastSyncedAppointmentId.current !== appointmentId;
+      
+      if (shouldSync) {
+        setStatus(appointment.status || 'pending');
+        setNotes(appointment.notes || '');
+        setTotalPaidAmount(appointment.paidAmount || '0');
+        lastSyncedAppointmentId.current = appointmentId;
+      }
+    }
+  }, [appointment?.id, isOpen, isUpdating]); // Sync when appointment ID changes or dialog opens
+
+  // Fetch products
+  const { data: products = [] } = useQuery({
+    queryKey: ['/api/products'],
+  });
+
+  // Sync products when appointment/isOpen changes
+  useEffect(() => {
+    if (appointment?.appointmentProducts && isOpen && !isUpdating) {
+      setSelectedProducts(appointment.appointmentProducts.map((ap: any) => ({
+        productId: ap.productId,
+        quantity: ap.quantity,
+        price: parseFloat(ap.productPrice || '0'),
+        name: ap.productName,
+        unit: ap.unit
+      })));
+    }
+  }, [appointment?.id, isOpen, isUpdating]);
 
   const recordPaymentMutation = useMutation({
     mutationFn: async (data: { amount: number; fullPayment: boolean }) => {
@@ -88,10 +236,22 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
 
   if (!appointment) return null;
 
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = (newStatus?: string) => {
     const updatedStatus = newStatus || status;
     setStatus(updatedStatus);
     updateAppointmentMutation.mutate({ status: updatedStatus, notes });
+  };
+
+  const handleUpdateStatus = () => {
+    updateAppointmentMutation.mutate({ 
+      status, 
+      notes,
+      paidAmount: totalPaidAmount,
+      products: selectedProducts.map(p => ({
+        productId: p.productId,
+        quantity: p.quantity
+      }))
+    });
   };
 
   const handleFullPayment = () => {
@@ -196,7 +356,7 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Appointment Details</span>
-            {getStatusBadge(appointment.status)}
+            {getStatusBadge(status)}
           </DialogTitle>
         </DialogHeader>
 
@@ -275,6 +435,22 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
             </CardContent>
           </Card>
 
+          {/* Products Section */}
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-3 flex items-center">
+                <Package className="w-4 h-4 mr-2" />
+                Produtos Usados / Vendidos
+              </h3>
+              <ProductSearchableSelect
+                products={products}
+                selectedProducts={selectedProducts}
+                onSelectionChange={setSelectedProducts}
+                placeholder="Adicionar produto ao agendamento..."
+              />
+            </CardContent>
+          </Card>
+
           {/* Status Management */}
           <Card>
             <CardContent className="p-4">
@@ -282,7 +458,15 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Appointment Status</label>
-                  <Select value={status} onValueChange={setStatus}>
+                  <Select 
+                    value={status} 
+                    onValueChange={(newStatus) => {
+                      setStatus(newStatus);
+                      // Auto-save when status changes
+                      updateAppointmentMutation.mutate({ status: newStatus, notes });
+                    }}
+                    disabled={updateAppointmentMutation.isPending}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -294,6 +478,9 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
+                  {updateAppointmentMutation.isPending && (
+                    <p className="text-xs text-slate-500 mt-1">Updating status...</p>
+                  )}
                 </div>
 
                 <div>
@@ -326,8 +513,15 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
                   </div>
                   <div>
                     <label className="text-sm text-slate-600">Amount Paid</label>
-                    <div className="text-lg font-semibold text-green-600">
-                      NZ${parseFloat(appointment.paidAmount || '0').toFixed(2)}
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg font-semibold text-green-600">NZ$</span>
+                        <Input 
+                            type="number"
+                            value={totalPaidAmount}
+                            onChange={(e) => setTotalPaidAmount(e.target.value)}
+                            className="text-lg font-semibold text-green-600 h-10 w-32"
+                            placeholder="0.00"
+                        />
                     </div>
                   </div>
                 </div>
@@ -438,7 +632,19 @@ export default function AppointmentDetailsDialog({ appointment, isOpen, onClose 
               Cancel
             </Button>
             <Button 
-              onClick={() => handleStatusChange(status)}
+              variant="outline"
+              onClick={() => {
+                onClose();
+                // Trigger edit mode - this will be handled by parent component
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('editAppointment', { detail: appointment }));
+                }, 100);
+              }}
+            >
+              Edit Appointment
+            </Button>
+            <Button 
+              onClick={handleUpdateStatus}
               disabled={updateAppointmentMutation.isPending}
             >
               {updateAppointmentMutation.isPending ? "Updating..." : "Update Appointment"}

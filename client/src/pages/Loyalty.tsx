@@ -21,13 +21,11 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { z } from "zod";
 import { useLocale } from "@/contexts/LocaleContext";
 
-const { formatCurrency } = useLocale();
-
 const packageFormSchema = insertLoyaltyPackageSchema.omit({ userId: true });
 type PackageFormData = z.infer<typeof packageFormSchema>;
 
 export default function Loyalty() {
-  const { t } = useLocale();
+  const { t, formatCurrency } = useLocale();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedServices, setSelectedServices] = useState<number[]>([]);
   const { toast } = useToast();
@@ -134,7 +132,6 @@ export default function Loyalty() {
         delete payload.validityDays;
       }
       
-      console.log("Sending payload:", payload);
       await apiRequest('POST', '/api/loyalty-packages', payload);
     },
     onSuccess: () => {
@@ -157,8 +154,6 @@ export default function Loyalty() {
   });
 
   const onSubmit = (data: PackageFormData) => {
-    console.log("Form submitted with data:", data);
-    console.log("Selected services:", selectedServices);
     
     if (selectedServices.length === 0) {
       toast({

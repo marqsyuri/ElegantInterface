@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Equipes</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="login-container">
+        <!-- Left side - Login Form -->
+        <div class="login-form-section">
+            <div class="login-form-wrapper">
+                <div class="login-card">
+                    <div class="login-header">
+                        <div class="logo-container">
+                            <div class="logo-background">
+                                <svg class="sparkles-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                                    <path d="M5 3v4"/>
+                                    <path d="M19 17v4"/>
+                                    <path d="M3 5h4"/>
+                                    <path d="M17 19h4"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <h1 class="login-title">Bem-vindo de volta</h1>
+                        <p class="login-subtitle">Equipes</p>
+                        <p class="login-description">Digite suas credenciais para acessar</p>
+                    </div>
+                    
+                    <div class="login-content">
+                        <form id="loginForm" class="login-form">
+                            <!-- Username field -->
+                            <div class="form-group">
+                                <label for="username" class="form-label">
+                                    <svg class="label-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="12" cy="7" r="4"/>
+                                    </svg>
+                                    Usuário
+                                </label>
+                                <input
+                                    id="username"
+                                    type="text"
+                                    name="username"
+                                    placeholder="Digite seu usuário"
+                                    required
+                                    class="form-input"
+                                    autocomplete="username"
+                                />
+                            </div>
+
+                            <!-- Password field -->
+                            <div class="form-group">
+                                <label for="password" class="form-label">
+                                    <svg class="label-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                    </svg>
+                                    Senha
+                                </label>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    name="password"
+                                    placeholder="Digite sua senha"
+                                    required
+                                    class="form-input"
+                                    autocomplete="current-password"
+                                />
+                            </div>
+
+                            <!-- Error message -->
+                            <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                            <!-- Submit button -->
+                            <button 
+                                type="submit"
+                                id="loginButton"
+                                class="login-button"
+                            >
+                                <span id="buttonText">Entrar</span>
+                                <span id="buttonLoader" class="button-loader" style="display: none;">
+                                    <div class="spinner"></div>
+                                    Entrando...
+                                </span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right side - Banner -->
+        <div class="login-banner-section">
+            <div class="banner-background"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+

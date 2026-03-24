@@ -236,10 +236,7 @@ export default function Products() {
 
   // Debug: log to console
   if (Array.isArray(productsList) && productsList.length > 0) {
-    console.log('✅ Products loaded:', productsList.length, 'products');
-    console.log('First product:', productsList[0]);
   } else if (!isLoading) {
-    console.log('⚠️ No products in list. productsList:', productsList);
   }
 
   return (

@@ -56,14 +56,14 @@ interface BusinessHours {
 }
 
 const bookingSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().min(10, "Phone number is required"),
-  email: z.string().email("Valid email is required"),
+  name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
+  phone: z.string().min(10, "Telefone é obrigatório"),
+  email: z.string().email("Email válido é obrigatório"),
   notes: z.string().optional(),
-  selectedServices: z.array(z.string()).min(1, "Please select at least one service"),
-  selectedProfessional: z.string().min(1, "Please select a professional"),
-  selectedDate: z.string().min(1, "Please select a date"),
-  selectedTime: z.string().min(1, "Please select a time"),
+  selectedServices: z.array(z.string()).min(1, "Por favor, selecione pelo menos um serviço"),
+  selectedProfessional: z.string().min(1, "Por favor, selecione um profissional"),
+  selectedDate: z.string().min(1, "Por favor, selecione uma data"),
+  selectedTime: z.string().min(1, "Por favor, selecione um horário"),
 });
 
 type BookingForm = z.infer<typeof bookingSchema>;
@@ -152,8 +152,8 @@ export default function ClientBooking() {
   const handleDateTimeSelected = () => {
     if (!selectedDate || !selectedTime) {
       toast({
-        title: "Date/Time Required",
-        description: "Please select both date and time to continue.",
+        title: "Data/Horário Obrigatórios",
+        description: "Por favor, selecione data e horário para continuar.",
         variant: "destructive",
       });
       return;
@@ -169,19 +169,17 @@ export default function ClientBooking() {
 
   const bookingMutation = useMutation({
     mutationFn: (data: BookingForm) => {
-      console.log('Submitting booking data:', data);
       return apiRequest("POST", `/api/public/appointments/${publicLink}`, data);
     },
     onSuccess: (response) => {
-      console.log('Booking successful:', response);
       setShowConfirmation(true);
       setShowBookingForm(false);
     },
     onError: (error) => {
       console.error('Booking error:', error);
       toast({
-        title: "Error", 
-        description: "Failed to submit booking. Please try again.",
+        title: "Erro", 
+        description: "Falha ao enviar agendamento. Por favor, tente novamente.",
         variant: "destructive",
       });
     },
@@ -192,7 +190,7 @@ export default function ClientBooking() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-2 border-slate-800 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading services...</p>
+          <p className="text-slate-600">Carregando serviços...</p>
         </div>
       </div>
     );
@@ -202,8 +200,8 @@ export default function ClientBooking() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center p-6">
-          <p className="text-slate-600 mb-4">Invalid booking link.</p>
-          <p className="text-sm text-slate-500">Please check the link and try again.</p>
+          <p className="text-slate-600 mb-4">Link de agendamento inválido.</p>
+          <p className="text-sm text-slate-500">Por favor, verifique o link e tente novamente.</p>
         </div>
       </div>
     );
@@ -213,8 +211,8 @@ export default function ClientBooking() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center p-6">
-          <p className="text-slate-600 mb-2">No services available at the moment.</p>
-          <p className="text-sm text-slate-500">Please check back later or contact us directly.</p>
+          <p className="text-slate-600 mb-2">Nenhum serviço disponível no momento.</p>
+          <p className="text-sm text-slate-500">Por favor, tente novamente mais tarde ou entre em contato conosco diretamente.</p>
         </div>
       </div>
     );
@@ -253,8 +251,8 @@ export default function ClientBooking() {
   const handleContinue = () => {
     if (selectedServices.length === 0) {
       toast({
-        title: "No Services Selected",
-        description: "Please select at least one service to continue.",
+        title: "Nenhum Serviço Selecionado",
+        description: "Por favor, selecione pelo menos um serviço para continuar.",
         variant: "destructive",
       });
       return;
@@ -265,8 +263,8 @@ export default function ClientBooking() {
   const handleProfessionalSelected = () => {
     if (!selectedProfessional) {
       toast({
-        title: "No Professional Selected",
-        description: "Please select a professional to continue.",
+        title: "Nenhum Profissional Selecionado",
+        description: "Por favor, selecione um profissional para continuar.",
         variant: "destructive",
       });
       return;
@@ -292,11 +290,11 @@ export default function ClientBooking() {
       const hours = Math.floor(minutes / 60);
       const remainingMinutes = minutes % 60;
       if (remainingMinutes === 0) {
-        return `${hours} hour${hours > 1 ? 's' : ''}`;
+        return `${hours}h`;
       }
-      return `${hours} hour${hours > 1 ? 's' : ''} ${remainingMinutes} mins`;
+      return `${hours}h ${remainingMinutes}min`;
     }
-    return `${minutes} mins`;
+    return `${minutes}min`;
   };
 
   // Generate calendar days for current month
@@ -417,7 +415,7 @@ export default function ClientBooking() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex-1">
-              <h1 className="text-lg font-medium text-slate-900">Select Professional</h1>
+              <h1 className="text-lg font-medium text-slate-900">Selecione o Profissional</h1>
               {company?.clinicAddress && (
                 <div className="flex items-center text-slate-600 text-sm mt-1">
                   <MapPin className="h-3 w-3 mr-1" />
@@ -432,7 +430,7 @@ export default function ClientBooking() {
           {/* Selected Services Summary */}
           <Card className="mb-6">
             <CardContent className="p-4">
-              <h3 className="font-medium text-slate-900 mb-3">Selected Services</h3>
+              <h3 className="font-medium text-slate-900 mb-3">Serviços Selecionados</h3>
               <div className="space-y-2">
                 {selectedServiceDetails.map((service) => (
                   <div key={service.id} className="flex justify-between items-center text-sm">
@@ -454,7 +452,7 @@ export default function ClientBooking() {
           </Card>
 
           {/* Professional Selection */}
-          <h3 className="text-lg font-medium text-slate-900 mb-4">Choose Your Professional</h3>
+          <h3 className="text-lg font-medium text-slate-900 mb-4">Escolha seu Profissional</h3>
           
           {professionals && professionals.length > 0 ? (
             <div className="space-y-3">
@@ -503,7 +501,7 @@ export default function ClientBooking() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-slate-600">No professionals available at the moment.</p>
+              <p className="text-slate-600">Nenhum profissional disponível no momento.</p>
             </div>
           )}
 
@@ -514,7 +512,7 @@ export default function ClientBooking() {
                 onClick={handleProfessionalSelected}
                 className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
               >
-                Continue to Date & Time
+                Continue para Data e Horário
               </Button>
             </div>
           )}
@@ -548,7 +546,7 @@ export default function ClientBooking() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex-1">
-              <h1 className="text-lg font-medium text-slate-900">Select Date & Time</h1>
+              <h1 className="text-lg font-medium text-slate-900">Selecione Data e Horário</h1>
               {company?.clinicAddress && (
                 <div className="flex items-center text-slate-600 text-sm mt-1">
                   <MapPin className="h-3 w-3 mr-1" />
@@ -563,7 +561,7 @@ export default function ClientBooking() {
           {/* Booking Summary */}
           <Card className="mb-6">
             <CardContent className="p-4">
-              <h3 className="font-medium text-slate-900 mb-3">Booking Summary</h3>
+              <h3 className="font-medium text-slate-900 mb-3">Resumo do Agendamento</h3>
               <div className="space-y-2 text-sm">
                 {selectedServiceDetails.map((service) => (
                   <div key={service.id} className="flex justify-between items-center">
@@ -573,7 +571,7 @@ export default function ClientBooking() {
                 ))}
                 {selectedProfessional && professionals && (
                   <div className="flex justify-between items-center text-slate-600">
-                    <span>Professional:</span>
+                    <span>Profissional:</span>
                     <span>{professionals.find(p => p.id.toString() === selectedProfessional)?.name}</span>
                   </div>
                 )}
@@ -589,7 +587,7 @@ export default function ClientBooking() {
           <div className="mb-6">
             <h3 className="text-lg font-medium text-slate-900 mb-4 flex items-center">
               <Calendar className="h-5 w-5 mr-2" />
-              Select Date
+              Selecione a Data
             </h3>
             
             {/* Calendar Header */}
@@ -604,7 +602,7 @@ export default function ClientBooking() {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <h4 className="font-medium text-slate-900">
-                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                 </h4>
                 <Button
                   variant="ghost"
@@ -618,7 +616,7 @@ export default function ClientBooking() {
 
               {/* Weekday Headers */}
               <div className="grid grid-cols-7 gap-1 mb-2">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => (
                   <div key={index} className="h-8 flex items-center justify-center text-xs font-medium text-slate-600">
                     {day}
                   </div>
@@ -663,7 +661,7 @@ export default function ClientBooking() {
             <div className="mb-6">
               <h3 className="text-lg font-medium text-slate-900 mb-4 flex items-center">
                 <Clock className="h-5 w-5 mr-2" />
-                Select Time
+                Selecione o Horário
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {timeSlots.map((slot) => (
@@ -684,7 +682,7 @@ export default function ClientBooking() {
               </div>
               {timeSlots.length === 0 && (
                 <div className="text-center py-8">
-                  <p className="text-slate-600">No available times for this date.</p>
+                  <p className="text-slate-600">Nenhum horário disponível para esta data.</p>
                 </div>
               )}
             </div>
@@ -696,7 +694,7 @@ export default function ClientBooking() {
               onClick={handleDateTimeSelected}
               className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
             >
-              Continue to Booking Details
+              Continue para Detalhes do Agendamento
             </Button>
           )}
         </div>
@@ -726,7 +724,7 @@ export default function ClientBooking() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex-1">
-              <h1 className="text-lg font-medium text-slate-900">Book Appointment</h1>
+              <h1 className="text-lg font-medium text-slate-900">Confirmar Agendamento</h1>
               {company?.clinicAddress && (
                 <div className="flex items-center text-slate-600 text-sm mt-1">
                   <MapPin className="h-3 w-3 mr-1" />
@@ -741,7 +739,7 @@ export default function ClientBooking() {
           {/* Booking Summary */}
           <Card className="mb-6">
             <CardContent className="p-4">
-              <h3 className="font-medium text-slate-900 mb-3">Booking Summary</h3>
+              <h3 className="font-medium text-slate-900 mb-3">Resumo do Agendamento</h3>
               <div className="space-y-2">
                 {selectedServiceDetails.map((service) => (
                   <div key={service.id} className="flex justify-between items-center text-sm">
@@ -759,7 +757,7 @@ export default function ClientBooking() {
                 {selectedProfessional && professionals && (
                   <div className="border-t pt-2 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-600">Professional:</span>
+                      <span className="text-slate-600">Profissional:</span>
                       <span className="text-slate-900 font-medium">
                         {professionals.find(p => p.id.toString() === selectedProfessional)?.name}
                       </span>
@@ -771,7 +769,7 @@ export default function ClientBooking() {
                 {selectedDate && selectedTime && (
                   <div className="border-t pt-2 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-600">Date & Time:</span>
+                      <span className="text-slate-600">Data e Horário:</span>
                       <span className="text-slate-900 font-medium">
                         {new Date(selectedDate).toLocaleDateString('en-NZ', { 
                           weekday: 'short', 
@@ -799,9 +797,9 @@ export default function ClientBooking() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>Nome Completo</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your full name" {...field} />
+                      <Input placeholder="Digite seu nome completo" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -813,9 +811,9 @@ export default function ClientBooking() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
+                    <FormLabel>Telefone</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your phone number" {...field} />
+                      <Input placeholder="Digite seu telefone" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -827,9 +825,9 @@ export default function ClientBooking() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email Address</FormLabel>
+                    <FormLabel>Endereço de Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your email address" {...field} />
+                      <Input placeholder="Digite seu email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -841,10 +839,10 @@ export default function ClientBooking() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Additional Notes (Optional)</FormLabel>
+                    <FormLabel>Observações Adicionais (Opcional)</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Any special requests or notes..."
+                        placeholder="Algum pedido especial ou observação..."
                         className="min-h-[80px]"
                         {...field} 
                       />
@@ -859,12 +857,9 @@ export default function ClientBooking() {
                 className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-lg font-medium"
                 disabled={bookingMutation.isPending}
                 onClick={() => {
-                  console.log('Button clicked, form state:', form.formState);
-                  console.log('Form values:', form.getValues());
-                  console.log('Form errors:', form.formState.errors);
                 }}
               >
-                {bookingMutation.isPending ? "Submitting..." : "Request Appointment"}
+                {bookingMutation.isPending ? "Enviando..." : "Solicitar Agendamento"}
               </Button>
             </form>
           </Form>
@@ -889,16 +884,16 @@ export default function ClientBooking() {
               </div>
               
               <h2 className="text-2xl font-semibold text-slate-900 mb-2">
-                Booking Request Sent!
+                Solicitação Enviada!
               </h2>
               
               <p className="text-slate-600 mb-6">
-                We've received your appointment request and will contact you soon to confirm your booking.
+                Recebemos sua solicitação de agendamento e entraremos em contato em breve para confirmar.
               </p>
 
               {/* Booking Summary */}
               <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left">
-                <h3 className="font-medium text-slate-900 mb-3">Your Booking Details</h3>
+                <h3 className="font-medium text-slate-900 mb-3">Detalhes do Agendamento</h3>
                 <div className="space-y-2 text-sm">
                   {selectedServiceDetails.map((service) => (
                     <div key={service.id} className="flex justify-between">
@@ -909,20 +904,20 @@ export default function ClientBooking() {
                   
                   {selectedProfessional && professionals && (
                     <div className="flex justify-between text-slate-600">
-                      <span>Professional:</span>
+                      <span>Profissional:</span>
                       <span>{professionals.find(p => p.id.toString() === selectedProfessional)?.name}</span>
                     </div>
                   )}
                   
                   {selectedDate && selectedTime && (
                     <div className="flex justify-between text-slate-600">
-                      <span>Date & Time:</span>
+                      <span>Data e Horário:</span>
                       <span>
-                        {new Date(selectedDate).toLocaleDateString('en-NZ', { 
+                        {new Date(selectedDate).toLocaleDateString('pt-BR', { 
                           weekday: 'short', 
                           month: 'short', 
                           day: 'numeric' 
-                        })} at {selectedTime}
+                        })} às {selectedTime}
                       </span>
                     </div>
                   )}
@@ -938,7 +933,7 @@ export default function ClientBooking() {
               {(company?.clinicPhone || company?.clinicWhatsapp) && (
                 <div className="border-t pt-4">
                   <p className="text-sm text-slate-600 mb-3">
-                    Questions? Contact us:
+                    Dúvidas? Entre em contato:
                   </p>
                   <div className="flex justify-center space-x-4">
                     {company.clinicPhone && (
@@ -999,9 +994,9 @@ export default function ClientBooking() {
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-medium text-slate-900">Select services</h1>
+          <h1 className="text-lg font-medium text-slate-900">Selecione os serviços</h1>
           <Button variant="ghost" size="sm" className="text-slate-600">
-            Log in
+            Entrar
           </Button>
         </div>
         
@@ -1093,13 +1088,13 @@ export default function ClientBooking() {
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-slate-900">
-                    Selected ({selectedServices.length})
+                    Selecionado(s) ({selectedServices.length})
                   </h3>
                   <button
                     onClick={() => setSelectedServices([])}
                     className="text-xs text-slate-600 hover:text-slate-900"
                   >
-                    Clear All
+                    Limpar
                   </button>
                 </div>
                 <div className="space-y-1 max-h-20 overflow-y-auto">
@@ -1119,7 +1114,7 @@ export default function ClientBooking() {
                       Total: ${calculateTotal().toFixed(2)}
                     </div>
                     <div className="text-xs text-slate-600">
-                      Duration: {formatDuration(
+                      Duração: {formatDuration(
                         selectedServices.reduce((total, id) => {
                           const service = services.find(s => s.id.toString() === id);
                           return total + (service?.duration || 0);
@@ -1133,7 +1128,7 @@ export default function ClientBooking() {
                 onClick={handleContinue}
                 className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 text-base font-medium"
               >
-                Continue
+                Continuar
               </Button>
             </div>
           </div>

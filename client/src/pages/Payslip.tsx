@@ -56,10 +56,13 @@ export default function Payslip() {
 
   // Fetch payslip data
   const { data: payslipData = [], isLoading, error: payslipError } = useQuery<PayslipData[]>({
-    queryKey: ["/api/payslip", selectedStaffId, startDate, endDate],
+    queryKey: ["/api/payslip", selectedStaffId || "all", startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (selectedStaffId) params.append("staffId", selectedStaffId);
+      // Only append staffId if it's a valid number (not empty string or "all")
+      if (selectedStaffId && selectedStaffId !== "all" && selectedStaffId.trim() !== "") {
+        params.append("staffId", selectedStaffId);
+      }
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
 

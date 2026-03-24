@@ -46,6 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false, // Don't retry on auth failures
     refetchOnWindowFocus: false, // Don't refetch when window gains focus
+    staleTime: 0, // Always refetch to get fresh data
+    cacheTime: 0, // Don't cache user data
   });
 
   const loginMutation = useMutation({
@@ -57,10 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return await res.json();
     },
-    onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/user"], user);
-      // Force invalidate to trigger refetch
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    onSuccess: async (user: User) => {
+      // Clear cache first to ensure fresh data
+      queryClient.removeQueries({ queryKey: ["/api/user"] });
+      // Force refetch to get correct user data from server
+      await queryClient.refetchQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
       toast({

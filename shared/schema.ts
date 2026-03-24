@@ -37,8 +37,21 @@ export const sessions = pgTable(
     sess: jsonb("sess").notNull(),
     expire: timestamp("expire").notNull(),
   },
-  (table) => [index("IDX_session_expire").on(table.expire)],
+  (table) => [index("IDX_session_expire").on(table.expire)]
 );
+
+// Companies table - Empresas/Salões
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(), // Nome da empresa/salão
+  cnpj: varchar("cnpj"), // CNPJ (opcional)
+  address: text("address"),
+  phone: varchar("phone"),
+  email: varchar("email"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // User storage table - converted to local authentication
 export const users = pgTable("users", {
@@ -46,6 +59,7 @@ export const users = pgTable("users", {
   username: varchar("username").unique().notNull(),
   email: varchar("email").unique().notNull(),
   password: varchar("password").notNull(), // MD5 hash
+  role: varchar("role").default("admin"), // admin, staff (was showing as resize varchar(50) -> varchar)
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -61,7 +75,11 @@ export const users = pgTable("users", {
   clinicWhatsapp: varchar("clinic_whatsapp"),
   publicLink: varchar("public_link").unique(), // Unique identifier for client access
   isActive: boolean("is_active").default(true),
-  role: varchar("role").default("admin"), // admin, staff
+
+  // role: varchar("role").default("admin"), // moved up to restore order if matters, or just ensuring it exists
+  companyId: integer("company_id").references(() => companies.id), // ID da empresa (obrigatório para todos)
+  parentUserId: integer("parent_user_id").references(() => users.id), // DEPRECATED: Mantido para compatibilidade durante migração
+  maxStaffCount: integer("max_staff_count").default(10), // Quantidade máxima de staffs permitidos por salão
   inactivityDays: integer("inactivity_days").default(7), // Days before marking leads for follow-up
   reminderHours: integer("reminder_hours").default(2), // Hours before appointment to send reminder
   reminderStartTime: varchar("reminder_start_time").default("18:00"), // Start time for sending reminders
@@ -72,10 +90,65 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Categories table
+export const categories = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  type: varchar("type").notNull(), // product, service, expense
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Suppliers table
+export const suppliers = pgTable("suppliers", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: varchar("name").notNull(),
+  contactName: varchar("contact_name"),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  address: text("address"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Taxes table
+export const taxes = pgTable("taxes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: varchar("name").notNull(),
+  rate: decimal("rate", { precision: 5, scale: 2 }).notNull(), // percentage
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Procedure Taxes table
+export const procedureTaxes = pgTable("procedure_taxes", {
+  id: serial("id").primaryKey(),
+  procedureId: integer("procedure_id")
+    .notNull()
+    .references(() => procedures.id, { onDelete: "cascade" }),
+  taxId: integer("tax_id")
+    .notNull()
+    .references(() => taxes.id),
+});
+
 // Business Hours table
 export const businessHours = pgTable("business_hours", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   dayOfWeek: varchar("day_of_week").notNull(), // monday, tuesday, etc.
   isOpen: boolean("is_open").default(true),
   openTime: varchar("open_time"), // HH:MM format
@@ -89,7 +162,9 @@ export const businessHours = pgTable("business_hours", {
 // Clients table
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   name: varchar("name").notNull(),
   cpf: varchar("cpf"),
   phone: varchar("phone"),
@@ -104,6 +179,7 @@ export const clients = pgTable("clients", {
   notifyWhatsapp: boolean("notify_whatsapp").default(false),
   notifyPhone: boolean("notify_phone").default(false),
   lastLogin: timestamp("last_login"), // Track last login for client portal
+  datahr: timestamp("datahr"), // Data e hora do último agendamento realizado
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -111,8 +187,12 @@ export const clients = pgTable("clients", {
 // Inactive Clients table - populated daily by scheduled job
 export const inactiveClients = pgTable("inactive_clients", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  clientId: integer("client_id").notNull().references(() => clients.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
   clientName: varchar("client_name").notNull(),
   clientEmail: varchar("client_email"),
   clientPhone: varchar("client_phone"),
@@ -127,7 +207,9 @@ export const inactiveClients = pgTable("inactive_clients", {
 // Services table
 export const services = pgTable("services", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   name: varchar("name").notNull(),
   description: text("description"),
   duration: integer("duration"), // in minutes
@@ -140,31 +222,56 @@ export const services = pgTable("services", {
 // Procedures table
 export const procedures = pgTable("procedures", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   name: varchar("name").notNull(),
   description: text("description"),
   category: varchar("category").notNull(),
   duration: integer("duration"), // in minutes
-  price: decimal("price", { precision: 10, scale: 2 }).default('0'),
-  materials: jsonb("materials").$type<{ materialId: number; quantity: number }[]>().default([]),
+  price: decimal("price", { precision: 10, scale: 2 }).default("0"),
+  materials: jsonb("materials")
+    .$type<{ materialId: number; quantity: number }[]>()
+    .default([]),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Procedure products (consumo de insumos por procedimento)
+export const procedureProducts = pgTable("procedure_products", {
+  id: serial("id").primaryKey(),
+  procedureId: integer("procedure_id").notNull().references(() => procedures.id, { onDelete: "cascade" }),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull().default("1"),
+  unit: varchar("unit").default("un"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type ProcedureProduct = typeof procedureProducts.$inferSelect;
+export type InsertProcedureProduct = typeof procedureProducts.$inferInsert;
+
 // Appointments table
 export const appointments = pgTable("appointments", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  clientId: integer("client_id").notNull().references(() => clients.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
   serviceId: integer("service_id"), // nullable for backwards compatibility
   serviceType: varchar("service_type").notNull().default("service"), // "service" or "procedure"
-  selectedProcedures: jsonb("selected_procedures").$type<string[]>().default([]), // DEPRECATED: use appointment_procedures table
+  selectedProcedures: jsonb("selected_procedures")
+    .$type<string[]>()
+    .default([]), // DEPRECATED: use appointment_procedures table
   appointmentDate: timestamp("appointment_date").notNull(),
   duration: integer("duration").default(60), // DEPRECATED: use total_duration
   status: varchar("status").notNull().default("pending"), // pending, confirmed, scheduled, completed, cancelled
   notes: text("notes"),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).default('0'), // DEPRECATED: use total_price
-  paidAmount: decimal("paid_amount", { precision: 10, scale: 2 }).default('0'),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).default(
+    "0"
+  ), // DEPRECATED: use total_price
+  paidAmount: decimal("paid_amount", { precision: 10, scale: 2 }).default("0"),
   paymentStatus: varchar("payment_status").default("pending"), // pending, partial, paid
   beforeImages: jsonb("before_images").$type<string[]>().default([]), // array of image URLs
   afterImages: jsonb("after_images").$type<string[]>().default([]), // array of image URLs
@@ -172,31 +279,64 @@ export const appointments = pgTable("appointments", {
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }),
   totalDuration: integer("total_duration"), // in minutes
   procedureCount: integer("procedure_count").default(0),
+  waitlist: boolean("waitlist").default(false),
   staffId: integer("staff_id").references(() => staff.id), // assigned professional
   createdAt: timestamp("created_at").defaultNow(),
+  professionalId: integer("professional_id"), // DEPRECATED: use staff_id
+  selectedProducts: jsonb("selected_products")
+    .$type<{ id: number; quantity: number }[]>()
+    .default([]), // DEPRECATED: use appointment_products
 });
 
 // Appointment Procedures junction table (many-to-many)
 export const appointmentProcedures = pgTable("appointment_procedures", {
   id: serial("id").primaryKey(),
-  appointmentId: integer("appointment_id").notNull().references(() => appointments.id, { onDelete: 'cascade' }),
-  procedureId: integer("procedure_id").notNull().references(() => procedures.id),
+  appointmentId: integer("appointment_id")
+    .notNull()
+    .references(() => appointments.id, { onDelete: "cascade" }),
+  procedureId: integer("procedure_id")
+    .notNull()
+    .references(() => procedures.id),
+  staffId: integer("staff_id").references(() => staff.id), // Professional who performed this specific procedure
   order: integer("order").default(0), // execution order
   // Snapshot fields - preserve values at booking time
   procedureName: varchar("procedure_name").notNull(),
   procedureCategory: varchar("procedure_category").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   duration: integer("duration").notNull(), // in minutes
-  materials: jsonb("materials").$type<{ materialId: number; quantity: number }[]>().default([]),
+  materials: jsonb("materials")
+    .$type<{ materialId: number; quantity: number }[]>()
+    .default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Appointment Products junction table (many-to-many)
+export const appointmentProducts = pgTable("appointment_products", {
+  id: serial("id").primaryKey(),
+  appointmentId: integer("appointment_id")
+    .notNull()
+    .references(() => appointments.id, { onDelete: "cascade" }),
+  productId: integer("product_id")
+    .notNull()
+    .references(() => products.id),
+  quantity: integer("quantity").notNull().default(1),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(), // Price charged (may include discount)
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Catalog price at time of sale
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Appointment Reminders table - populated hourly by scheduled job
 export const appointmentReminders = pgTable("appointment_reminders", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  appointmentId: integer("appointment_id").notNull().references(() => appointments.id),
-  clientId: integer("client_id").notNull().references(() => clients.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  appointmentId: integer("appointment_id")
+    .notNull()
+    .references(() => appointments.id),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
   clientName: varchar("client_name").notNull(),
   clientEmail: varchar("client_email"),
   clientPhone: varchar("client_phone"),
@@ -212,8 +352,12 @@ export const appointmentReminders = pgTable("appointment_reminders", {
 // Clinical records table
 export const clinicalRecords = pgTable("clinical_records", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  clientId: integer("client_id").notNull().references(() => clients.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
   procedureId: integer("procedure_id").references(() => procedures.id),
   procedureDate: date("procedure_date").notNull(),
@@ -236,7 +380,9 @@ export const clinicalRecords = pgTable("clinical_records", {
 // Financial transactions table
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   clientId: integer("client_id").references(() => clients.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
   type: varchar("type").notNull(), // income, expense
@@ -252,7 +398,9 @@ export const transactions = pgTable("transactions", {
 // Campaigns table for marketing campaigns
 export const campaigns = pgTable("campaigns", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   name: varchar("name").notNull(),
   objective: text("objective"),
   channel: varchar("channel").notNull(), // email, whatsapp
@@ -270,7 +418,9 @@ export const campaigns = pgTable("campaigns", {
 // Messages table for client communication
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   clientId: integer("client_id").references(() => clients.id),
   campaignId: integer("campaign_id").references(() => campaigns.id),
   type: varchar("type").notNull(), // manual, automatic
@@ -286,8 +436,12 @@ export const messages = pgTable("messages", {
 // Client feedback table
 export const feedback = pgTable("feedback", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  clientId: integer("client_id").notNull().references(() => clients.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
   rating: integer("rating").notNull(), // 1-5 stars
   comment: text("comment"),
@@ -297,7 +451,9 @@ export const feedback = pgTable("feedback", {
 // Inventory/Materials table
 export const inventory = pgTable("inventory", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   itemName: varchar("item_name").notNull(),
   category: varchar("category").notNull(), // epi, material, product
   currentStock: integer("current_stock").default(0),
@@ -310,7 +466,9 @@ export const inventory = pgTable("inventory", {
 // Products table (for retail/sale)
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   name: varchar("name").notNull(),
   code: varchar("code").notNull(),
   description: text("description"),
@@ -324,7 +482,7 @@ export const products = pgTable("products", {
   unit: varchar("unit").notNull(),
   location: varchar("location"),
   barcode: varchar("barcode"),
-  weight: decimal("weight", { precision: 10, scale: 2 }),
+  weight: decimal("weight", { precision: 10, scale: 2 }), // was numeric(8,3) -> numeric(10,2) in db:push log
   dimensions: jsonb("dimensions"),
   tags: jsonb("tags").$type<string[]>(),
   images: jsonb("images").$type<string[]>(),
@@ -336,7 +494,9 @@ export const products = pgTable("products", {
 // Loyalty packages table
 export const loyaltyPackages = pgTable("loyalty_packages", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   name: varchar("name").notNull(),
   description: text("description"),
   services: jsonb("services"), // array of service IDs and quantities
@@ -351,9 +511,15 @@ export const loyaltyPackages = pgTable("loyalty_packages", {
 // Client packages (purchased packages)
 export const clientPackages = pgTable("client_packages", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  clientId: integer("client_id").notNull().references(() => clients.id),
-  packageId: integer("package_id").notNull().references(() => loyaltyPackages.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
+  packageId: integer("package_id")
+    .notNull()
+    .references(() => loyaltyPackages.id),
   purchaseDate: date("purchase_date").notNull(),
   expiryDate: date("expiry_date").notNull(),
   sessionsUsed: integer("sessions_used").default(0),
@@ -365,14 +531,24 @@ export const clientPackages = pgTable("client_packages", {
 // Packages table (new system with service and money balances)
 export const packages = pgTable("packages", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  clientId: integer("client_id").notNull().references(() => clients.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
   name: varchar("name").notNull(),
   description: text("description"),
-  services: jsonb("services").$type<Array<{ procedureId: number; quantity: number; price: number }>>().default([]), // Array of selected services with quantities
-  products: jsonb("products").$type<Array<{ productId: number; quantity: number; price: number }>>().default([]), // Array of selected products with quantities
+  services: jsonb("services")
+    .$type<Array<{ procedureId: number; quantity: number; price: number }>>()
+    .default([]), // Array of selected services with quantities
+  products: jsonb("products")
+    .$type<Array<{ productId: number; quantity: number; price: number }>>()
+    .default([]), // Array of selected products with quantities
   serviceBalance: integer("service_balance").default(0), // Hidden service balance (sum of service quantities)
-  moneyBalance: decimal("money_balance", { precision: 10, scale: 2 }).default("0"), // Hidden money balance (sum of product prices * quantities)
+  moneyBalance: decimal("money_balance", { precision: 10, scale: 2 }).default(
+    "0"
+  ), // Hidden money balance (sum of product prices * quantities)
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(), // Total price calculated live
   validityStartDate: date("validity_start_date").notNull(), // Period start
   validityEndDate: date("validity_end_date").notNull(), // Period end
@@ -384,9 +560,18 @@ export const packages = pgTable("packages", {
 // Loyalty Settings table
 export const loyaltySettings = pgTable("loyalty_settings", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id).unique(),
-  pointsPerDollar: decimal("points_per_dollar", { precision: 10, scale: 2 }).default("1.00"), // Points earned per $1 spent
-  discountPerHundredPoints: decimal("discount_per_hundred_points", { precision: 10, scale: 2 }).default("10.00"), // Discount value per 100 points
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id)
+    .unique(),
+  pointsPerDollar: decimal("points_per_dollar", {
+    precision: 10,
+    scale: 2,
+  }).default("1.00"), // Points earned per $1 spent
+  discountPerHundredPoints: decimal("discount_per_hundred_points", {
+    precision: 10,
+    scale: 2,
+  }).default("10.00"), // Discount value per 100 points
   birthdayBonusPoints: integer("birthday_bonus_points").default(50),
   referralBonusPoints: integer("referral_bonus_points").default(30),
   bronzeThreshold: integer("bronze_threshold").default(0),
@@ -397,28 +582,74 @@ export const loyaltySettings = pgTable("loyalty_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Staff management table
+// Staff management table - Funcionários do sistema com acesso de login
 export const staff = pgTable("staff", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id), // Admin/empresa que possui este staff
+  companyId: integer("company_id").references(() => companies.id), // ID da empresa (pode ser usado em vez de userId)
+  // Campos de login para staff fazer login no sistema
+  username: varchar("username").unique(), // Username único para login (nullable para staff antigos sem login)
+  password: varchar("password"), // MD5 hash da senha (nullable para staff antigos sem login)
+  // Informações do funcionário
   name: varchar("name").notNull(),
   email: varchar("email"),
   phone: varchar("phone"),
   irdNumber: varchar("ird_number"), // NZ tax number
-  role: varchar("role").notNull(), // 'therapist', 'receptionist', 'manager'
+  role: varchar("role").notNull(), // 'therapist', 'receptionist', 'manager' (função do funcionário)
+  accessLevel: varchar("access_level").default("staff"), // 'admin' (vê tudo) ou 'staff' (só agendamentos)
   specialties: jsonb("specialties").$type<string[]>().default([]),
-  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).default("0"), // percentage
+  commissionRate: decimal("commission_rate", {
+    precision: 5,
+    scale: 2,
+  }).default("0"), // percentage
   hourlyPayment: boolean("hourly_payment").default(false), // paid by hours worked
   isActive: boolean("is_active").default(true),
   startDate: date("start_date").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  // Fields found missing in db:push
+  profileImage: text("profile_image"),
+  bio: text("bio"),
+  experience: varchar("experience"),
+  rating: decimal("rating", { precision: 3, scale: 1 }).default("5.0"),
+  totalReviews: integer("total_reviews").default(0),
+  isAvailable: boolean("is_available").default(true),
+});
+
+// Staff-Procedures junction table (many-to-many: which procedures each staff can perform)
+export const staffProcedures = pgTable("staff_procedures", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id")
+    .notNull()
+    .references(() => staff.id, { onDelete: "cascade" }),
+  procedureId: integer("procedure_id")
+    .notNull()
+    .references(() => procedures.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Appointment-Staff junction table (many-to-many: multiple staff per appointment)
+export const appointmentStaff = pgTable("appointment_staff", {
+  id: serial("id").primaryKey(),
+  appointmentId: integer("appointment_id")
+    .notNull()
+    .references(() => appointments.id, { onDelete: "cascade" }),
+  staffId: integer("staff_id")
+    .notNull()
+    .references(() => staff.id),
+  isPrimary: boolean("is_primary").default(false), // Indicates the primary professional
+  role: varchar("role"), // Optional: 'main', 'assistant', 'supervisor', etc.
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Staff schedules table
 export const staffSchedules = pgTable("staff_schedules", {
   id: serial("id").primaryKey(),
-  staffId: integer("staff_id").notNull().references(() => staff.id),
+  staffId: integer("staff_id")
+    .notNull()
+    .references(() => staff.id),
   dayOfWeek: varchar("day_of_week").notNull(), // 'monday', 'tuesday', etc.
   startTime: varchar("start_time").notNull(),
   endTime: varchar("end_time").notNull(),
@@ -429,7 +660,9 @@ export const staffSchedules = pgTable("staff_schedules", {
 // Notifications table
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   clientId: integer("client_id").references(() => clients.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
   type: varchar("type").notNull(),
@@ -437,15 +670,13 @@ export const notifications = pgTable("notifications", {
   message: text("message").notNull(),
   channel: varchar("channel").notNull().default("in_app"),
   status: varchar("status").notNull().default("unread"),
-  metadata: jsonb("metadata")
-    .$type<NotificationMetadata>()
-    .default({
-      clientName: "",
-      appointmentDate: "1970-01-01T00:00:00.000Z",
-      appointmentTime: null,
-      procedures: [],
-      staffName: null,
-    }),
+  metadata: jsonb("metadata").$type<NotificationMetadata>().default({
+    clientName: "",
+    appointmentDate: "1970-01-01T00:00:00.000Z",
+    appointmentTime: null,
+    procedures: [],
+    staffName: null,
+  }),
   isRead: boolean("is_read").notNull().default(false),
   readAt: timestamp("read_at"),
   scheduledFor: timestamp("scheduled_for"),
@@ -457,7 +688,9 @@ export const notifications = pgTable("notifications", {
 // Marketing campaigns table
 export const marketingCampaigns = pgTable("marketing_campaigns", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   name: varchar("name").notNull(),
   type: varchar("type").notNull(), // 'email', 'sms', 'promotion'
   subject: varchar("subject"),
@@ -471,14 +704,16 @@ export const marketingCampaigns = pgTable("marketing_campaigns", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-
-
 // Payment transactions table
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   appointmentId: integer("appointment_id").references(() => appointments.id),
-  clientId: integer("client_id").notNull().references(() => clients.id),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   currency: varchar("currency").default("NZD"),
   method: varchar("method").notNull(), // 'cash', 'eftpos', 'credit_card', 'paywave', 'app_payment'
@@ -491,7 +726,9 @@ export const payments = pgTable("payments", {
 // Social media integration table
 export const socialMediaPosts = pgTable("social_media_posts", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   platform: varchar("platform").notNull(), // 'facebook', 'instagram', 'google_business'
   content: text("content").notNull(),
   imageUrl: varchar("image_url"),
@@ -499,14 +736,20 @@ export const socialMediaPosts = pgTable("social_media_posts", {
   status: varchar("status").default("draft"), // 'draft', 'scheduled', 'published', 'failed'
   scheduledFor: timestamp("scheduled_for"),
   publishedAt: timestamp("published_at"),
-  engagement: jsonb("engagement").$type<{likes?: number, comments?: number, shares?: number}>(),
+  engagement: jsonb("engagement").$type<{
+    likes?: number;
+    comments?: number;
+    shares?: number;
+  }>(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Banners table
 export const banners = pgTable("banners", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   images: jsonb("images").$type<string[]>().notNull(),
   mode: varchar("mode").notNull().default("fixed"), // 'carousel' | 'fixed'
   duration: integer("duration").default(5), // segundos para transição
@@ -536,7 +779,10 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   businessHours: many(businessHours),
   banners: many(banners),
   packages: many(packages),
-  loyaltySettings: one(loyaltySettings, { fields: [users.id], references: [loyaltySettings.userId] }),
+  loyaltySettings: one(loyaltySettings, {
+    fields: [users.id],
+    references: [loyaltySettings.userId],
+  }),
 }));
 
 export const businessHoursRelations = relations(businessHours, ({ one }) => ({
@@ -562,91 +808,202 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
 export const proceduresRelations = relations(procedures, ({ one, many }) => ({
   user: one(users, { fields: [procedures.userId], references: [users.id] }),
   appointmentProcedures: many(appointmentProcedures),
+  staffProcedures: many(staffProcedures),
 }));
 
-export const appointmentsRelations = relations(appointments, ({ one, many }) => ({
-  user: one(users, { fields: [appointments.userId], references: [users.id] }),
-  client: one(clients, { fields: [appointments.clientId], references: [clients.id] }),
-  service: one(services, { fields: [appointments.serviceId], references: [services.id] }),
-  staff: one(staff, { fields: [appointments.staffId], references: [staff.id] }),
-  appointmentProcedures: many(appointmentProcedures),
-}));
+export const appointmentsRelations = relations(
+  appointments,
+  ({ one, many }) => ({
+    user: one(users, { fields: [appointments.userId], references: [users.id] }),
+    client: one(clients, {
+      fields: [appointments.clientId],
+      references: [clients.id],
+    }),
+    service: one(services, {
+      fields: [appointments.serviceId],
+      references: [services.id],
+    }),
+    staff: one(staff, {
+      fields: [appointments.staffId],
+      references: [staff.id],
+    }), // Mantém para compatibilidade
+    appointmentProcedures: many(appointmentProcedures),
+    appointmentProducts: many(appointmentProducts), // Nova relação de produtos
+    appointmentStaff: many(appointmentStaff), // Nova relação
+  })
+);
 
-export const appointmentProceduresRelations = relations(appointmentProcedures, ({ one }) => ({
-  appointment: one(appointments, { fields: [appointmentProcedures.appointmentId], references: [appointments.id] }),
-  procedure: one(procedures, { fields: [appointmentProcedures.procedureId], references: [procedures.id] }),
-}));
+export const appointmentProceduresRelations = relations(
+  appointmentProcedures,
+  ({ one }) => ({
+    appointment: one(appointments, {
+      fields: [appointmentProcedures.appointmentId],
+      references: [appointments.id],
+    }),
+    procedure: one(procedures, {
+      fields: [appointmentProcedures.procedureId],
+      references: [procedures.id],
+    }),
+    staff: one(staff, {
+      fields: [appointmentProcedures.staffId],
+      references: [staff.id],
+    }),
+  })
+);
 
-export const clinicalRecordsRelations = relations(clinicalRecords, ({ one }) => ({
-  user: one(users, { fields: [clinicalRecords.userId], references: [users.id] }),
-  client: one(clients, { fields: [clinicalRecords.clientId], references: [clients.id] }),
-  appointment: one(appointments, { fields: [clinicalRecords.appointmentId], references: [appointments.id] }),
-  procedure: one(procedures, { fields: [clinicalRecords.procedureId], references: [procedures.id] }),
-}));
+export const appointmentProductsRelations = relations(
+  appointmentProducts,
+  ({ one }) => ({
+    appointment: one(appointments, {
+      fields: [appointmentProducts.appointmentId],
+      references: [appointments.id],
+    }),
+    product: one(products, {
+      fields: [appointmentProducts.productId],
+      references: [products.id],
+    }),
+  })
+);
+
+export const clinicalRecordsRelations = relations(
+  clinicalRecords,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [clinicalRecords.userId],
+      references: [users.id],
+    }),
+    client: one(clients, {
+      fields: [clinicalRecords.clientId],
+      references: [clients.id],
+    }),
+    appointment: one(appointments, {
+      fields: [clinicalRecords.appointmentId],
+      references: [appointments.id],
+    }),
+    procedure: one(procedures, {
+      fields: [clinicalRecords.procedureId],
+      references: [procedures.id],
+    }),
+  })
+);
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
   user: one(users, { fields: [transactions.userId], references: [users.id] }),
-  client: one(clients, { fields: [transactions.clientId], references: [clients.id] }),
-  appointment: one(appointments, { fields: [transactions.appointmentId], references: [appointments.id] }),
+  client: one(clients, {
+    fields: [transactions.clientId],
+    references: [clients.id],
+  }),
+  appointment: one(appointments, {
+    fields: [transactions.appointmentId],
+    references: [appointments.id],
+  }),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
   user: one(users, { fields: [messages.userId], references: [users.id] }),
-  client: one(clients, { fields: [messages.clientId], references: [clients.id] }),
+  client: one(clients, {
+    fields: [messages.clientId],
+    references: [clients.id],
+  }),
 }));
 
 export const feedbackRelations = relations(feedback, ({ one }) => ({
   user: one(users, { fields: [feedback.userId], references: [users.id] }),
-  client: one(clients, { fields: [feedback.clientId], references: [clients.id] }),
-  appointment: one(appointments, { fields: [feedback.appointmentId], references: [appointments.id] }),
+  client: one(clients, {
+    fields: [feedback.clientId],
+    references: [clients.id],
+  }),
+  appointment: one(appointments, {
+    fields: [feedback.appointmentId],
+    references: [appointments.id],
+  }),
 }));
 
 export const inventoryRelations = relations(inventory, ({ one }) => ({
   user: one(users, { fields: [inventory.userId], references: [users.id] }),
 }));
 
-export const loyaltyPackagesRelations = relations(loyaltyPackages, ({ one, many }) => ({
-  user: one(users, { fields: [loyaltyPackages.userId], references: [users.id] }),
-  clientPackages: many(clientPackages),
-}));
+export const loyaltyPackagesRelations = relations(
+  loyaltyPackages,
+  ({ one, many }) => ({
+    user: one(users, {
+      fields: [loyaltyPackages.userId],
+      references: [users.id],
+    }),
+    clientPackages: many(clientPackages),
+  })
+);
 
 export const clientPackagesRelations = relations(clientPackages, ({ one }) => ({
   user: one(users, { fields: [clientPackages.userId], references: [users.id] }),
-  client: one(clients, { fields: [clientPackages.clientId], references: [clients.id] }),
-  package: one(loyaltyPackages, { fields: [clientPackages.packageId], references: [loyaltyPackages.id] }),
+  client: one(clients, {
+    fields: [clientPackages.clientId],
+    references: [clients.id],
+  }),
+  package: one(loyaltyPackages, {
+    fields: [clientPackages.packageId],
+    references: [loyaltyPackages.id],
+  }),
 }));
 
 export const staffRelations = relations(staff, ({ one, many }) => ({
   user: one(users, { fields: [staff.userId], references: [users.id] }),
   schedules: many(staffSchedules),
-  appointments: many(appointments),
+  appointments: many(appointments), // Mantém para compatibilidade
+  appointmentStaff: many(appointmentStaff), // Nova relação
+  staffProcedures: many(staffProcedures), // Nova relação
 }));
 
 export const staffSchedulesRelations = relations(staffSchedules, ({ one }) => ({
-  staff: one(staff, { fields: [staffSchedules.staffId], references: [staff.id] }),
+  staff: one(staff, {
+    fields: [staffSchedules.staffId],
+    references: [staff.id],
+  }),
 }));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
-  client: one(clients, { fields: [notifications.clientId], references: [clients.id] }),
-  appointment: one(appointments, { fields: [notifications.appointmentId], references: [appointments.id] }),
+  client: one(clients, {
+    fields: [notifications.clientId],
+    references: [clients.id],
+  }),
+  appointment: one(appointments, {
+    fields: [notifications.appointmentId],
+    references: [appointments.id],
+  }),
 }));
 
-export const marketingCampaignsRelations = relations(marketingCampaigns, ({ one }) => ({
-  user: one(users, { fields: [marketingCampaigns.userId], references: [users.id] }),
-}));
-
-
+export const marketingCampaignsRelations = relations(
+  marketingCampaigns,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [marketingCampaigns.userId],
+      references: [users.id],
+    }),
+  })
+);
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
   user: one(users, { fields: [payments.userId], references: [users.id] }),
-  client: one(clients, { fields: [payments.clientId], references: [clients.id] }),
-  appointment: one(appointments, { fields: [payments.appointmentId], references: [appointments.id] }),
+  client: one(clients, {
+    fields: [payments.clientId],
+    references: [clients.id],
+  }),
+  appointment: one(appointments, {
+    fields: [payments.appointmentId],
+    references: [appointments.id],
+  }),
 }));
 
-export const socialMediaPostsRelations = relations(socialMediaPosts, ({ one }) => ({
-  user: one(users, { fields: [socialMediaPosts.userId], references: [users.id] }),
-}));
+export const socialMediaPostsRelations = relations(
+  socialMediaPosts,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [socialMediaPosts.userId],
+      references: [users.id],
+    }),
+  })
+);
 
 export const bannersRelations = relations(banners, ({ one }) => ({
   user: one(users, { fields: [banners.userId], references: [users.id] }),
@@ -654,12 +1011,21 @@ export const bannersRelations = relations(banners, ({ one }) => ({
 
 export const packagesRelations = relations(packages, ({ one }) => ({
   user: one(users, { fields: [packages.userId], references: [users.id] }),
-  client: one(clients, { fields: [packages.clientId], references: [clients.id] }),
+  client: one(clients, {
+    fields: [packages.clientId],
+    references: [clients.id],
+  }),
 }));
 
-export const loyaltySettingsRelations = relations(loyaltySettings, ({ one }) => ({
-  user: one(users, { fields: [loyaltySettings.userId], references: [users.id] }),
-}));
+export const loyaltySettingsRelations = relations(
+  loyaltySettings,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [loyaltySettings.userId],
+      references: [users.id],
+    }),
+  })
+);
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -672,9 +1038,12 @@ export const insertClientSchema = createInsertSchema(clients).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  datahr: true, // Omit datahr from insert - it's only updated when appointments are created
 });
 
-export const insertInactiveClientSchema = createInsertSchema(inactiveClients).omit({
+export const insertInactiveClientSchema = createInsertSchema(
+  inactiveClients
+).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -690,12 +1059,16 @@ export const insertAppointmentSchema = createInsertSchema(appointments).omit({
   createdAt: true,
 });
 
-export const insertAppointmentProcedureSchema = createInsertSchema(appointmentProcedures).omit({
+export const insertAppointmentProcedureSchema = createInsertSchema(
+  appointmentProcedures
+).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertClinicalRecordSchema = createInsertSchema(clinicalRecords).omit({
+export const insertClinicalRecordSchema = createInsertSchema(
+  clinicalRecords
+).omit({
   id: true,
   createdAt: true,
 });
@@ -732,55 +1105,77 @@ export const insertProductSchema = createInsertSchema(products).omit({
   updatedAt: true,
 });
 
-export const updateProductSchema = createInsertSchema(products).omit({
-  id: true,
-  userId: true,
-  createdAt: true,
-}).partial();
+export const updateProductSchema = createInsertSchema(products)
+  .omit({
+    id: true,
+    userId: true,
+    createdAt: true,
+  })
+  .partial();
 
-export const insertLoyaltyPackageSchema = createInsertSchema(loyaltyPackages).omit({
+export const insertLoyaltyPackageSchema = createInsertSchema(
+  loyaltyPackages
+).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertClientPackageSchema = createInsertSchema(clientPackages).omit({
+export const insertClientPackageSchema = createInsertSchema(
+  clientPackages
+).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertProcedureSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-  category: z.string(),
-  duration: z.number(),
-  materials: z.array(z.object({
-    materialId: z.number(),
-    quantity: z.number()
-  })).default([]),
-  isActive: z.boolean().default(true),
-}).passthrough();
+export const insertProcedureSchema = z
+  .object({
+    name: z.string(),
+    description: z.string().optional(),
+    category: z.string(),
+    duration: z.number(),
+    materials: z
+      .array(
+        z.object({
+          materialId: z.number(),
+          quantity: z.number(),
+        })
+      )
+      .default([]),
+    isActive: z.boolean().default(true),
+  })
+  .passthrough();
 
-export const updateProcedureSchema = z.object({
-  name: z.string().optional(),
-  description: z.string().optional(),
-  category: z.string().optional(),
-  duration: z.number().optional(),
-  materials: z.array(z.object({
-    materialId: z.number(),
-    quantity: z.number()
-  })).optional(),
-  isActive: z.boolean().optional(),
-}).passthrough();
+export const updateProcedureSchema = z
+  .object({
+    name: z.string().optional(),
+    description: z.string().optional(),
+    category: z.string().optional(),
+    duration: z.number().optional(),
+    materials: z
+      .array(
+        z.object({
+          materialId: z.number(),
+          quantity: z.number(),
+        })
+      )
+      .optional(),
+    isActive: z.boolean().optional(),
+  })
+  .passthrough();
 
-export const insertStaffSchema = createInsertSchema(staff).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  commissionRate: z.number().optional(),
-});
+export const insertStaffSchema = createInsertSchema(staff)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    commissionRate: z.number().optional(),
+  });
 
-export const insertStaffScheduleSchema = createInsertSchema(staffSchedules).omit({
+export const insertStaffScheduleSchema = createInsertSchema(
+  staffSchedules
+).omit({
   id: true,
   createdAt: true,
 });
@@ -793,28 +1188,32 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   isRead: true,
 });
 
-export const insertMarketingCampaignSchema = createInsertSchema(marketingCampaigns).omit({
+export const insertMarketingCampaignSchema = createInsertSchema(
+  marketingCampaigns
+).omit({
   id: true,
   createdAt: true,
 });
-
-
 
 export const insertPaymentSchema = createInsertSchema(payments).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertSocialMediaPostSchema = createInsertSchema(socialMediaPosts).omit({
+export const insertSocialMediaPostSchema = createInsertSchema(
+  socialMediaPosts
+).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertBusinessHoursSchema = createInsertSchema(businessHours).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const insertBusinessHoursSchema = createInsertSchema(businessHours).omit(
+  {
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  }
+);
 
 export const insertBannerSchema = createInsertSchema(banners).omit({
   id: true,
@@ -828,7 +1227,9 @@ export const insertPackageSchema = createInsertSchema(packages).omit({
   updatedAt: true,
 });
 
-export const insertLoyaltySettingsSchema = createInsertSchema(loyaltySettings).omit({
+export const insertLoyaltySettingsSchema = createInsertSchema(
+  loyaltySettings
+).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -840,7 +1241,9 @@ export type UpsertUser = z.infer<typeof insertUserSchema>;
 // Integrations table
 export const integrations = pgTable("integrations", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   name: varchar("name").notNull(),
   url: text("url").notNull(),
   authType: varchar("auth_type").notNull(), // Bearer, Basic, API Key, Custom, etc.
@@ -868,7 +1271,6 @@ export const insertIntegrationSchema = createInsertSchema(integrations, {
   updatedAt: true,
 });
 
-
 export type User = typeof users.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
@@ -877,7 +1279,9 @@ export type InsertService = z.infer<typeof insertServiceSchema>;
 export type Appointment = typeof appointments.$inferSelect;
 export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
 export type AppointmentProcedure = typeof appointmentProcedures.$inferSelect;
-export type InsertAppointmentProcedure = z.infer<typeof insertAppointmentProcedureSchema>;
+export type InsertAppointmentProcedure = z.infer<
+  typeof insertAppointmentProcedureSchema
+>;
 export type ClinicalRecord = typeof clinicalRecords.$inferSelect;
 export type InsertClinicalRecord = z.infer<typeof insertClinicalRecordSchema>;
 export type Transaction = typeof transactions.$inferSelect;
@@ -910,8 +1314,9 @@ export type InsertStaffSchedule = z.infer<typeof insertStaffScheduleSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type MarketingCampaign = typeof marketingCampaigns.$inferSelect;
-export type InsertMarketingCampaign = z.infer<typeof insertMarketingCampaignSchema>;
-
+export type InsertMarketingCampaign = z.infer<
+  typeof insertMarketingCampaignSchema
+>;
 
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
@@ -933,3 +1338,60 @@ export const loginUserSchema = z.object({
 });
 
 export type LoginUser = z.infer<typeof loginUserSchema>;
+
+// Sales table
+export const sales = pgTable("sales", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  clientId: integer("client_id").references(() => clients.id),
+  saleDate: date("sale_date").notNull(),
+  products: jsonb("products")
+    .$type<
+      { productId: number; quantity: number; price: number; name: string }[]
+    >()
+    .notNull(),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  discountPercent: decimal("discount_percent", {
+    precision: 5,
+    scale: 2,
+  }).default("0"),
+  discountAmount: decimal("discount_amount", {
+    precision: 10,
+    scale: 2,
+  }).default("0"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: varchar("payment_method").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const salesRelations = relations(sales, ({ one }) => ({
+  user: one(users, { fields: [sales.userId], references: [users.id] }),
+  client: one(clients, { fields: [sales.clientId], references: [clients.id] }),
+}));
+
+export const insertSaleSchema = createInsertSchema(sales).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Sale = typeof sales.$inferSelect;
+export type InsertSale = z.infer<typeof insertSaleSchema>;
+
+export const insertAppointmentProductSchema = createInsertSchema(appointmentProducts).omit({ 
+  id: true,
+  createdAt: true 
+});
+
+export type AppointmentProduct = typeof appointmentProducts.$inferSelect;
+export type InsertAppointmentProduct = typeof appointmentProducts.$inferInsert;
+
+export type AppointmentStaff = typeof appointmentStaff.$inferSelect;
+export type InsertAppointmentStaff = typeof appointmentStaff.$inferInsert;
+
+export type StaffProcedure = typeof staffProcedures.$inferSelect;
+export type InsertStaffProcedure = typeof staffProcedures.$inferInsert;

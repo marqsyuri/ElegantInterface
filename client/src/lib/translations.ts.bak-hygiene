@@ -1,0 +1,2714 @@
+/**
+ * Sistema de tradução simples sem dependências externas
+ * Baseado em objetos JavaScript puros
+ */
+
+type TranslationKey = 
+  | 'welcome_back'
+  | 'enter_credentials'
+  | 'username'
+  | 'password'
+  | 'login'
+  | 'daily_revenue'
+  | 'total_clients'
+  | 'satisfaction_rate'
+  | 'todays_schedule'
+  | 'view_all'
+  | 'quick_actions'
+  | 'book_appointment'
+  | 'add_client'
+  | 'record_payment'
+  | 'loading'
+  | 'redirecting'
+  | 'client_management'
+  | 'manage_clients'
+  | 'add_client'
+  | 'edit_client'
+  | 'save_changes'
+  | 'cancel'
+  | 'settings'
+  | 'language'
+  | 'currency'
+  | 'select_language'
+  | 'select_currency'
+  | 'new_appointment'
+  | 'send_message'
+  | 'no_appointments_today'
+  | 'logging_in'
+  | 'login_button'
+  | 'todays_appointments'
+  | 'service_categories'
+  | 'hair_cut'
+  | 'hair_cut_subtitle'
+  | 'hair_colour'
+  | 'hair_colour_subtitle'
+  | 'hair_treatment'
+  | 'hair_treatment_subtitle'
+  | 'blow_dry'
+  | 'blow_dry_subtitle'
+  | 'extensions'
+  | 'extensions_subtitle'
+  | 'nail_care'
+  | 'nail_care_subtitle'
+  | 'performance_overview'
+  | 'monthly_growth'
+  | 'completed_treatments'
+  | 'average_rating'
+  | 'dashboard_menu'
+  | 'appointments_menu'
+  | 'registry_menu'
+  | 'clients_menu'
+  | 'services_menu'
+  | 'procedures_menu'
+  | 'packages_menu'
+  | 'products_menu'
+  | 'clinical_menu'
+  | 'clinical_records_menu'
+  | 'inventory_menu'
+  | 'management_menu'
+  | 'staff_menu'
+  | 'financial_menu'
+  | 'business_hours_menu'
+  | 'analytics_menu'
+  | 'settings_menu'
+  // Common action buttons
+  | 'save'
+  | 'delete'
+  | 'edit'
+  | 'create'
+  | 'update'
+  | 'submit'
+  | 'close'
+  | 'open'
+  | 'view'
+  | 'show'
+  | 'hide'
+  | 'search'
+  | 'filter'
+  | 'export'
+  | 'import'
+  | 'download'
+  | 'upload'
+  | 'print'
+  | 'back'
+  | 'next'
+  | 'previous'
+  | 'confirm'
+  | 'yes'
+  | 'no'
+  | 'ok'
+  | 'remove'
+  | 'clear'
+  | 'reset'
+  | 'apply'
+  // Page titles and labels
+  | 'appointments_title'
+  | 'appointments_subtitle'
+  | 'clients_title'
+  | 'clients_subtitle'
+  | 'calendar_view'
+  | 'list_view'
+  | 'month_view'
+  | 'week_view'
+  | 'day_view'
+  | 'search_clients'
+  | 'search_placeholder'
+  | 'overview'
+  | 'loyalty_programs'
+  | 'client_database'
+  | 'no_clients_found'
+  | 'unknown_procedure'
+  | 'unknown_service'
+  | 'invalid_date'
+  | 'success'
+  | 'error'
+  | 'failed_to_create'
+  | 'created_successfully'
+  | 'updated_successfully'
+  | 'deleted_successfully'
+  | 'please_try_again'
+  // Calendar specific
+  | 'appointment_calendar'
+  | 'today'
+  | 'today_tomorrow'
+  | 'week_of'
+  | 'new_appointment_button'
+  | 'appointments_list'
+  | 'time'
+  // Form labels and placeholders
+  | 'upload_before_photos'
+  | 'upload_after_photos'
+  | 'creating'
+  | 'updating'
+  | 'update_appointment'
+  | 'please_select_procedure'
+  | 'please_select_client'
+  | 'please_select_staff'
+  | 'client_communication'
+  | 'new_message'
+  | 'send_manual_message'
+  | 'recipient'
+  | 'select_recipient'
+  | 'all_clients'
+  | 'marketing_campaigns'
+  | 'create_manage_campaigns'
+  | 'campaigns'
+  | 'total_campaigns'
+  | 'sent'
+  | 'financial_management'
+  | 'control_revenue_expenses'
+  | 'transaction_added'
+  | 'procedure_name_required'
+  | 'category_required'
+  | 'duration_min_15'
+  | 'price_positive'
+  | 'quantity_min_1'
+  | 'procedure_created'
+  | 'procedure_updated'
+  | 'procedure_deleted'
+  | 'failed_create_procedure'
+  | 'name_required'
+  | 'role_required'
+  | 'ird_number_required'
+  | 'staff_created'
+  | 'staff_updated'
+  | 'staff_deleted'
+  | 'no_data_found'
+  | 'select_category'
+  | 'all_categories'
+  // Additional missing translations
+  | 'loyalty'
+  | 'fidelity'
+  | 'status'
+  | 'select_status'
+  | 'total_duration'
+  | 'automatically_calculated'
+  | 'please_select_services'
+  | 'client_analytics'
+  | 'coming_soon'
+  | 'add_first_client'
+  | 'scheduled'
+  | 'confirmed'
+  | 'completed'
+  | 'cancelled'
+  | 'pending'
+  | 'minutes'
+  | 'manage_packages_points'
+  | 'create_new_appointment'
+  | 'client_label'
+  | 'type_to_search_clients'
+  | 'procedures_label'
+  | 'professional_label'
+  | 'select_professional'
+  | 'date_label'
+  | 'time_label'
+  | 'select_time'
+  | 'loading_times'
+  | 'no_times_available'
+  | 'booked'
+  | 'total_amount'
+  | 'paid_amount'
+  | 'notes_label'
+  | 'additional_notes'
+  | 'before_photos'
+  | 'after_photos'
+  | 'selected_procedures'
+  | 'total_price'
+  | 'no_times_available_date'
+  | 'other_category'
+  | 'clinical_records'
+  | 'record_track_treatments'
+  | 'electronic_clinical_record'
+  | 'new_record'
+  | 'new_clinical_record'
+  | 'select_client'
+  | 'procedure_performed'
+  | 'select_procedure'
+  | 'procedure_date'
+  | 'procedure_notes'
+  | 'procedure_notes_placeholder'
+  | 'result_assessment'
+  | 'poor'
+  | 'excellent'
+  | 'next_appointment'
+  | 'before_after_photos'
+  | 'before'
+  | 'after'
+  | 'click_to_add_photo'
+  | 'saving'
+  | 'save_clinical_record'
+  | 'result'
+  | 'next_label'
+  | 'no_clinical_records'
+  | 'create_first_clinical_record'
+  | 'clinical_record_created'
+  | 'failed_create_clinical_record'
+  | 'invalid_image_file'
+  | 'image_uploaded_successfully'
+  | 'failed_upload_image'
+  // Payslip translations
+  | 'payslip_report'
+  | 'payslip_report_subtitle'
+  | 'download_pdf'
+  | 'filters'
+  | 'professional'
+  | 'all_professionals'
+  | 'start_date'
+  | 'end_date'
+  | 'error_loading_data'
+  | 'unexpected_error'
+  | 'loading_data'
+  | 'no_data_for_period'
+  | 'appointments_count'
+  | 'procedures_summary'
+  | 'procedure'
+  | 'category'
+  | 'quantity'
+  | 'appointment_details'
+  | 'date_time'
+  | 'client'
+  | 'duration'
+  | 'no_data_for_pdf'
+  | 'error_generating_pdf'
+  | 'period'
+  | 'total_appointments'
+  | 'total_hours_worked'
+  | 'generated_on'
+  | 'page'
+  | 'of'
+  | 'failed_fetch_payslip'
+  // Campaign translations
+  | 'campaigns_title'
+  | 'campaigns_subtitle'
+  | 'marketing_campaigns'
+  | 'new_campaign'
+  | 'create_new_campaign'
+  | 'campaign_name'
+  | 'campaign_objective'
+  | 'campaign_objective_placeholder'
+  | 'communication_channel'
+  | 'message'
+  | 'message_placeholder'
+  | 'use_name_personalize'
+  | 'when_to_send'
+  | 'send_now'
+  | 'schedule'
+  | 'date_and_time'
+  | 'creating_campaign'
+  | 'create_campaign'
+  | 'name'
+  | 'objective'
+  | 'channel'
+  | 'sent_total'
+  | 'date'
+  | 'actions'
+  | 'no_campaigns_created'
+  | 'start_first_campaign'
+  | 'create_first_campaign'
+  | 'campaign_details'
+  | 'total_recipients'
+  | 'sent'
+  | 'created_on'
+  | 'completed_on'
+  | 'campaign_created_success'
+  | 'campaign_create_failed'
+  | 'campaign_sent_success'
+  | 'campaign_send_failed'
+  | 'campaign_deleted_success'
+  | 'campaign_delete_failed'
+  | 'confirm_delete_campaign'
+  | 'campaign_objective_required'
+  | 'message_required'
+  // Procedures translations
+  | 'procedures_title'
+  | 'procedures_subtitle'
+  | 'treatment_procedures'
+  | 'new_procedure'
+  | 'edit_procedure'
+  | 'procedure_name'
+  | 'duration_minutes'
+  | 'price_nzd'
+  | 'required_materials'
+  | 'add_material'
+  | 'select_material'
+  | 'qty'
+  | 'update'
+  | 'create_procedure'
+  | 'search_procedures'
+  | 'clear_filters'
+  | 'no_procedures_yet'
+  | 'create_first_procedure'
+  | 'add_first_procedure'
+  | 'no_procedures_found'
+  | 'loading_procedures'
+  | 'showing'
+  | 'of'
+  | 'procedure_singular'
+  | 'procedures_plural'
+  | 'materials_required'
+  | 'available'
+  // Products translations
+  | 'products_management'
+  | 'products_subtitle'
+  | 'total_products'
+  | 'total_value'
+  | 'low_stock'
+  | 'active_products'
+  | 'click_to_view_details'
+  | 'products_summary_by_type'
+  | 'products_catalog'
+  | 'add_product'
+  | 'edit_product'
+  | 'add_new_product'
+  | 'product_name'
+  | 'product_code'
+  | 'sale_price_nzd'
+  | 'cost_price_nzd'
+  | 'current_stock'
+  | 'min_stock_alert'
+  | 'max_stock'
+  | 'storage_location'
+  | 'update_product'
+  | 'create_product'
+  | 'search_products'
+  | 'no_products_found'
+  | 'start_adding_product'
+  | 'try_different_search'
+  | 'products_low_stock'
+  | 'all_products_well_stocked'
+  | 'no_products_below_minimum'
+  | 'current_stock_label'
+  | 'min_stock_label'
+  | 'difference'
+  | 'low_stock_alert'
+  | 'reorder_message'
+  | 'inactive'
+  | 'active'
+  // Staff translations
+  | 'staff_management'
+  | 'staff_subtitle'
+  | 'overview'
+  | 'schedules'
+  | 'performance'
+  | 'add_staff_member'
+  | 'total_staff'
+  | 'active_staff'
+  | 'avg_commission'
+  | 'team_members'
+  | 'no_staff_registered'
+  | 'add_first_staff'
+  | 'weekly_schedules'
+  | 'schedule_management_coming_soon'
+  | 'staff_performance'
+  | 'performance_analytics_coming_soon'
+  | 'add_new_staff_member'
+  | 'full_name'
+  | 'role'
+  | 'email_optional'
+  | 'phone_optional'
+  | 'specialties'
+  | 'list_specialties'
+  | 'commission_rate_percent'
+  | 'paid_by_hours_worked'
+  | 'active_staff_member'
+  | 'adding'
+  | 'saving'
+  | 'save_changes'
+  | 'edit_staff_member'
+  | 'confirm_remove_staff'
+  // Materials/Inventory translations
+  | 'inventory_control'
+  | 'inventory_subtitle'
+  | 'personal_protection_equipment'
+  | 'add_item'
+  | 'add_item_to_inventory'
+  | 'item_name'
+  | 'minimum_stock'
+  | 'select_unit'
+  | 'units'
+  | 'boxes'
+  | 'packets'
+  | 'bottles'
+  | 'litres'
+  | 'last_restocked'
+  | 'add_to_inventory'
+  | 'inventory_management'
+  | 'out_of_stock'
+  | 'stock_ok'
+  | 'no_items_in_stock'
+  | 'add_first_item'
+  // Financial translations
+  | 'financial_control'
+  | 'recent_transactions'
+  | 'appointment_revenue'
+  | 'financial_summary'
+  | 'monthly_summary'
+  | 'total_revenue'
+  | 'from_appointments_transactions'
+  | 'total_expenses'
+  | 'operating_costs_supplies'
+  | 'completed_revenue'
+  | 'completed_appointments'
+  | 'pending_revenue'
+  | 'scheduled_appointments'
+  | 'net_profit'
+  | 'profit_margin'
+  | 'add_transaction'
+  | 'new_income'
+  | 'new_expense'
+  | 'income'
+  | 'expense'
+  | 'amount'
+  | 'transaction_date'
+  | 'select_category'
+  | 'treatment'
+  | 'consultation'
+  | 'product_sale'
+  | 'materials'
+  | 'equipment'
+  | 'marketing'
+  | 'rent'
+  | 'utilities'
+  | 'supplies'
+  | 'maintenance'
+  | 'insurance'
+  | 'professional_services'
+  | 'add_new_transaction'
+  | 'no_transactions_recorded'
+  | 'no_appointments_scheduled'
+  // Communication translations
+  | 'communication_title'
+  | 'communication_subtitle'
+  | 'automatic_messages'
+  | 'appointment_reminder'
+  | 'sent_24h_before'
+  | 'reminder_message'
+  | 'post_treatment_feedback'
+  | 'sent_2h_after'
+  | 'feedback_message'
+  | 'monthly_promotions'
+  | 'sent_beginning_month'
+  | 'promotion_message'
+  | 'client_feedback'
+  | 'no_feedback_received'
+  | 'channel'
+  | 'sending'
+  | 'send_message'
+  // Loyalty translations
+  | 'create_package'
+  | 'package_name'
+  | 'included_services'
+  | 'original_price'
+  | 'discounted_price'
+  | 'discount_percent'
+  | 'validity_days'
+  | 'creating'
+  | 'available_packages'
+  | 'normal_price'
+  | 'details'
+  | 'no_packages_created'
+  | 'create_first_package'
+  | 'loyalty_clients'
+  | 'client_since'
+  | 'accumulated_points'
+  | 'next_discount'
+  | 'how_it_works'
+  | 'points_per_dollar'
+  | 'points_equals_discount'
+  | 'birthday_bonus'
+  | 'friend_referral'
+  | 'vip_levels'
+  | 'bronze'
+  | 'silver'
+  | 'gold'
+  | 'points'
+  // Packages translations
+  | 'packages_title'
+  | 'packages_subtitle'
+  | 'new_package'
+  | 'create_new_package'
+  | 'select_client'
+  | 'package_name_label'
+  | 'description_optional'
+  | 'services'
+  | 'products'
+  | 'total_price_label'
+  | 'validity_start_date'
+  | 'validity_end_date'
+  | 'update_package'
+  | 'create_package_button'
+  | 'loading_packages'
+  | 'no_packages_found'
+  | 'create_first_package_button'
+  | 'service_balance'
+  | 'money_balance'
+  | 'validity'
+  | 'contents'
+  // Analytics translations
+  | 'business_analytics'
+  | 'analytics_subtitle'
+  | 'revenue'
+  | 'clients_analytics'
+  | 'services_analytics'
+  | 'from_last_month'
+  | 'new_this_month'
+  | 'revenue_vs_expenses'
+  | 'appointment_success_rate'
+  | 'out_of'
+  | 'appointments_completed'
+  | 'revenue_breakdown'
+  | 'total_income'
+  | 'client_statistics'
+  | 'client_activity'
+  | 'inactive_clients'
+  | 'loyalty_points_distribution'
+  | 'service_performance'
+  | 'appointments'
+  | 'bookings'
+  | 'no_service_data'
+  // Settings translations
+  | 'settings_title'
+  | 'settings_subtitle'
+  | 'profile'
+  | 'business_hours'
+  | 'notifications'
+  | 'appearance'
+  | 'loyalty_settings'
+  | 'public_page'
+  | 'banners'
+  | 'general'
+  | 'email'
+  | 'first_name'
+  | 'last_name'
+  | 'professional_registration'
+  | 'clinic_name'
+  | 'clinic_cnpj'
+  | 'clinic_address'
+  | 'clinic_phone'
+  | 'clinic_whatsapp'
+  | 'reminder_start_time'
+  | 'reminder_end_time'
+  | 'inactivity_days'
+  | 'reminder_hours'
+  | 'save_profile'
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+  | 'closed'
+  | 'open'
+  | 'break_time'
+  | 'save_business_hours'
+  | 'notification_preferences'
+  | 'email_notifications'
+  | 'sms_notifications'
+  | 'push_notifications'
+  | 'save_notifications'
+  | 'appearance_settings'
+  | 'hero_image'
+  | 'upload_hero_image'
+  | 'save_appearance'
+  | 'loyalty_program_settings'
+  | 'points_per_dollar_spent'
+  | 'discount_per_hundred_points'
+  | 'birthday_bonus_points'
+  | 'referral_bonus_points'
+  | 'bronze_threshold'
+  | 'silver_threshold'
+  | 'gold_threshold'
+  | 'save_loyalty_settings'
+  | 'public_page_settings'
+  | 'public_page_url'
+  | 'login_screen_banner'
+  | 'dashboard_banner'
+  | 'enter_image_url'
+  | 'save_banner'
+  | 'valid_image_url_required'
+  | 'click_to_upload'
+  | 'jpg_or_png_max_10mb'
+  | 'beauty_therapy_board_registration_placeholder'
+  | 'specialties_label'
+  | 'describe_specialties_placeholder'
+  | 'list_specialties_placeholder'
+  | 'clinic_details'
+  | 'clinic_name_label'
+  | 'business_number'
+  | 'business_phone'
+  | 'complete_address'
+  | 'whatsapp_business'
+  | 'system_information'
+  | 'support_title'
+  | 'need_help_contact_support'
+  | 'contact_support_button'
+  | 'account_title'
+  | 'signed_in_as'
+  | 'sign_out'
+  | 'operating_hours'
+  | 'save_hours'
+  | 'saving_hours'
+  | 'operating_hours_information'
+  | 'operating_hours_description'
+  | 'closing_time'
+  | 'lunch_start'
+  | 'lunch_end'
+  | 'time_parameters'
+  | 'inactivity_timeout_days'
+  | 'inactivity_timeout_description'
+  | 'reminder_time_hours'
+  | 'reminder_time_description'
+  | 'reminder_schedule_configuration'
+  | 'reminder_schedule_description'
+  | 'start_time_for_reminders'
+  | 'select_start_time'
+  | 'start_time_example'
+  | 'end_time_for_reminders'
+  | 'select_end_time'
+  | 'end_time_example'
+  | 'valid_configuration'
+  | 'reminder_example'
+  | 'save_time_settings'
+  | 'team_members_management'
+  | 'loading_team_members'
+  | 'edit_staff_member'
+  | 'no_team_members_yet'
+  | 'add_staff_members_description'
+  | 'go_to_staff_management'
+  | 'team_management'
+  | 'team_management_description'
+  | 'staff_member_updated'
+  | 'staff_member_removed'
+  | 'failed_update_staff'
+  | 'failed_remove_staff'
+  | 'confirm_remove_staff_member'
+  | 'name_label'
+  | 'role_label'
+  | 'phone_label'
+  | 'commission_rate_percent'
+  | 'paid_by_hours_worked'
+  | 'active_label'
+  | 'inactive_label'
+  | 'staff_member_name_placeholder'
+  | 'role_placeholder'
+  | 'email_placeholder'
+  | 'phone_placeholder'
+  | 'ird_number_placeholder'
+  | 'loyalty_settings_description'
+  | 'points_per_dollar_label'
+  | 'discount_per_hundred_points_label'
+  | 'birthday_bonus_points_label'
+  | 'referral_bonus_points_label'
+  | 'bronze_threshold_label'
+  | 'silver_threshold_label'
+  | 'gold_threshold_label'
+  | 'loyalty_settings_saved'
+  | 'failed_save_loyalty_settings'
+  | 'from_team'
+  | 'drop_image_or_click'
+  | 'jpg_png_up_to_10mb'
+  | 'desktop_label'
+  | 'mobile_label'
+  | 'recommended_resolution'
+  | 'optimised_automatically'
+  | 'uploading';
+
+type Translations = Record<TranslationKey, string>;
+
+const translations: Record<string, Translations> = {
+  'pt-BR': {
+    welcome_back: 'Bem-vindo de volta',
+    enter_credentials: 'Entre com suas credenciais para acessar o sistema',
+    username: 'Usuário',
+    password: 'Senha',
+    login: 'Entrar',
+    daily_revenue: 'Receita Diária',
+    total_clients: 'Total de Clientes',
+    satisfaction_rate: 'Taxa de Satisfação',
+    todays_schedule: 'Agenda de Hoje',
+    view_all: 'Ver Todos',
+    quick_actions: 'Ações Rápidas',
+    book_appointment: 'Agendar Consulta',
+    add_client: 'Adicionar Cliente',
+    record_payment: 'Registrar Pagamento',
+    loading: 'Carregando...',
+    redirecting: 'Redirecionando para o dashboard...',
+    client_management: 'Gestão de Clientes',
+    manage_clients: 'Gerencie seu banco de dados de clientes e agendamentos',
+    edit_client: 'Editar Cliente',
+    save_changes: 'Salvar Alterações',
+    cancel: 'Cancelar',
+    settings: 'Configurações',
+    language: 'Idioma / Language',
+    currency: 'Moeda / Currency',
+    select_language: 'Selecione o idioma',
+    select_currency: 'Selecione a moeda',
+    new_appointment: 'Novo Agendamento',
+    send_message: 'Enviar Mensagem',
+    no_appointments_today: 'Nenhum agendamento para hoje',
+    logging_in: 'Entrando...',
+    login_button: 'Entrar na Plataforma',
+    todays_appointments: 'Agendamentos de Hoje',
+    service_categories: 'Categorias de Serviços',
+    hair_cut: 'Corte de Cabelo',
+    hair_cut_subtitle: 'Homens e Mulheres',
+    hair_colour: 'Coloração',
+    hair_colour_subtitle: '& Tintura',
+    hair_treatment: 'Tratamento Capilar',
+    hair_treatment_subtitle: '& Cuidados',
+    blow_dry: 'Escova',
+    blow_dry_subtitle: '& Finalização',
+    extensions: 'Extensões',
+    extensions_subtitle: 'Cabelo e Cílios',
+    nail_care: 'Cuidados com Unhas',
+    nail_care_subtitle: 'Mani & Pedi',
+    performance_overview: 'Visão Geral de Desempenho',
+    monthly_growth: 'Crescimento Mensal',
+    completed_treatments: 'Tratamentos Concluídos',
+    average_rating: 'Avaliação Média',
+    dashboard_menu: 'Dashboard',
+    appointments_menu: 'Agendamentos',
+    registry_menu: 'Registro',
+    clients_menu: 'Clientes',
+    services_menu: 'Serviços',
+    procedures_menu: 'Procedimentos',
+    packages_menu: 'Pacotes',
+    products_menu: 'Produtos',
+    clinical_menu: 'Clínico',
+    clinical_records_menu: 'Prontuários Clínicos',
+    inventory_menu: 'EPI & Materiais',
+    management_menu: 'Gestão',
+    staff_menu: 'Equipe',
+    financial_menu: 'Financeiro',
+    business_hours_menu: 'Horários de Funcionamento',
+    analytics_menu: 'Análises',
+    settings_menu: 'Configurações',
+    // Common action buttons
+    save: 'Salvar',
+    delete: 'Excluir',
+    edit: 'Editar',
+    create: 'Criar',
+    update: 'Atualizar',
+    submit: 'Enviar',
+    close: 'Fechar',
+    open: 'Abrir',
+    view: 'Ver',
+    show: 'Mostrar',
+    hide: 'Ocultar',
+    search: 'Pesquisar',
+    filter: 'Filtrar',
+    export: 'Exportar',
+    import: 'Importar',
+    download: 'Baixar',
+    upload: 'Enviar',
+    print: 'Imprimir',
+    back: 'Voltar',
+    next: 'Próximo',
+    previous: 'Anterior',
+    confirm: 'Confirmar',
+    yes: 'Sim',
+    no: 'Não',
+    ok: 'OK',
+    remove: 'Remover',
+    clear: 'Limpar',
+    reset: 'Redefinir',
+    apply: 'Aplicar',
+    // Page titles and labels
+    appointments_title: 'Agendamentos',
+    appointments_subtitle: 'Gerencie os agendamentos dos seus clientes',
+    clients_title: 'Gestão de Clientes',
+    clients_subtitle: 'Gerencie seu banco de dados de clientes e agendamentos',
+    calendar_view: 'Calendário',
+    list_view: 'Lista',
+    month_view: 'Mês',
+    week_view: 'Semana',
+    day_view: 'Dia',
+    search_clients: 'Pesquisar clientes...',
+    search_placeholder: 'Pesquisar...',
+    overview: 'Visão Geral',
+    loyalty_programs: 'Programas de Fidelidade',
+    client_database: 'Banco de Dados de Clientes',
+    no_clients_found: 'Nenhum cliente encontrado',
+    unknown_procedure: 'Procedimento Desconhecido',
+    unknown_service: 'Serviço Desconhecido',
+    invalid_date: 'Data inválida',
+    success: 'Sucesso',
+    error: 'Erro',
+    failed_to_create: 'Falha ao criar. Por favor, tente novamente.',
+    created_successfully: 'Criado com sucesso!',
+    updated_successfully: 'Atualizado com sucesso!',
+    deleted_successfully: 'Excluído com sucesso!',
+    please_try_again: 'Por favor, tente novamente',
+    // Calendar specific
+    appointment_calendar: 'Calendário de Agendamentos',
+    today: 'Hoje',
+    today_tomorrow: 'Hoje e Amanhã',
+    week_of: 'Semana de',
+    new_appointment_button: 'Novo Agendamento',
+    appointments_list: 'Lista de Agendamentos',
+    time: 'Horário',
+    // Form labels and placeholders
+    upload_before_photos: 'Enviar Fotos Antes',
+    upload_after_photos: 'Enviar Fotos Depois',
+    creating: 'Criando...',
+    updating: 'Atualizando...',
+    update_appointment: 'Atualizar Agendamento',
+    please_select_procedure: 'Por favor, selecione pelo menos um procedimento',
+    please_select_client: 'Por favor, selecione um cliente',
+    please_select_staff: 'Por favor, selecione um membro da equipe',
+    client_communication: 'Comunicação com Clientes',
+    new_message: 'Nova Mensagem',
+    send_manual_message: 'Enviar Mensagem Manual',
+    recipient: 'Destinatário',
+    select_recipient: 'Selecione o destinatário',
+    all_clients: 'Todos os clientes',
+    marketing_campaigns: 'Campanhas de Marketing',
+    create_manage_campaigns: 'Crie e gerencie suas campanhas de marketing',
+    campaigns: 'Campanhas',
+    total_campaigns: 'Total de Campanhas',
+    sent: 'Enviadas',
+    financial_management: 'Gestão Financeira',
+    control_revenue_expenses: 'Controle receitas, despesas e fluxo de caixa',
+    transaction_added: 'Transação adicionada com sucesso!',
+    procedure_name_required: 'Nome do procedimento é obrigatório',
+    category_required: 'Categoria é obrigatória',
+    duration_min_15: 'Duração deve ser de pelo menos 15 minutos',
+    price_positive: 'Preço deve ser positivo',
+    quantity_min_1: 'Quantidade deve ser pelo menos 1',
+    procedure_created: 'Procedimento criado com sucesso!',
+    procedure_updated: 'Procedimento atualizado com sucesso!',
+    procedure_deleted: 'Procedimento excluído com sucesso!',
+    failed_create_procedure: 'Falha ao criar procedimento',
+    name_required: 'Nome é obrigatório',
+    role_required: 'Função é obrigatória',
+    ird_number_required: 'Número IRD é obrigatório',
+    staff_created: 'Membro da equipe criado com sucesso!',
+    staff_updated: 'Membro da equipe atualizado com sucesso!',
+    staff_deleted: 'Membro da equipe excluído com sucesso!',
+    no_data_found: 'Nenhum dado encontrado',
+    select_category: 'Selecione a categoria',
+    all_categories: 'Todas as categorias',
+    // Additional missing translations
+    loyalty: 'Fidelidade',
+    fidelity: 'Fidelidade',
+    status: 'Status',
+    select_status: 'Selecione o status',
+    total_duration: 'Duração Total',
+    automatically_calculated: 'Calculado automaticamente a partir dos procedimentos selecionados',
+    please_select_services: 'Por favor, selecione os serviços primeiro para ver os horários disponíveis',
+    client_analytics: 'Análises de Clientes',
+    coming_soon: 'Em breve...',
+    add_first_client: 'Adicione seu primeiro cliente',
+    scheduled: 'Agendado',
+    confirmed: 'Confirmado',
+    completed: 'Concluído',
+    cancelled: 'Cancelado',
+    pending: 'Pendente',
+    minutes: 'minutos',
+    manage_packages_points: 'Gerencie pacotes de serviços e pontos de fidelidade',
+    create_new_appointment: 'Criar Novo Agendamento',
+    client_label: 'Cliente',
+    type_to_search_clients: 'Digite para pesquisar clientes...',
+    procedures_label: 'Procedimentos',
+    professional_label: 'Profissional',
+    select_professional: 'Selecione um profissional',
+    date_label: 'Data',
+    time_label: 'Horário',
+    select_time: 'Selecione o horário',
+    loading_times: 'Carregando horários...',
+    no_times_available: 'Nenhum horário disponível',
+    booked: 'Reservado',
+    total_amount: 'Valor Total',
+    paid_amount: 'Valor Pago',
+    notes_label: 'Observações',
+    additional_notes: 'Observações adicionais...',
+    before_photos: 'Fotos Antes',
+    after_photos: 'Fotos Depois',
+    selected_procedures: 'Procedimentos Selecionados',
+    total_price: 'Preço Total',
+    no_times_available_date: 'Nenhum horário disponível para esta data e profissional. Tente selecionar outra data ou profissional.',
+    other_category: 'Outros',
+    clinical_records: 'Registros Clínicos',
+    record_track_treatments: 'Registre e acompanhe tratamentos realizados',
+    electronic_clinical_record: 'Prontuário Eletrônico',
+    new_record: 'Novo Registro',
+    new_clinical_record: 'Novo Registro Clínico',
+    select_client: 'Selecione um cliente',
+    procedure_performed: 'Procedimento Realizado',
+    select_procedure: 'Selecione um procedimento',
+    procedure_date: 'Data do Procedimento',
+    procedure_notes: 'Observações do Procedimento',
+    procedure_notes_placeholder: 'Detalhes do procedimento, reações, resultados observados...',
+    result_assessment: 'Avaliação do Resultado',
+    poor: 'Ruim',
+    excellent: 'Excelente',
+    next_appointment: 'Próximo Agendamento',
+    before_after_photos: 'Fotos Antes/Depois',
+    before: 'Antes',
+    after: 'Depois',
+    click_to_add_photo: 'Clique para adicionar foto',
+    saving: 'Salvando...',
+    save_clinical_record: 'Salvar Registro Clínico',
+    result: 'Resultado',
+    next_label: 'Próximo',
+    no_clinical_records: 'Nenhum registro clínico cadastrado',
+    create_first_clinical_record: 'Criar primeiro registro clínico',
+    clinical_record_created: 'Registro clínico criado com sucesso!',
+    failed_create_clinical_record: 'Falha ao criar registro clínico. Por favor, tente novamente.',
+    invalid_image_file: 'Por favor, selecione um arquivo de imagem válido (PNG ou JPG).',
+    image_uploaded_successfully: 'Imagem enviada com sucesso!',
+    failed_upload_image: 'Falha ao enviar imagem. Por favor, tente novamente.',
+    // Payslip translations
+    payslip_report: 'Relatório de Payslip',
+    payslip_report_subtitle: 'Relatório de procedimentos realizados por profissional',
+    download_pdf: 'Baixar PDF',
+    filters: 'Filtros',
+    professional: 'Profissional',
+    all_professionals: 'Todos os profissionais',
+    start_date: 'Data Inicial',
+    end_date: 'Data Final',
+    error_loading_data: 'Erro ao carregar dados',
+    unexpected_error: 'Ocorreu um erro inesperado',
+    loading_data: 'Carregando dados...',
+    no_data_for_period: 'Nenhum dado encontrado para o período selecionado',
+    appointments_count: 'atendimentos',
+    procedures_summary: 'Resumo de Procedimentos',
+    procedure: 'Procedimento',
+    category: 'Categoria',
+    quantity: 'Quantidade',
+    appointment_details: 'Detalhes dos Atendimentos',
+    date_time: 'Data/Hora',
+    client: 'Cliente',
+    duration: 'Duração',
+    no_data_for_pdf: 'Não há dados para gerar o PDF.',
+    error_generating_pdf: 'Erro ao gerar PDF:',
+    period: 'Período:',
+    total_appointments: 'Total de Atendimentos:',
+    total_hours_worked: 'Total de Horas Trabalhadas:',
+    generated_on: 'Gerado em:',
+    page: 'Página',
+    of: 'de',
+    failed_fetch_payslip: 'Falha ao buscar dados do payslip',
+    // Campaign translations
+    campaigns_title: 'Campanhas',
+    campaigns_subtitle: 'Gerencie campanhas de marketing para seus clientes',
+    new_campaign: 'Nova Campanha',
+    create_new_campaign: 'Criar Nova Campanha',
+    campaign_name: 'Nome da Campanha',
+    campaign_objective: 'Objetivo da Campanha',
+    campaign_objective_placeholder: 'Descreva o objetivo desta campanha...',
+    communication_channel: 'Canal de Comunicação',
+    message: 'Mensagem',
+    message_placeholder: 'Digite sua mensagem... Use {nome} para personalizar com o nome do cliente.',
+    use_name_personalize: 'Use {nome} para personalizar com o nome do cliente',
+    when_to_send: 'Quando Enviar',
+    send_now: 'Enviar Agora',
+    schedule: 'Agendar',
+    date_and_time: 'Data e Hora',
+    creating_campaign: 'Criando...',
+    create_campaign: 'Criar Campanha',
+    campaign_name_label: 'Nome',
+    objective: 'Objetivo',
+    campaign_channel: 'Canal',
+    sent_total: 'Enviadas/Total',
+    date: 'Data',
+    actions: 'Ações',
+    no_campaigns_created: 'Nenhuma campanha criada',
+    start_first_campaign: 'Comece criando sua primeira campanha de marketing',
+    create_first_campaign: 'Criar Primeira Campanha',
+    campaign_details: 'Detalhes da Campanha',
+    total_recipients: 'Total de Destinatários',
+    campaign_sent: 'Enviadas',
+    created_on: 'Criada em',
+    completed_on: 'Concluída em',
+    campaign_created_success: 'Campanha criada com sucesso!',
+    campaign_create_failed: 'Falha ao criar campanha. Tente novamente.',
+    campaign_sent_success: 'Campanha enviada com sucesso!',
+    campaign_send_failed: 'Falha ao enviar campanha. Tente novamente.',
+    campaign_deleted_success: 'Campanha deletada com sucesso!',
+    campaign_delete_failed: 'Falha ao deletar campanha. Tente novamente.',
+    confirm_delete_campaign: 'Tem certeza que deseja deletar esta campanha?',
+    campaign_objective_required: 'Objetivo é obrigatório',
+    message_required: 'Mensagem é obrigatória',
+    // Procedures translations
+    procedures_title: 'Procedimentos',
+    procedures_subtitle: 'Gerencie procedimentos de tratamento e materiais',
+    treatment_procedures: 'Procedimentos de Tratamento',
+    new_procedure: 'Novo Procedimento',
+    edit_procedure: 'Editar Procedimento',
+    procedure_name: 'Nome do Procedimento',
+    duration_minutes: 'Duração (minutos)',
+    price_nzd: 'Preço (R$)',
+    required_materials: 'Materiais Necessários',
+    add_material: 'Adicionar Material',
+    select_material: 'Selecionar material',
+    qty: 'Qtd',
+    update_material: 'Atualizar',
+    create_procedure: 'Criar Procedimento',
+    search_procedures: 'Pesquisar procedimentos por nome, descrição ou categoria...',
+    clear_filters: 'Limpar Filtros',
+    no_procedures_yet: 'Nenhum procedimento ainda',
+    create_first_procedure: 'Crie seu primeiro procedimento de tratamento para começar.',
+    add_first_procedure: 'Adicionar Primeiro Procedimento',
+    no_procedures_found: 'Nenhum procedimento encontrado',
+    loading_procedures: 'Carregando procedimentos...',
+    showing: 'Mostrando',
+    of_procedures: 'de',
+    procedure_singular: 'procedimento',
+    procedures_plural: 'procedimentos',
+    materials_required: 'Materiais Necessários',
+    available: 'disponível',
+    // Products translations
+    products_management: 'Gestão de Produtos',
+    products_subtitle: 'Gerencie produtos de venda e estoque',
+    total_products: 'Total de Produtos',
+    total_value: 'Valor Total',
+    low_stock: 'Estoque Baixo',
+    active_products: 'Produtos Ativos',
+    click_to_view_details: 'Clique para ver detalhes',
+    products_summary_by_type: 'Resumo de Produtos por Tipo',
+    products_catalog: 'Catálogo de Produtos',
+    add_product: 'Adicionar Produto',
+    edit_product: 'Editar Produto',
+    add_new_product: 'Adicionar Novo Produto',
+    product_name: 'Nome do Produto *',
+    product_code: 'Código do Produto *',
+    sale_price_nzd: 'Preço de Venda (R$) *',
+    cost_price_nzd: 'Preço de Custo (R$)',
+    current_stock: 'Estoque Atual',
+    min_stock_alert: 'Alerta de Estoque Mínimo',
+    max_stock: 'Estoque Máximo',
+    storage_location: 'Localização do Armazenamento',
+    update_product: 'Atualizar Produto',
+    create_product: 'Criar Produto',
+    search_products: 'Pesquisar produtos por nome, código ou código de barras...',
+    no_products_found: 'Nenhum produto encontrado',
+    start_adding_product: 'Comece adicionando seu primeiro produto',
+    try_different_search: 'Tente um termo de pesquisa diferente',
+    products_low_stock: 'Produtos com Estoque Baixo',
+    all_products_well_stocked: 'Todos os produtos estão bem estocados!',
+    no_products_below_minimum: 'Nenhum produto está abaixo do nível mínimo de estoque.',
+    current_stock_label: 'Estoque Atual',
+    min_stock_label: 'Estoque Mínimo',
+    difference: 'Diferença',
+    low_stock_alert: 'Alerta de Estoque Baixo',
+    reorder_message: 'Estes produtos atingiram ou ficaram abaixo do nível mínimo de estoque. Considere reabastecer para garantir serviço ininterrupto.',
+    inactive: 'Inativo',
+    active: 'Ativo',
+    // Staff translations
+    staff_management: 'Gestão de Equipe',
+    staff_subtitle: 'Gerencie membros da equipe e horários',
+    staff_overview: 'Visão Geral',
+    schedules: 'Horários',
+    performance: 'Desempenho',
+    add_staff_member: 'Adicionar Membro da Equipe',
+    total_staff: 'Total de Funcionários',
+    active_staff: 'Funcionários Ativos',
+    avg_commission: 'Comissão Média',
+    team_members: 'Membros da Equipe',
+    no_staff_registered: 'Nenhum funcionário registrado',
+    add_first_staff: 'Adicionar primeiro funcionário',
+    weekly_schedules: 'Horários Semanais',
+    schedule_management_coming_soon: 'Gerenciamento de horários em breve...',
+    staff_performance: 'Desempenho da Equipe',
+    performance_analytics_coming_soon: 'Análises de desempenho em breve...',
+    add_new_staff_member: 'Adicionar Novo Membro da Equipe',
+    full_name: 'Nome Completo',
+    role: 'Função',
+    email_optional: 'Email (Opcional)',
+    phone_optional: 'Telefone (Opcional)',
+    specialties: 'Especialidades',
+    list_specialties: 'Liste especialidades e certificações',
+    commission_rate_percent: 'Taxa de Comissão (%)',
+    paid_by_hours_worked: 'Pago por Horas Trabalhadas',
+    active_staff_member: 'Membro da Equipe Ativo',
+    adding: 'Adicionando...',
+    saving_staff: 'Salvando...',
+    save_staff_changes: 'Salvar Alterações',
+    edit_staff_member: 'Editar Membro da Equipe',
+    confirm_remove_staff: 'Tem certeza que deseja remover',
+    // Materials/Inventory translations
+    inventory_control: 'Controle de Estoque',
+    inventory_subtitle: 'Gerencie materiais da clínica e EPI',
+    personal_protection_equipment: 'Equipamento de Proteção Individual',
+    add_item: 'Adicionar Item',
+    add_item_to_inventory: 'Adicionar Item ao Estoque',
+    item_name: 'Nome do Item',
+    minimum_stock: 'Estoque Mínimo',
+    select_unit: 'Selecionar unidade',
+    units: 'Unidades',
+    boxes: 'Caixas',
+    packets: 'Pacotes',
+    bottles: 'Garrafas',
+    litres: 'Litros',
+    last_restocked: 'Última Reposição',
+    add_to_inventory: 'Adicionar ao Estoque',
+    inventory_management: 'Gerenciamento de Estoque',
+    out_of_stock: 'Sem Estoque',
+    stock_ok: 'Estoque OK',
+    no_items_in_stock: 'Nenhum item em estoque',
+    add_first_item: 'Adicionar primeiro item',
+    // Financial translations
+    financial_control: 'Controle Financeiro',
+    recent_transactions: 'Transações Recentes',
+    appointment_revenue: 'Receita de Agendamentos',
+    financial_summary: 'Resumo Financeiro',
+    monthly_summary: 'Resumo Mensal',
+    total_revenue: 'Receita Total',
+    from_appointments_transactions: 'De agendamentos e transações',
+    total_expenses: 'Despesas Totais',
+    operating_costs_supplies: 'Custos operacionais e suprimentos',
+    completed_revenue: 'Receita Concluída',
+    completed_appointments: 'agendamentos concluídos',
+    pending_revenue: 'Receita Pendente',
+    scheduled_appointments: 'agendamentos agendados',
+    net_profit: 'Lucro Líquido',
+    profit_margin: 'Margem de Lucro',
+    add_transaction: 'Adicionar Transação',
+    new_income: 'Nova Receita',
+    new_expense: 'Nova Despesa',
+    amount: 'Valor',
+    transaction_date: 'Data',
+    select_transaction_category: 'Selecione uma categoria',
+    treatment: 'Tratamento',
+    consultation: 'Consulta',
+    product_sale: 'Venda de Produto',
+    materials: 'Materiais',
+    equipment: 'Equipamento',
+    marketing: 'Marketing',
+    rent: 'Aluguel',
+    utilities: 'Utilidades',
+    supplies: 'Suprimentos',
+    maintenance: 'Manutenção',
+    insurance: 'Seguro',
+    professional_services: 'Serviços Profissionais',
+    add_new_transaction: 'Adicionar Nova Transação',
+    no_transactions_recorded: 'Nenhuma transação registrada',
+    no_appointments_scheduled: 'Nenhum agendamento agendado',
+    // Communication translations
+    communication_title: 'Comunicação',
+    communication_subtitle: 'Gerencie mensagens, feedback e interações com clientes',
+    automatic_messages: 'Mensagens Automáticas',
+    appointment_reminder: 'Lembrete de Agendamento',
+    sent_24h_before: 'Enviado 24h antes do agendamento',
+    reminder_message: 'Olá [nome], gostaríamos de lembrá-lo que você tem um agendamento amanhã às [hora]. Até breve!',
+    post_treatment_feedback: 'Feedback Pós-Tratamento',
+    sent_2h_after: 'Enviado 2h após o tratamento',
+    feedback_message: 'Como você está se sentindo após seu tratamento? Seu feedback é muito importante para nós!',
+    monthly_promotions: 'Promoções Mensais',
+    sent_beginning_month: 'Enviado no início de cada mês',
+    promotion_message: 'Confira nossas promoções especiais deste mês! Cuide da sua pele com descontos especiais.',
+    client_feedback: 'Feedback dos Clientes',
+    no_feedback_received: 'Nenhum feedback recebido',
+    feedback_channel: 'Canal',
+    sending: 'Enviando...',
+    send_feedback_message: 'Enviar Mensagem',
+    // Loyalty translations
+    create_package: 'Criar Pacote',
+    package_name: 'Nome do Pacote',
+    included_services: 'Serviços Incluídos',
+    original_price: 'Preço Original',
+    discounted_price: 'Preço com Desconto',
+    discount_percent: 'Desconto (%)',
+    validity_days: 'Validade (dias)',
+    creating_package: 'Criando...',
+    available_packages: 'Pacotes Disponíveis',
+    normal_price: 'Preço normal:',
+    details: 'Detalhes',
+    no_packages_created: 'Nenhum pacote criado',
+    create_first_package: 'Criar primeiro pacote',
+    loyalty_clients: 'Clientes de Fidelidade',
+    client_since: 'Cliente desde',
+    accumulated_points: 'Pontos acumulados',
+    next_discount: 'Próximo desconto:',
+    how_it_works: 'Como Funciona',
+    points_per_dollar: 'ponto(s) por R$ 1,00 gasto',
+    points_equals_discount: 'pontos = R$',
+    birthday_bonus: 'Bônus de aniversário: +',
+    friend_referral: 'Indicação de amigo: +',
+    vip_levels: 'Níveis VIP',
+    bronze: 'Bronze',
+    silver: 'Prata',
+    gold: 'Ouro',
+    points: 'pontos',
+    // Packages translations
+    packages_title: 'Pacotes',
+    packages_subtitle: 'Gerencie pacotes de clientes com serviços e produtos',
+    new_package: 'Novo Pacote',
+    create_new_package: 'Criar Novo Pacote',
+    select_package_client: 'Selecione um cliente',
+    package_name_label: 'Nome do Pacote',
+    description_optional: 'Descrição (Opcional)',
+    services: 'Serviços',
+    products: 'Produtos',
+    total_price_label: 'Preço Total:',
+    validity_start_date: 'Data de Início da Validade',
+    validity_end_date: 'Data de Fim da Validade',
+    update_package: 'Atualizar Pacote',
+    create_package_button: 'Criar Pacote',
+    loading_packages: 'Carregando pacotes...',
+    no_packages_found: 'Nenhum pacote encontrado. Crie seu primeiro pacote!',
+    create_first_package_button: 'Criar Primeiro Pacote',
+    service_balance: 'Saldo de Serviços',
+    money_balance: 'Saldo em Dinheiro',
+    validity: 'Validade',
+    contents: 'Conteúdo:',
+    // Analytics translations
+    business_analytics: 'Análises de Negócios',
+    analytics_subtitle: 'Insights abrangentes sobre o desempenho do seu negócio',
+    analytics_revenue: 'Receita',
+    clients_analytics: 'Clientes',
+    services_analytics: 'Serviços',
+    from_last_month: 'do mês passado',
+    new_this_month: 'novos este mês',
+    revenue_vs_expenses: 'Receita vs Despesas',
+    appointment_success_rate: 'Taxa de Sucesso de Agendamentos',
+    out_of: 'de',
+    appointments_completed: 'agendamentos concluídos',
+    revenue_breakdown: 'Detalhamento de Receita',
+    total_income: 'Receita Total',
+    client_statistics: 'Estatísticas de Clientes',
+    client_activity: 'Atividade de Clientes',
+    inactive_clients: 'Clientes Inativos',
+    loyalty_points_distribution: 'Distribuição de Pontos de Fidelidade',
+    service_performance: 'Desempenho de Serviços',
+    appointments: 'agendamentos',
+    bookings: 'reservas',
+    no_service_data: 'Nenhum dado de serviço disponível ainda',
+    // Settings translations
+    settings_title: 'Configurações',
+    settings_subtitle: 'Gerencie as configurações do sistema',
+    profile: 'Perfil',
+    business_hours: 'Horários de Funcionamento',
+    notifications: 'Notificações',
+    appearance: 'Aparência',
+    loyalty_settings: 'Configurações de Fidelidade',
+    public_page: 'Página Pública',
+    banners: 'Banners',
+    general: 'Geral',
+    email: 'Email',
+    first_name: 'Nome',
+    last_name: 'Sobrenome',
+    professional_registration: 'Registro Profissional',
+    clinic_name: 'Nome da Clínica',
+    clinic_cnpj: 'CNPJ da Clínica',
+    clinic_address: 'Endereço da Clínica',
+    clinic_phone: 'Telefone da Clínica',
+    clinic_whatsapp: 'WhatsApp da Clínica',
+    reminder_start_time: 'Horário de Início dos Lembretes',
+    reminder_end_time: 'Horário de Fim dos Lembretes',
+    inactivity_days: 'Dias de Inatividade',
+    reminder_hours: 'Horas de Lembrete',
+    save_profile: 'Salvar Perfil',
+    monday: 'Segunda-feira',
+    tuesday: 'Terça-feira',
+    wednesday: 'Quarta-feira',
+    thursday: 'Quinta-feira',
+    friday: 'Sexta-feira',
+    saturday: 'Sábado',
+    sunday: 'Domingo',
+    closed: 'Fechado',
+    open_hours: 'Aberto',
+    break_time: 'Horário de Intervalo',
+    save_business_hours: 'Salvar Horários de Funcionamento',
+    notification_preferences: 'Preferências de Notificação',
+    email_notifications: 'Notificações por Email',
+    sms_notifications: 'Notificações por SMS',
+    push_notifications: 'Notificações Push',
+    save_notifications: 'Salvar Notificações',
+    appearance_settings: 'Configurações de Aparência',
+    hero_image: 'Imagem Hero',
+    upload_hero_image: 'Enviar Imagem Hero',
+    save_appearance: 'Salvar Aparência',
+    loyalty_program_settings: 'Configurações do Programa de Fidelidade',
+    points_per_dollar_spent: 'Pontos por Real Gastos',
+    discount_per_hundred_points: 'Desconto por Cem Pontos',
+    birthday_bonus_points: 'Pontos de Bônus de Aniversário',
+    referral_bonus_points: 'Pontos de Bônus de Indicação',
+    bronze_threshold: 'Limiar Bronze',
+    silver_threshold: 'Limiar Prata',
+    gold_threshold: 'Limiar Ouro',
+    save_loyalty_settings: 'Salvar Configurações de Fidelidade',
+    public_page_settings: 'Configurações da Página Pública',
+    public_page_url: 'URL da Página Pública',
+    login_screen_banner: 'Banner da Tela de Login',
+    dashboard_banner: 'Banner do Dashboard',
+    enter_image_url: 'Digite a URL da imagem',
+    save_banner: 'Salvar Banner',
+    valid_image_url_required: 'Por favor, insira uma URL de imagem válida',
+    click_to_upload: 'Clique para enviar',
+    jpg_or_png_max_10mb: 'JPG ou PNG, máx. 10MB',
+    beauty_therapy_board_registration_placeholder: 'Número de registro do Beauty Therapy Board NZ',
+    specialties_label: 'Especialidades',
+    describe_specialties_placeholder: 'Descreva suas especialidades...',
+    list_specialties_placeholder: 'Liste especialidades e certificações',
+    clinic_details: 'Detalhes da Clínica',
+    clinic_name_label: 'Nome da Clínica',
+    business_number: 'Número de Negócio',
+    business_phone: 'Telefone Comercial',
+    complete_address: 'Endereço Completo',
+    whatsapp_business: 'WhatsApp Business',
+    system_information: 'Informações do Sistema',
+    support_title: 'Suporte',
+    need_help_contact_support: 'Precisa de ajuda? Entre em contato com nossa equipe de suporte para assistência com seu sistema de gestão de clínica.',
+    contact_support_button: 'Contatar Suporte',
+    account_title: 'Conta',
+    signed_in_as: 'Conectado como:',
+    sign_out: 'Sair',
+    operating_hours: 'Horários de Funcionamento',
+    save_hours: 'Salvar Horários',
+    saving_hours: 'Salvando...',
+    operating_hours_information: 'Informações sobre Horários de Funcionamento',
+    operating_hours_description: 'Estes horários serão usados para agendamento de consultas e disponibilidade de reservas de clientes. Os intervalos de almoço são automaticamente excluídos dos horários de consulta disponíveis.',
+    closing_time: 'Horário de Fechamento',
+    lunch_start: 'Início do Intervalo',
+    lunch_end: 'Fim do Intervalo',
+    time_parameters: 'Parâmetros de Tempo',
+    inactivity_timeout_days: 'Tempo de Inatividade (dias)',
+    inactivity_timeout_description: 'Leads sem atividade por X dias serão marcados para acompanhamento',
+    reminder_time_hours: 'Tempo de Lembrete (horas)',
+    reminder_time_description: 'Lembretes serão enviados X horas antes dos agendamentos',
+    reminder_schedule_configuration: 'Configuração de Horário de Lembretes',
+    reminder_schedule_description: 'Defina a janela de tempo para envio de lembretes. Os lembretes serão enviados apenas neste período para respeitar as horas de descanso dos clientes.',
+    start_time_for_reminders: 'Horário de Início dos Lembretes',
+    select_start_time: 'Selecione o horário de início',
+    start_time_example: 'ex: 18:00 - Lembretes começam a ser enviados a partir deste horário',
+    end_time_for_reminders: 'Horário de Fim dos Lembretes',
+    select_end_time: 'Selecione o horário de fim',
+    end_time_example: 'ex: 20:00 - Lembretes param de ser enviados após este horário',
+    valid_configuration: 'Configuração Válida: Lembretes serão enviados entre',
+    reminder_example: 'Exemplo: Com horários',
+    save_time_settings: 'Salvar Configurações de Tempo',
+    team_members_management: 'Gestão de Membros da Equipe',
+    loading_team_members: 'Carregando membros da equipe...',
+    edit_staff_member: 'Editar Membro da Equipe',
+    no_team_members_yet: 'Ainda não há membros da equipe',
+    add_staff_members_description: 'Adicione membros da equipe para gerenciar sua equipe e horários',
+    go_to_staff_management: 'Ir para Gestão de Equipe',
+    team_management: 'Gestão de Equipe',
+    team_management_description: 'Gerencie seus membros da equipe aqui. Você pode editar suas informações, horários e removê-los da equipe. Para gestão completa de equipe incluindo adicionar novos membros, use a página Equipe do menu principal.',
+    staff_member_updated: 'Membro da equipe atualizado com sucesso',
+    staff_member_removed: 'Membro da equipe removido com sucesso',
+    failed_update_staff: 'Falha ao atualizar membro da equipe',
+    failed_remove_staff: 'Falha ao remover membro da equipe',
+    confirm_remove_staff_member: 'Tem certeza que deseja remover',
+    name_label: 'Nome',
+    role_label: 'Função',
+    phone_label: 'Telefone',
+    commission_rate_percent: 'Taxa de Comissão (%)',
+    paid_by_hours_worked: 'Pago por Horas Trabalhadas',
+    active_label: 'Ativo',
+    inactive_label: 'Inativo',
+    staff_member_name_placeholder: 'Nome do membro da equipe',
+    role_placeholder: 'ex: Esteticista Sênior',
+    email_placeholder: 'email@exemplo.com',
+    phone_placeholder: '021 123 4567',
+    ird_number_placeholder: '123-456-789',
+    loyalty_settings_description: 'Configure como os clientes ganham e resgatam pontos de fidelidade.',
+    points_per_dollar_label: 'Pontos por R$ 1,00 gasto',
+    discount_per_hundred_points_label: 'Desconto por Cem Pontos',
+    birthday_bonus_points_label: 'Pontos de Bônus de Aniversário',
+    referral_bonus_points_label: 'Pontos de Bônus de Indicação',
+    bronze_threshold_label: 'Limiar Bronze',
+    silver_threshold_label: 'Limiar Prata',
+    gold_threshold_label: 'Limiar Ouro',
+    loyalty_settings_saved: 'Configurações de fidelidade salvas com sucesso!',
+    failed_save_loyalty_settings: 'Falha ao salvar configurações de fidelidade',
+    income: 'Receita',
+    expense: 'Despesa',
+    from_team: 'da equipe',
+    drop_image_or_click: 'Solte sua imagem aqui ou clique para procurar',
+    jpg_png_up_to_10mb: 'JPG, PNG até 10MB',
+    desktop_label: 'Desktop',
+    mobile_label: 'Mobile',
+    recommended_resolution: 'Recomendado: 1920x600px',
+    optimised_automatically: 'Otimizado automaticamente',
+    uploading: 'Enviando...',
+    // Additional common translations
+    last_7_days: 'Últimos 7 dias',
+    last_30_days: 'Últimos 30 dias',
+    last_3_months: 'Últimos 3 meses',
+    last_year: 'Último ano',
+    other_category: 'Outro',
+    confirm_delete: 'Tem certeza que deseja deletar',
+    edit_package: 'Editar Pacote',
+    ird_number_required_optional: 'CPF/CNPJ *',
+    optional: 'Opcional',
+    please_try_again_search: 'Tente ajustar seus critérios de pesquisa ou filtro.',
+    remove_item: 'Remover',
+    completed_status: 'concluído',
+    revenue_label: 'receita',
+    active_clients_label: 'Clientes Ativos',
+    total_clients_label: 'Total de Clientes',
+    edit_item: 'Editar',
+    status_label: 'Status',
+    name_label: 'Nome',
+    price_label: 'Preço',
+    unit_label: 'Unidade',
+    barcode_label: 'Código de Barras',
+    products_menu_label: 'Produtos',
+    manage_packages_points_label: 'Gerencie pacotes de serviços e pontos de fidelidade',
+    create_item: 'Criar',
+    packages_menu_label: 'Pacote',
+    and_label: 'e',
+    professional_profile: 'Perfil Profissional',
+    opening_time: 'Horário de Abertura',
+    closing_time: 'Horário de Fechamento',
+    upload_hero_image_description: 'Envie uma imagem hero para sua página de agendamento de clientes. Esta imagem será exibida no topo da sua página pública de agendamento.',
+    receive_email_alerts: 'Receba alertas por email para novos agendamentos',
+    send_sms_reminders: 'Envie lembretes de agendamento via SMS',
+    realtime_alerts: 'Alertas em tempo real no aplicativo',
+    marketing_notifications: 'Notificações de Marketing',
+    receive_updates: 'Receba atualizações sobre novos recursos e dicas',
+    configure_notifications: 'Configure como e quando deseja receber notificações sobre agendamentos, comunicações com clientes e atualizações do sistema.',
+    team: 'Equipe',
+    integrations: 'Integrações',
+    loading_generic: 'Carregando...',
+    all_categories_label: 'Todas as Categorias',
+    select_category_label: 'Selecione uma categoria',
+    category_label: 'Categoria',
+    description_label: 'Descrição',
+    client_label_generic: 'Cliente',
+  },
+  'en-NZ': {
+    welcome_back: 'Welcome back',
+    enter_credentials: 'Enter your credentials to access the system',
+    username: 'Username',
+    password: 'Password',
+    login: 'Login',
+    daily_revenue: 'Daily Revenue',
+    total_clients: 'Total Clients',
+    satisfaction_rate: 'Satisfaction Rate',
+    todays_schedule: "Today's Schedule",
+    view_all: 'View All',
+    quick_actions: 'Quick Actions',
+    book_appointment: 'Book Appointment',
+    add_client: 'Add Client',
+    record_payment: 'Record Payment',
+    loading: 'Loading...',
+    redirecting: 'Redirecting to dashboard...',
+    client_management: 'Client Management',
+    manage_clients: 'Manage your client database and appointments',
+    edit_client: 'Edit Client',
+    save_changes: 'Save Changes',
+    cancel: 'Cancel',
+    settings: 'Settings',
+    language: 'Language',
+    currency: 'Currency',
+    select_language: 'Select language',
+    select_currency: 'Select currency',
+    new_appointment: 'New Appointment',
+    send_message: 'Send Message',
+    no_appointments_today: 'No appointments scheduled for today',
+    logging_in: 'Logging in...',
+    login_button: 'Login to Platform',
+    todays_appointments: "Today's Appointments",
+    service_categories: 'Service Categories',
+    hair_cut: 'Hair Cut',
+    hair_cut_subtitle: 'Men & Women',
+    hair_colour: 'Hair Colour',
+    hair_colour_subtitle: '& Dye',
+    hair_treatment: 'Hair Treatment',
+    hair_treatment_subtitle: '& Care',
+    blow_dry: 'Blow Dry',
+    blow_dry_subtitle: '& Styling',
+    extensions: 'Extensions',
+    extensions_subtitle: 'Hair & Lash',
+    nail_care: 'Nail Care',
+    nail_care_subtitle: 'Mani & Pedi',
+    performance_overview: 'Performance Overview',
+    monthly_growth: 'Monthly Growth',
+    completed_treatments: 'Completed Treatments',
+    average_rating: 'Average Rating',
+    dashboard_menu: 'Dashboard',
+    appointments_menu: 'Appointments',
+    registry_menu: 'Registry',
+    clients_menu: 'Clients',
+    services_menu: 'Services',
+    procedures_menu: 'Procedures',
+    packages_menu: 'Packages',
+    products_menu: 'Products',
+    clinical_menu: 'Clinical',
+    clinical_records_menu: 'Clinical Records',
+    inventory_menu: 'PPE & Materials',
+    management_menu: 'Management',
+    staff_menu: 'Staff',
+    financial_menu: 'Financial',
+    business_hours_menu: 'Business Hours',
+    analytics_menu: 'Analytics',
+    settings_menu: 'Settings',
+    // Common action buttons
+    save: 'Save',
+    delete: 'Delete',
+    edit: 'Edit',
+    create: 'Create',
+    update: 'Update',
+    submit: 'Submit',
+    close: 'Close',
+    open: 'Open',
+    view: 'View',
+    show: 'Show',
+    hide: 'Hide',
+    search: 'Search',
+    filter: 'Filter',
+    export: 'Export',
+    import: 'Import',
+    download: 'Download',
+    upload: 'Upload',
+    print: 'Print',
+    back: 'Back',
+    next: 'Next',
+    previous: 'Previous',
+    confirm: 'Confirm',
+    yes: 'Yes',
+    no: 'No',
+    ok: 'OK',
+    remove: 'Remove',
+    clear: 'Clear',
+    reset: 'Reset',
+    apply: 'Apply',
+    // Page titles and labels
+    appointments_title: 'Appointments',
+    appointments_subtitle: 'Manage your client appointments',
+    clients_title: 'Client Management',
+    clients_subtitle: 'Manage your client database and appointments',
+    calendar_view: 'Calendar',
+    list_view: 'List',
+    month_view: 'Month',
+    week_view: 'Week',
+    day_view: 'Day',
+    search_clients: 'Search clients...',
+    search_placeholder: 'Search...',
+    overview: 'Overview',
+    loyalty_programs: 'Loyalty Programs',
+    client_database: 'Client Database',
+    no_clients_found: 'No clients found',
+    unknown_procedure: 'Unknown Procedure',
+    unknown_service: 'Unknown Service',
+    invalid_date: 'Invalid date',
+    success: 'Success',
+    error: 'Error',
+    failed_to_create: 'Failed to create. Please try again.',
+    created_successfully: 'Created successfully!',
+    updated_successfully: 'Updated successfully!',
+    deleted_successfully: 'Deleted successfully!',
+    please_try_again: 'Please try again',
+    // Calendar specific
+    appointment_calendar: 'Appointment Calendar',
+    today: 'Today',
+    today_tomorrow: 'Today & Tomorrow',
+    week_of: 'Week of',
+    new_appointment_button: 'New Appointment',
+    appointments_list: 'Appointments List',
+    time: 'Time',
+    // Form labels and placeholders
+    upload_before_photos: 'Upload Before Photos',
+    upload_after_photos: 'Upload After Photos',
+    creating: 'Creating...',
+    updating: 'Updating...',
+    update_appointment: 'Update Appointment',
+    please_select_procedure: 'Please select at least one procedure',
+    please_select_client: 'Please select a client',
+    please_select_staff: 'Please select a staff member',
+    client_communication: 'Client Communication',
+    new_message: 'New Message',
+    send_manual_message: 'Send Manual Message',
+    recipient: 'Recipient',
+    select_recipient: 'Select recipient',
+    all_clients: 'All clients',
+    marketing_campaigns: 'Marketing Campaigns',
+    create_manage_campaigns: 'Create and manage your marketing campaigns',
+    campaigns: 'Campaigns',
+    total_campaigns: 'Total Campaigns',
+    sent: 'Sent',
+    financial_management: 'Financial Management',
+    control_revenue_expenses: 'Control revenue, expenses and cash flow',
+    transaction_added: 'Transaction added successfully!',
+    income: 'Income',
+    expense: 'Expense',
+    procedure_name_required: 'Procedure name is required',
+    category_required: 'Category is required',
+    duration_min_15: 'Duration must be at least 15 minutes',
+    price_positive: 'Price must be positive',
+    quantity_min_1: 'Quantity must be at least 1',
+    procedure_created: 'Procedure created successfully!',
+    procedure_updated: 'Procedure updated successfully!',
+    procedure_deleted: 'Procedure deleted successfully!',
+    failed_create_procedure: 'Failed to create procedure',
+    name_required: 'Name is required',
+    role_required: 'Role is required',
+    ird_number_required: 'IRD Number is required',
+    staff_created: 'Staff member created successfully!',
+    staff_updated: 'Staff member updated successfully!',
+    staff_deleted: 'Staff member deleted successfully!',
+    no_data_found: 'No data found',
+    select_category: 'Select category',
+    all_categories: 'All categories',
+    // Additional missing translations
+    loyalty: 'Loyalty',
+    fidelity: 'Fidelity',
+    status: 'Status',
+    select_status: 'Select status',
+    total_duration: 'Total Duration',
+    automatically_calculated: 'Automatically calculated from selected procedures',
+    please_select_services: 'Please select services first to see available appointment times',
+    client_analytics: 'Client Analytics',
+    coming_soon: 'Coming soon...',
+    add_first_client: 'Add your first client',
+    scheduled: 'Scheduled',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    pending: 'Pending',
+    minutes: 'minutes',
+    manage_packages_points: 'Manage service packages and loyalty points',
+    create_new_appointment: 'Create New Appointment',
+    client_label: 'Client',
+    type_to_search_clients: 'Type to search clients...',
+    procedures_label: 'Procedures',
+    professional_label: 'Professional',
+    select_professional: 'Select a professional',
+    date_label: 'Date',
+    time_label: 'Time',
+    select_time: 'Select time',
+    loading_times: 'Loading times...',
+    no_times_available: 'No times available',
+    booked: 'Booked',
+    total_amount: 'Total Amount',
+    paid_amount: 'Paid Amount',
+    notes_label: 'Notes',
+    additional_notes: 'Additional notes...',
+    before_photos: 'Before Photos',
+    after_photos: 'After Photos',
+    selected_procedures: 'Selected Procedures',
+    total_price: 'Total Price',
+    no_times_available_date: 'No times available for this date and professional. Try selecting another date or professional.',
+    other_category: 'Other',
+    clinical_records: 'Clinical Records',
+    record_track_treatments: 'Record and track treatments performed',
+    electronic_clinical_record: 'Electronic Clinical Record',
+    new_record: 'New Record',
+    new_clinical_record: 'New Clinical Record',
+    select_client: 'Select a client',
+    procedure_performed: 'Procedure Performed',
+    select_procedure: 'Select a procedure',
+    procedure_date: 'Procedure Date',
+    procedure_notes: 'Procedure Notes',
+    procedure_notes_placeholder: 'Procedure details, reactions, observed results...',
+    result_assessment: 'Result Assessment',
+    poor: 'Poor',
+    excellent: 'Excellent',
+    next_appointment: 'Next Appointment',
+    before_after_photos: 'Before/After Photos',
+    before: 'Before',
+    after: 'After',
+    click_to_add_photo: 'Click to add photo',
+    saving: 'Saving...',
+    save_clinical_record: 'Save Clinical Record',
+    result: 'Result',
+    next_label: 'Next',
+    no_clinical_records: 'No clinical records registered',
+    create_first_clinical_record: 'Create first clinical record',
+    clinical_record_created: 'Clinical record created successfully!',
+    failed_create_clinical_record: 'Failed to create clinical record. Please try again.',
+    invalid_image_file: 'Please select a valid image file (PNG or JPG).',
+    image_uploaded_successfully: 'Image uploaded successfully!',
+    failed_upload_image: 'Failed to upload image. Please try again.',
+    // Payslip translations
+    payslip_report: 'Payslip Report',
+    payslip_report_subtitle: 'Report of procedures performed by professional',
+    download_pdf: 'Download PDF',
+    filters: 'Filters',
+    professional: 'Professional',
+    all_professionals: 'All professionals',
+    start_date: 'Start Date',
+    end_date: 'End Date',
+    error_loading_data: 'Error loading data',
+    unexpected_error: 'An unexpected error occurred',
+    loading_data: 'Loading data...',
+    no_data_for_period: 'No data found for the selected period',
+    appointments_count: 'appointments',
+    procedures_summary: 'Procedures Summary',
+    procedure: 'Procedure',
+    category: 'Category',
+    quantity: 'Quantity',
+    appointment_details: 'Appointment Details',
+    date_time: 'Date/Time',
+    client: 'Client',
+    duration: 'Duration',
+    no_data_for_pdf: 'There is no data to generate the PDF.',
+    error_generating_pdf: 'Error generating PDF:',
+    period: 'Period:',
+    total_appointments: 'Total Appointments:',
+    total_hours_worked: 'Total Hours Worked:',
+    generated_on: 'Generated on:',
+    page: 'Page',
+    of: 'of',
+    failed_fetch_payslip: 'Failed to fetch payslip data',
+    // Campaign translations
+    campaigns_title: 'Campaigns',
+    campaigns_subtitle: 'Manage marketing campaigns for your clients',
+    marketing_campaigns: 'Marketing Campaigns',
+    new_campaign: 'New Campaign',
+    create_new_campaign: 'Create New Campaign',
+    campaign_name: 'Campaign Name',
+    campaign_objective: 'Campaign Objective',
+    campaign_objective_placeholder: 'Describe the objective of this campaign...',
+    communication_channel: 'Communication Channel',
+    message: 'Message',
+    message_placeholder: 'Type your message... Use {name} to personalise with the client\'s name.',
+    use_name_personalize: 'Use {name} to personalise with the client\'s name',
+    when_to_send: 'When to Send',
+    send_now: 'Send Now',
+    schedule: 'Schedule',
+    date_and_time: 'Date and Time',
+    creating_campaign: 'Creating...',
+    create_campaign: 'Create Campaign',
+    name: 'Name',
+    objective: 'Objective',
+    channel: 'Channel',
+    sent_total: 'Sent/Total',
+    date: 'Date',
+    actions: 'Actions',
+    no_campaigns_created: 'No campaigns created',
+    start_first_campaign: 'Start by creating your first marketing campaign',
+    create_first_campaign: 'Create First Campaign',
+    campaign_details: 'Campaign Details',
+    total_recipients: 'Total Recipients',
+    sent: 'Sent',
+    created_on: 'Created on',
+    completed_on: 'Completed on',
+    campaign_created_success: 'Campaign created successfully!',
+    campaign_create_failed: 'Failed to create campaign. Please try again.',
+    campaign_sent_success: 'Campaign sent successfully!',
+    campaign_send_failed: 'Failed to send campaign. Please try again.',
+    campaign_deleted_success: 'Campaign deleted successfully!',
+    campaign_delete_failed: 'Failed to delete campaign. Please try again.',
+    confirm_delete_campaign: 'Are you sure you want to delete this campaign?',
+    campaign_objective_required: 'Objective is required',
+    message_required: 'Message is required',
+    // Procedures translations
+    procedures_title: 'Procedures',
+    procedures_subtitle: 'Manage treatment procedures and materials',
+    treatment_procedures: 'Treatment Procedures',
+    new_procedure: 'New Procedure',
+    edit_procedure: 'Edit Procedure',
+    procedure_name: 'Procedure Name',
+    duration_minutes: 'Duration (minutes)',
+    price_nzd: 'Price (NZD $)',
+    required_materials: 'Required Materials',
+    add_material: 'Add Material',
+    select_material: 'Select material',
+    qty: 'Qty',
+    update: 'Update',
+    create_procedure: 'Create Procedure',
+    search_procedures: 'Search procedures by name, description or category...',
+    clear_filters: 'Clear Filters',
+    no_procedures_yet: 'No procedures yet',
+    create_first_procedure: 'Create your first treatment procedure to get started.',
+    add_first_procedure: 'Add First Procedure',
+    no_procedures_found: 'No procedures found',
+    loading_procedures: 'Loading procedures...',
+    showing: 'Showing',
+    of: 'of',
+    procedure_singular: 'procedure',
+    procedures_plural: 'procedures',
+    materials_required: 'Materials Required',
+    available: 'available',
+    // Products translations
+    products_management: 'Products Management',
+    products_subtitle: 'Manage retail products and inventory',
+    total_products: 'Total Products',
+    total_value: 'Total Value',
+    low_stock: 'Low Stock',
+    active_products: 'Active Products',
+    click_to_view_details: 'Click to view details',
+    products_summary_by_type: 'Products Summary by Type',
+    products_catalog: 'Products Catalog',
+    add_product: 'Add Product',
+    edit_product: 'Edit Product',
+    add_new_product: 'Add New Product',
+    product_name: 'Product Name *',
+    product_code: 'Product Code *',
+    sale_price_nzd: 'Sale Price (NZ$) *',
+    cost_price_nzd: 'Cost Price (NZ$)',
+    current_stock: 'Current Stock',
+    min_stock_alert: 'Min Stock Alert',
+    max_stock: 'Max Stock',
+    storage_location: 'Storage Location',
+    update_product: 'Update Product',
+    create_product: 'Create Product',
+    search_products: 'Search products by name, code, or barcode...',
+    no_products_found: 'No products found',
+    start_adding_product: 'Start by adding your first product',
+    try_different_search: 'Try a different search term',
+    products_low_stock: 'Products with Low Stock',
+    all_products_well_stocked: 'All products are well stocked!',
+    no_products_below_minimum: 'No products are currently below their minimum stock level.',
+    current_stock_label: 'Current Stock',
+    min_stock_label: 'Min Stock',
+    difference: 'Difference',
+    low_stock_alert: 'Low Stock Alert',
+    reorder_message: 'These products have reached or fallen below their minimum stock level. Consider reordering to ensure uninterrupted service.',
+    inactive: 'Inactive',
+    active: 'Active',
+    // Staff translations
+    staff_management: 'Staff Management',
+    staff_subtitle: 'Manage your team members and schedules',
+    overview: 'Overview',
+    schedules: 'Schedules',
+    performance: 'Performance',
+    add_staff_member: 'Add Staff Member',
+    total_staff: 'Total Staff',
+    active_staff: 'Active Staff',
+    avg_commission: 'Avg Commission',
+    team_members: 'Team Members',
+    no_staff_registered: 'No staff members registered',
+    add_first_staff: 'Add first staff member',
+    weekly_schedules: 'Weekly Schedules',
+    schedule_management_coming_soon: 'Schedule management coming soon...',
+    staff_performance: 'Staff Performance',
+    performance_analytics_coming_soon: 'Performance analytics coming soon...',
+    add_new_staff_member: 'Add New Staff Member',
+    full_name: 'Full Name',
+    role: 'Role',
+    email_optional: 'Email (Optional)',
+    phone_optional: 'Phone (Optional)',
+    specialties: 'Specialties',
+    list_specialties: 'List specialties and certifications',
+    commission_rate_percent: 'Commission Rate (%)',
+    paid_by_hours_worked: 'Paid by Hours Worked',
+    active_staff_member: 'Active Staff Member',
+    adding: 'Adding...',
+    saving: 'Saving...',
+    save_changes: 'Save Changes',
+    edit_staff_member: 'Edit Staff Member',
+    confirm_remove_staff: 'Are you sure you want to remove',
+    // Materials/Inventory translations
+    inventory_control: 'Inventory Control',
+    inventory_subtitle: 'Manage clinic materials and PPE',
+    personal_protection_equipment: 'Personal Protection Equipment',
+    add_item: 'Add Item',
+    add_item_to_inventory: 'Add Item to Inventory',
+    item_name: 'Item Name',
+    minimum_stock: 'Minimum Stock',
+    select_unit: 'Select unit',
+    units: 'Units',
+    boxes: 'Boxes',
+    packets: 'Packets',
+    bottles: 'Bottles',
+    litres: 'Litres',
+    last_restocked: 'Last Restocked',
+    add_to_inventory: 'Add to Inventory',
+    inventory_management: 'Inventory Management',
+    out_of_stock: 'Out of Stock',
+    stock_ok: 'Stock OK',
+    no_items_in_stock: 'No items in stock',
+    add_first_item: 'Add first item',
+    // Financial translations
+    financial_control: 'Financial Control',
+    recent_transactions: 'Recent Transactions',
+    appointment_revenue: 'Appointment Revenue',
+    financial_summary: 'Financial Summary',
+    monthly_summary: 'Monthly Summary',
+    total_revenue: 'Total Revenue',
+    from_appointments_transactions: 'From appointments and transactions',
+    total_expenses: 'Total Expenses',
+    operating_costs_supplies: 'Operating costs and supplies',
+    completed_revenue: 'Completed Revenue',
+    completed_appointments: 'completed appointments',
+    pending_revenue: 'Pending Revenue',
+    scheduled_appointments: 'scheduled appointments',
+    net_profit: 'Net Profit',
+    profit_margin: 'Profit Margin',
+    add_transaction: 'Add Transaction',
+    new_income: 'New Income',
+    new_expense: 'New Expense',
+    amount: 'Amount',
+    transaction_date: 'Date',
+    select_category: 'Select a category',
+    treatment: 'Treatment',
+    consultation: 'Consultation',
+    product_sale: 'Product Sale',
+    materials: 'Materials',
+    equipment: 'Equipment',
+    marketing: 'Marketing',
+    rent: 'Rent',
+    utilities: 'Utilities',
+    supplies: 'Supplies',
+    maintenance: 'Maintenance',
+    insurance: 'Insurance',
+    professional_services: 'Professional Services',
+    add_new_transaction: 'Add New Transaction',
+    no_transactions_recorded: 'No transactions recorded',
+    no_appointments_scheduled: 'No appointments scheduled',
+    // Communication translations
+    communication_title: 'Communication',
+    communication_subtitle: 'Manage messages, feedback and client interactions',
+    automatic_messages: 'Automatic Messages',
+    appointment_reminder: 'Appointment Reminder',
+    sent_24h_before: 'Sent 24h before appointment',
+    reminder_message: 'Hi [name], we\'d like to remind you that you have an appointment tomorrow at [time]. See you soon!',
+    post_treatment_feedback: 'Post-Treatment Feedback',
+    sent_2h_after: 'Sent 2h after treatment',
+    feedback_message: 'How are you feeling after your treatment? Your feedback is very important to us!',
+    monthly_promotions: 'Monthly Promotions',
+    sent_beginning_month: 'Sent at the beginning of each month',
+    promotion_message: 'Check out our special promotions this month! Take care of your skin with special discounts.',
+    client_feedback: 'Client Feedback',
+    no_feedback_received: 'No feedback received',
+    channel: 'Channel',
+    sending: 'Sending...',
+    send_message: 'Send Message',
+    // Loyalty translations
+    create_package: 'Create Package',
+    package_name: 'Package Name',
+    included_services: 'Included Services',
+    original_price: 'Original Price',
+    discounted_price: 'Discounted Price',
+    discount_percent: 'Discount (%)',
+    validity_days: 'Validity (days)',
+    creating: 'Creating...',
+    available_packages: 'Available Packages',
+    normal_price: 'Normal price:',
+    details: 'Details',
+    no_packages_created: 'No packages created',
+    create_first_package: 'Create first package',
+    loyalty_clients: 'Loyalty Clients',
+    client_since: 'Client since',
+    accumulated_points: 'Accumulated points',
+    next_discount: 'Next discount:',
+    how_it_works: 'How It Works',
+    points_per_dollar: 'point(s) per $1.00 spent',
+    points_equals_discount: 'points = $',
+    birthday_bonus: 'Birthday bonus: +',
+    friend_referral: 'Friend referral: +',
+    vip_levels: 'VIP Levels',
+    bronze: 'Bronze',
+    silver: 'Silver',
+    gold: 'Gold',
+    points: 'points',
+    // Packages translations
+    packages_title: 'Packages',
+    packages_subtitle: 'Manage client packages with services and products',
+    new_package: 'New Package',
+    create_new_package: 'Create New Package',
+    select_client: 'Select a client',
+    package_name_label: 'Package Name',
+    description_optional: 'Description (Optional)',
+    services: 'Services',
+    products: 'Products',
+    total_price_label: 'Total Price:',
+    validity_start_date: 'Validity Start Date',
+    validity_end_date: 'Validity End Date',
+    update_package: 'Update Package',
+    create_package_button: 'Create Package',
+    loading_packages: 'Loading packages...',
+    no_packages_found: 'No packages found. Create your first package!',
+    create_first_package_button: 'Create First Package',
+    service_balance: 'Service Balance',
+    money_balance: 'Money Balance',
+    validity: 'Validity',
+    contents: 'Contents:',
+    // Analytics translations
+    business_analytics: 'Business Analytics',
+    analytics_subtitle: 'Comprehensive insights into your business performance',
+    revenue: 'Revenue',
+    clients_analytics: 'Clients',
+    services_analytics: 'Services',
+    from_last_month: 'from last month',
+    new_this_month: 'new this month',
+    revenue_vs_expenses: 'Revenue vs Expenses',
+    appointment_success_rate: 'Appointment Success Rate',
+    out_of: 'out of',
+    appointments_completed: 'appointments completed',
+    revenue_breakdown: 'Revenue Breakdown',
+    total_income: 'Total Income',
+    client_statistics: 'Client Statistics',
+    client_activity: 'Client Activity',
+    inactive_clients: 'Inactive Clients',
+    loyalty_points_distribution: 'Loyalty Points Distribution',
+    service_performance: 'Service Performance',
+    appointments: 'appointments',
+    bookings: 'bookings',
+    no_service_data: 'No service data available yet',
+    // Settings translations
+    settings_title: 'Settings',
+    settings_subtitle: 'Manage system settings',
+    profile: 'Profile',
+    business_hours: 'Business Hours',
+    notifications: 'Notifications',
+    appearance: 'Appearance',
+    loyalty_settings: 'Loyalty Settings',
+    public_page: 'Public Page',
+    banners: 'Banners',
+    general: 'General',
+    email: 'Email',
+    first_name: 'First Name',
+    last_name: 'Last Name',
+    professional_registration: 'Professional Registration',
+    clinic_name: 'Clinic Name',
+    clinic_cnpj: 'Clinic CNPJ',
+    clinic_address: 'Clinic Address',
+    clinic_phone: 'Clinic Phone',
+    clinic_whatsapp: 'Clinic WhatsApp',
+    reminder_start_time: 'Reminder Start Time',
+    reminder_end_time: 'Reminder End Time',
+    inactivity_days: 'Inactivity Days',
+    reminder_hours: 'Reminder Hours',
+    save_profile: 'Save Profile',
+    monday: 'Monday',
+    tuesday: 'Tuesday',
+    wednesday: 'Wednesday',
+    thursday: 'Thursday',
+    friday: 'Friday',
+    saturday: 'Saturday',
+    sunday: 'Sunday',
+    closed: 'Closed',
+    open: 'Open',
+    break_time: 'Break Time',
+    save_business_hours: 'Save Business Hours',
+    notification_preferences: 'Notification Preferences',
+    email_notifications: 'Email Notifications',
+    sms_notifications: 'SMS Notifications',
+    push_notifications: 'Push Notifications',
+    save_notifications: 'Save Notifications',
+    appearance_settings: 'Appearance Settings',
+    hero_image: 'Hero Image',
+    upload_hero_image: 'Upload Hero Image',
+    save_appearance: 'Save Appearance',
+    loyalty_program_settings: 'Loyalty Program Settings',
+    points_per_dollar_spent: 'Points per Dollar Spent',
+    discount_per_hundred_points: 'Discount per Hundred Points',
+    birthday_bonus_points: 'Birthday Bonus Points',
+    referral_bonus_points: 'Referral Bonus Points',
+    bronze_threshold: 'Bronze Threshold',
+    silver_threshold: 'Silver Threshold',
+    gold_threshold: 'Gold Threshold',
+    save_loyalty_settings: 'Save Loyalty Settings',
+    public_page_settings: 'Public Page Settings',
+    public_page_url: 'Public Page URL',
+    login_screen_banner: 'Login Screen Banner',
+    dashboard_banner: 'Dashboard Banner',
+    enter_image_url: 'Enter image URL',
+    save_banner: 'Save Banner',
+    valid_image_url_required: 'Please enter a valid image URL',
+    click_to_upload: 'Click to upload',
+    jpg_or_png_max_10mb: 'JPG or PNG, max 10MB',
+    beauty_therapy_board_registration_placeholder: 'Beauty Therapy Board NZ registration number',
+    specialties_label: 'Specialties',
+    describe_specialties_placeholder: 'Describe your specialties...',
+    list_specialties_placeholder: 'List specialties and certifications',
+    clinic_details: 'Clinic Details',
+    clinic_name_label: 'Clinic Name',
+    business_number: 'Business Number',
+    business_phone: 'Business Phone',
+    complete_address: 'Complete Address',
+    whatsapp_business: 'WhatsApp Business',
+    system_information: 'System Information',
+    support_title: 'Support',
+    need_help_contact_support: 'Need help? Contact our support team for assistance with your clinic management system.',
+    contact_support_button: 'Contact Support',
+    account_title: 'Account',
+    signed_in_as: 'Signed in as:',
+    sign_out: 'Sign Out',
+    operating_hours: 'Operating Hours',
+    save_hours: 'Save Hours',
+    saving_hours: 'Saving...',
+    operating_hours_information: 'Operating Hours Information',
+    operating_hours_description: 'These hours will be used for appointment scheduling and client booking availability. Lunch breaks are automatically excluded from available appointment times.',
+    closing_time: 'Closing Time',
+    lunch_start: 'Lunch Start',
+    lunch_end: 'Lunch End',
+    time_parameters: 'Time Parameters',
+    inactivity_timeout_days: 'Inactivity Timeout (days)',
+    inactivity_timeout_description: 'Leads with no activity for X days will be marked for follow-up',
+    reminder_time_hours: 'Reminder Time (hours)',
+    reminder_time_description: 'Reminders will be sent X hours before appointments',
+    reminder_schedule_configuration: 'Reminder Schedule Configuration',
+    reminder_schedule_description: 'Set the time window for sending reminders. Reminders will only be sent within this period to respect clients\' rest hours.',
+    start_time_for_reminders: 'Start Time for Reminders',
+    select_start_time: 'Select start time',
+    start_time_example: 'e.g., 6:00 PM - Reminders start being sent from this time',
+    end_time_for_reminders: 'End Time for Reminders',
+    select_end_time: 'Select end time',
+    end_time_example: 'e.g., 8:00 PM - Reminders stop being sent after this time',
+    valid_configuration: 'Valid Configuration: Reminders will be sent between',
+    reminder_example: 'Example: With hours',
+    save_time_settings: 'Save Time Settings',
+    team_members_management: 'Team Members Management',
+    loading_team_members: 'Loading team members...',
+    edit_staff_member: 'Edit Staff Member',
+    no_team_members_yet: 'No team members yet',
+    add_staff_members_description: 'Add staff members to manage your team and schedules',
+    go_to_staff_management: 'Go to Staff Management',
+    team_management: 'Team Management',
+    team_management_description: 'Manage your team members here. You can edit their information, schedules, and remove them from the team. For full staff management including adding new members, use the Staff page from the main menu.',
+    staff_member_updated: 'Staff member updated successfully',
+    staff_member_removed: 'Staff member removed successfully',
+    failed_update_staff: 'Failed to update staff member',
+    failed_remove_staff: 'Failed to remove staff member',
+    confirm_remove_staff_member: 'Are you sure you want to remove',
+    name_label: 'Name',
+    role_label: 'Role',
+    phone_label: 'Phone',
+    commission_rate_percent: 'Commission Rate (%)',
+    paid_by_hours_worked: 'Paid by Hours Worked',
+    active_label: 'Active',
+    inactive_label: 'Inactive',
+    staff_member_name_placeholder: 'Staff member name',
+    role_placeholder: 'e.g., Senior Aesthetician',
+    email_placeholder: 'email@example.com',
+    phone_placeholder: '021 123 4567',
+    ird_number_placeholder: '123-456-789',
+    loyalty_settings_description: 'Configure how clients earn and redeem loyalty points.',
+    points_per_dollar_label: 'Points per $1.00 spent',
+    discount_per_hundred_points_label: 'Discount per Hundred Points',
+    birthday_bonus_points_label: 'Birthday Bonus Points',
+    referral_bonus_points_label: 'Referral Bonus Points',
+    bronze_threshold_label: 'Bronze Threshold',
+    silver_threshold_label: 'Silver Threshold',
+    gold_threshold_label: 'Gold Threshold',
+    loyalty_settings_saved: 'Loyalty settings saved successfully!',
+    failed_save_loyalty_settings: 'Failed to save loyalty settings',
+    from_team: 'from the team',
+    drop_image_or_click: 'Drop your image here or click to browse',
+    jpg_png_up_to_10mb: 'JPG, PNG up to 10MB',
+    desktop_label: 'Desktop',
+    mobile_label: 'Mobile',
+    recommended_resolution: 'Recommended: 1920x600px',
+    optimised_automatically: 'Optimised automatically',
+    uploading: 'Uploading...',
+    // Additional common translations
+    last_7_days: 'Last 7 days',
+    last_30_days: 'Last 30 days',
+    last_3_months: 'Last 3 months',
+    last_year: 'Last year',
+    other_category: 'Other',
+    confirm: 'Are you sure you want to delete',
+    edit_package: 'Edit Package',
+    ird_number_required: 'IRD Number *',
+    optional: 'Optional',
+    please_try_again: 'Try adjusting your search or filter criteria.',
+    remove: 'Remove',
+    completed: 'completed',
+    revenue: 'revenue',
+    active_clients: 'Active Clients',
+    total_clients: 'Total Clients',
+    edit: 'Edit',
+    status: 'Status',
+    name: 'Name',
+    price: 'Price',
+    unit: 'Unit',
+    barcode: 'Barcode',
+    products_menu: 'Products',
+    manage_packages_points: 'Manage service packages and loyalty points',
+    create: 'Create',
+    packages_menu: 'Package',
+    and: 'and',
+    professional_profile: 'Professional Profile',
+    opening_time: 'Opening Time',
+    closing_time: 'Closing Time',
+    upload_hero_image_description: 'Upload a hero image for your client booking page. This image will be displayed at the top of your public booking page.',
+    receive_email_alerts: 'Receive email alerts for new appointments',
+    send_sms_reminders: 'Send appointment reminders via SMS',
+    realtime_alerts: 'Real-time alerts in the app',
+    marketing_notifications: 'Marketing Notifications',
+    receive_updates: 'Receive updates about new features and tips',
+    configure_notifications: 'Configure how and when you want to receive notifications about appointments, client communications, and system updates.',
+    team: 'Team',
+    integrations: 'Integrations',
+    loading: 'Loading...',
+    all_categories: 'All Categories',
+    select_category: 'Select a category',
+    category: 'Category',
+    description: 'Description',
+    client: 'Client',
+  },
+  'en-US': {
+    welcome_back: 'Welcome back',
+    enter_credentials: 'Enter your credentials to access the system',
+    username: 'Username',
+    password: 'Password',
+    login: 'Sign In',
+    daily_revenue: 'Daily Revenue',
+    total_clients: 'Total Clients',
+    satisfaction_rate: 'Satisfaction Rate',
+    todays_schedule: "Today's Schedule",
+    view_all: 'View All',
+    quick_actions: 'Quick Actions',
+    book_appointment: 'Book Appointment',
+    add_client: 'Add Client',
+    record_payment: 'Record Payment',
+    loading: 'Loading...',
+    redirecting: 'Redirecting to dashboard...',
+    client_management: 'Client Management',
+    manage_clients: 'Manage your client database and appointments',
+    edit_client: 'Edit Client',
+    save_changes: 'Save Changes',
+    cancel: 'Cancel',
+    settings: 'Settings',
+    language: 'Language',
+    currency: 'Currency',
+    select_language: 'Select language',
+    select_currency: 'Select currency',
+    new_appointment: 'New Appointment',
+    send_message: 'Send Message',
+    no_appointments_today: 'No appointments scheduled for today',
+    logging_in: 'Signing in...',
+    login_button: 'Sign In to Platform',
+    todays_appointments: "Today's Appointments",
+    service_categories: 'Service Categories',
+    hair_cut: 'Hair Cut',
+    hair_cut_subtitle: 'Men & Women',
+    hair_colour: 'Hair Colour',
+    hair_colour_subtitle: '& Dye',
+    hair_treatment: 'Hair Treatment',
+    hair_treatment_subtitle: '& Care',
+    blow_dry: 'Blow Dry',
+    blow_dry_subtitle: '& Styling',
+    extensions: 'Extensions',
+    extensions_subtitle: 'Hair & Lash',
+    nail_care: 'Nail Care',
+    nail_care_subtitle: 'Mani & Pedi',
+    performance_overview: 'Performance Overview',
+    monthly_growth: 'Monthly Growth',
+    completed_treatments: 'Completed Treatments',
+    average_rating: 'Average Rating',
+    dashboard_menu: 'Dashboard',
+    appointments_menu: 'Appointments',
+    registry_menu: 'Registry',
+    clients_menu: 'Clients',
+    services_menu: 'Services',
+    procedures_menu: 'Procedures',
+    packages_menu: 'Packages',
+    products_menu: 'Products',
+    clinical_menu: 'Clinical',
+    clinical_records_menu: 'Clinical Records',
+    inventory_menu: 'PPE & Materials',
+    management_menu: 'Management',
+    staff_menu: 'Staff',
+    financial_menu: 'Financial',
+    business_hours_menu: 'Business Hours',
+    analytics_menu: 'Analytics',
+    settings_menu: 'Settings',
+    // Common action buttons
+    save: 'Save',
+    delete: 'Delete',
+    edit: 'Edit',
+    create: 'Create',
+    update: 'Update',
+    submit: 'Submit',
+    close: 'Close',
+    open: 'Open',
+    view: 'View',
+    show: 'Show',
+    hide: 'Hide',
+    search: 'Search',
+    filter: 'Filter',
+    export: 'Export',
+    import: 'Import',
+    download: 'Download',
+    upload: 'Upload',
+    print: 'Print',
+    back: 'Back',
+    next: 'Next',
+    previous: 'Previous',
+    confirm: 'Confirm',
+    yes: 'Yes',
+    no: 'No',
+    ok: 'OK',
+    remove: 'Remove',
+    clear: 'Clear',
+    reset: 'Reset',
+    apply: 'Apply',
+    // Page titles and labels
+    appointments_title: 'Appointments',
+    appointments_subtitle: 'Manage your client appointments',
+    clients_title: 'Client Management',
+    clients_subtitle: 'Manage your client database and appointments',
+    calendar_view: 'Calendar',
+    list_view: 'List',
+    month_view: 'Month',
+    week_view: 'Week',
+    day_view: 'Day',
+    search_clients: 'Search clients...',
+    search_placeholder: 'Search...',
+    overview: 'Overview',
+    loyalty_programs: 'Loyalty Programs',
+    client_database: 'Client Database',
+    no_clients_found: 'No clients found',
+    unknown_procedure: 'Unknown Procedure',
+    unknown_service: 'Unknown Service',
+    invalid_date: 'Invalid date',
+    success: 'Success',
+    error: 'Error',
+    failed_to_create: 'Failed to create. Please try again.',
+    created_successfully: 'Created successfully!',
+    updated_successfully: 'Updated successfully!',
+    deleted_successfully: 'Deleted successfully!',
+    please_try_again: 'Please try again',
+    // Calendar specific
+    appointment_calendar: 'Appointment Calendar',
+    today: 'Today',
+    today_tomorrow: 'Today & Tomorrow',
+    week_of: 'Week of',
+    new_appointment_button: 'New Appointment',
+    appointments_list: 'Appointments List',
+    time: 'Time',
+    // Form labels and placeholders
+    upload_before_photos: 'Upload Before Photos',
+    upload_after_photos: 'Upload After Photos',
+    creating: 'Creating...',
+    updating: 'Updating...',
+    update_appointment: 'Update Appointment',
+    please_select_procedure: 'Please select at least one procedure',
+    please_select_client: 'Please select a client',
+    please_select_staff: 'Please select a staff member',
+    client_communication: 'Client Communication',
+    new_message: 'New Message',
+    send_manual_message: 'Send Manual Message',
+    recipient: 'Recipient',
+    select_recipient: 'Select recipient',
+    all_clients: 'All clients',
+    marketing_campaigns: 'Marketing Campaigns',
+    create_manage_campaigns: 'Create and manage your marketing campaigns',
+    campaigns: 'Campaigns',
+    total_campaigns: 'Total Campaigns',
+    sent: 'Sent',
+    financial_management: 'Financial Management',
+    control_revenue_expenses: 'Control revenue, expenses and cash flow',
+    transaction_added: 'Transaction added successfully!',
+    procedure_name_required: 'Procedure name is required',
+    category_required: 'Category is required',
+    duration_min_15: 'Duration must be at least 15 minutes',
+    price_positive: 'Price must be positive',
+    quantity_min_1: 'Quantity must be at least 1',
+    procedure_created: 'Procedure created successfully!',
+    procedure_updated: 'Procedure updated successfully!',
+    procedure_deleted: 'Procedure deleted successfully!',
+    failed_create_procedure: 'Failed to create procedure',
+    name_required: 'Name is required',
+    role_required: 'Role is required',
+    ird_number_required: 'IRD Number is required',
+    staff_created: 'Staff member created successfully!',
+    staff_updated: 'Staff member updated successfully!',
+    staff_deleted: 'Staff member deleted successfully!',
+    no_data_found: 'No data found',
+    select_category: 'Select category',
+    all_categories: 'All categories',
+    // Additional missing translations
+    loyalty: 'Loyalty',
+    fidelity: 'Fidelidad',
+    status: 'Estado',
+    select_status: 'Seleccione el estado',
+    total_duration: 'Duración Total',
+    automatically_calculated: 'Calculado automáticamente a partir de los procedimientos seleccionados',
+    please_select_services: 'Por favor, seleccione los servicios primero para ver los horarios disponibles',
+    client_analytics: 'Análisis de Clientes',
+    coming_soon: 'Próximamente...',
+    add_first_client: 'Agregue su primer cliente',
+    scheduled: 'Programado',
+    confirmed: 'Confirmado',
+    completed: 'Completado',
+    cancelled: 'Cancelado',
+    pending: 'Pendiente',
+    clinical_records: 'Clinical Records',
+    record_track_treatments: 'Record and track treatments performed',
+    electronic_clinical_record: 'Electronic Clinical Record',
+    new_record: 'New Record',
+    new_clinical_record: 'New Clinical Record',
+    select_client: 'Select a client',
+    procedure_performed: 'Procedure Performed',
+    select_procedure: 'Select a procedure',
+    procedure_date: 'Procedure Date',
+    procedure_notes: 'Procedure Notes',
+    procedure_notes_placeholder: 'Procedure details, reactions, observed results...',
+    result_assessment: 'Result Assessment',
+    poor: 'Poor',
+    excellent: 'Excellent',
+    next_appointment: 'Next Appointment',
+    before_after_photos: 'Before/After Photos',
+    before: 'Before',
+    after: 'After',
+    click_to_add_photo: 'Click to add photo',
+    saving: 'Saving...',
+    save_clinical_record: 'Save Clinical Record',
+    result: 'Result',
+    next_label: 'Next',
+    no_clinical_records: 'No clinical records registered',
+    create_first_clinical_record: 'Create first clinical record',
+    clinical_record_created: 'Clinical record created successfully!',
+    failed_create_clinical_record: 'Failed to create clinical record. Please try again.',
+    invalid_image_file: 'Please select a valid image file (PNG or JPG).',
+    image_uploaded_successfully: 'Image uploaded successfully!',
+    failed_upload_image: 'Failed to upload image. Please try again.',
+  },
+  'es-ES': {
+    welcome_back: 'Bienvenido de nuevo',
+    enter_credentials: 'Ingrese sus credenciales para acceder al sistema',
+    username: 'Usuario',
+    password: 'Contraseña',
+    login: 'Iniciar Sesión',
+    daily_revenue: 'Ingresos Diarios',
+    total_clients: 'Total de Clientes',
+    satisfaction_rate: 'Tasa de Satisfacción',
+    todays_schedule: 'Agenda de Hoy',
+    view_all: 'Ver Todos',
+    quick_actions: 'Acciones Rápidas',
+    book_appointment: 'Reservar Cita',
+    add_client: 'Agregar Cliente',
+    record_payment: 'Registrar Pago',
+    loading: 'Cargando...',
+    redirecting: 'Redirigiendo al panel...',
+    client_management: 'Gestión de Clientes',
+    manage_clients: 'Administre su base de datos de clientes y citas',
+    edit_client: 'Editar Cliente',
+    save_changes: 'Guardar Cambios',
+    cancel: 'Cancelar',
+    settings: 'Configuración',
+    language: 'Idioma',
+    currency: 'Moneda',
+    select_language: 'Seleccione el idioma',
+    select_currency: 'Seleccione la moneda',
+    new_appointment: 'Nueva Cita',
+    send_message: 'Enviar Mensaje',
+    no_appointments_today: 'No hay citas programadas para hoy',
+    logging_in: 'Iniciando sesión...',
+    login_button: 'Iniciar Sesión en la Plataforma',
+    todays_appointments: 'Citas de Hoy',
+    service_categories: 'Categorías de Servicios',
+    hair_cut: 'Corte de Cabello',
+    hair_cut_subtitle: 'Hombres y Mujeres',
+    hair_colour: 'Coloración',
+    hair_colour_subtitle: '& Tinte',
+    hair_treatment: 'Tratamiento Capilar',
+    hair_treatment_subtitle: '& Cuidados',
+    blow_dry: 'Secado',
+    blow_dry_subtitle: '& Peinado',
+    extensions: 'Extensiones',
+    extensions_subtitle: 'Cabello y Pestañas',
+    nail_care: 'Cuidado de Uñas',
+    nail_care_subtitle: 'Mani & Pedi',
+    performance_overview: 'Resumen de Rendimiento',
+    monthly_growth: 'Crecimiento Mensual',
+    completed_treatments: 'Tratamientos Completados',
+    average_rating: 'Calificación Promedio',
+    dashboard_menu: 'Panel',
+    appointments_menu: 'Citas',
+    registry_menu: 'Registro',
+    clients_menu: 'Clientes',
+    services_menu: 'Servicios',
+    procedures_menu: 'Procedimientos',
+    packages_menu: 'Paquetes',
+    products_menu: 'Productos',
+    clinical_menu: 'Clínico',
+    clinical_records_menu: 'Registros Clínicos',
+    inventory_menu: 'EPP y Materiales',
+    management_menu: 'Gestión',
+    staff_menu: 'Personal',
+    financial_menu: 'Financiero',
+    business_hours_menu: 'Horario Comercial',
+    analytics_menu: 'Análisis',
+    settings_menu: 'Configuración',
+    // Common action buttons
+    save: 'Guardar',
+    delete: 'Eliminar',
+    edit: 'Editar',
+    create: 'Crear',
+    update: 'Actualizar',
+    submit: 'Enviar',
+    close: 'Cerrar',
+    open: 'Abrir',
+    view: 'Ver',
+    show: 'Mostrar',
+    hide: 'Ocultar',
+    search: 'Buscar',
+    filter: 'Filtrar',
+    export: 'Exportar',
+    import: 'Importar',
+    download: 'Descargar',
+    upload: 'Subir',
+    print: 'Imprimir',
+    back: 'Atrás',
+    next: 'Siguiente',
+    previous: 'Anterior',
+    confirm: 'Confirmar',
+    yes: 'Sí',
+    no: 'No',
+    ok: 'OK',
+    remove: 'Remover',
+    clear: 'Limpiar',
+    reset: 'Restablecer',
+    apply: 'Aplicar',
+    // Page titles and labels
+    appointments_title: 'Citas',
+    appointments_subtitle: 'Administre las citas de sus clientes',
+    clients_title: 'Gestión de Clientes',
+    clients_subtitle: 'Administre su base de datos de clientes y citas',
+    calendar_view: 'Calendario',
+    list_view: 'Lista',
+    month_view: 'Mes',
+    week_view: 'Semana',
+    day_view: 'Día',
+    search_clients: 'Buscar clientes...',
+    search_placeholder: 'Buscar...',
+    overview: 'Resumen',
+    loyalty_programs: 'Programas de Fidelidad',
+    client_database: 'Base de Datos de Clientes',
+    no_clients_found: 'No se encontraron clientes',
+    unknown_procedure: 'Procedimiento Desconocido',
+    unknown_service: 'Servicio Desconocido',
+    invalid_date: 'Fecha inválida',
+    success: 'Éxito',
+    error: 'Error',
+    failed_to_create: 'Error al crear. Por favor, intente nuevamente.',
+    created_successfully: '¡Creado con éxito!',
+    updated_successfully: '¡Actualizado con éxito!',
+    deleted_successfully: '¡Eliminado con éxito!',
+    please_try_again: 'Por favor, intente nuevamente',
+    // Calendar specific
+    appointment_calendar: 'Calendario de Citas',
+    today: 'Hoy',
+    today_tomorrow: 'Hoy y Mañana',
+    week_of: 'Semana del',
+    new_appointment_button: 'Nueva Cita',
+    appointments_list: 'Lista de Citas',
+    time: 'Hora',
+    // Form labels and placeholders
+    upload_before_photos: 'Subir Fotos Antes',
+    upload_after_photos: 'Subir Fotos Después',
+    creating: 'Creando...',
+    updating: 'Actualizando...',
+    update_appointment: 'Actualizar Cita',
+    please_select_procedure: 'Por favor, seleccione al menos un procedimiento',
+    please_select_client: 'Por favor, seleccione un cliente',
+    please_select_staff: 'Por favor, seleccione un miembro del personal',
+    client_communication: 'Comunicación con Clientes',
+    new_message: 'Nuevo Mensaje',
+    send_manual_message: 'Enviar Mensaje Manual',
+    recipient: 'Destinatario',
+    select_recipient: 'Seleccione el destinatario',
+    all_clients: 'Todos los clientes',
+    marketing_campaigns: 'Campañas de Marketing',
+    create_manage_campaigns: 'Cree y administre sus campañas de marketing',
+    campaigns: 'Campañas',
+    total_campaigns: 'Total de Campañas',
+    sent: 'Enviadas',
+    financial_management: 'Gestión Financiera',
+    control_revenue_expenses: 'Controle ingresos, gastos y flujo de caja',
+    transaction_added: '¡Transacción agregada con éxito!',
+    procedure_name_required: 'El nombre del procedimiento es obligatorio',
+    category_required: 'La categoría es obligatoria',
+    duration_min_15: 'La duración debe ser de al menos 15 minutos',
+    price_positive: 'El precio debe ser positivo',
+    quantity_min_1: 'La cantidad debe ser al menos 1',
+    procedure_created: '¡Procedimiento creado con éxito!',
+    procedure_updated: '¡Procedimiento actualizado con éxito!',
+    procedure_deleted: '¡Procedimiento eliminado con éxito!',
+    failed_create_procedure: 'Error al crear procedimiento',
+    name_required: 'El nombre es obligatorio',
+    role_required: 'El rol es obligatorio',
+    ird_number_required: 'El número IRD es obligatorio',
+    staff_created: '¡Miembro del personal creado con éxito!',
+    staff_updated: '¡Miembro del personal actualizado con éxito!',
+    staff_deleted: '¡Miembro del personal eliminado con éxito!',
+    no_data_found: 'No se encontraron datos',
+    select_category: 'Seleccione la categoría',
+    all_categories: 'Todas las categorías',
+    // Additional missing translations
+    loyalty: 'Fidelidad',
+    fidelity: 'Fidelidad',
+    status: 'Estado',
+    select_status: 'Seleccione el estado',
+    total_duration: 'Duración Total',
+    automatically_calculated: 'Calculado automáticamente a partir de los procedimientos seleccionados',
+    please_select_services: 'Por favor, seleccione los servicios primero para ver los horarios disponibles',
+    client_analytics: 'Análisis de Clientes',
+    coming_soon: 'Próximamente...',
+    add_first_client: 'Agregue su primer cliente',
+    scheduled: 'Programado',
+    confirmed: 'Confirmado',
+    completed: 'Completado',
+    cancelled: 'Cancelado',
+    pending: 'Pendiente',
+    minutes: 'minutos',
+    manage_packages_points: 'Administre paquetes de servicios y puntos de fidelidad',
+    create_new_appointment: 'Crear Nueva Cita',
+    client_label: 'Cliente',
+    type_to_search_clients: 'Escriba para buscar clientes...',
+    procedures_label: 'Procedimientos',
+    professional_label: 'Profesional',
+    select_professional: 'Seleccione un profesional',
+    date_label: 'Fecha',
+    time_label: 'Hora',
+    select_time: 'Seleccione la hora',
+    loading_times: 'Cargando horarios...',
+    no_times_available: 'No hay horarios disponibles',
+    booked: 'Reservado',
+    total_amount: 'Monto Total',
+    paid_amount: 'Monto Pagado',
+    notes_label: 'Notas',
+    additional_notes: 'Notas adicionales...',
+    before_photos: 'Fotos Antes',
+    after_photos: 'Fotos Después',
+    selected_procedures: 'Procedimientos Seleccionados',
+    total_price: 'Precio Total',
+    no_times_available_date: 'No hay horarios disponibles para esta fecha y profesional. Intente seleccionar otra fecha o profesional.',
+    other_category: 'Otros',
+    clinical_records: 'Registros Clínicos',
+    record_track_treatments: 'Registre y rastree tratamientos realizados',
+    electronic_clinical_record: 'Registro Clínico Electrónico',
+    new_record: 'Nuevo Registro',
+    new_clinical_record: 'Nuevo Registro Clínico',
+    select_client: 'Seleccione un cliente',
+    procedure_performed: 'Procedimiento Realizado',
+    select_procedure: 'Seleccione un procedimiento',
+    procedure_date: 'Fecha del Procedimiento',
+    procedure_notes: 'Notas del Procedimiento',
+    procedure_notes_placeholder: 'Detalles del procedimiento, reacciones, resultados observados...',
+    result_assessment: 'Evaluación del Resultado',
+    poor: 'Pobre',
+    excellent: 'Excelente',
+    next_appointment: 'Próxima Cita',
+    before_after_photos: 'Fotos Antes/Después',
+    before: 'Antes',
+    after: 'Después',
+    click_to_add_photo: 'Haga clic para agregar foto',
+    saving: 'Guardando...',
+    save_clinical_record: 'Guardar Registro Clínico',
+    result: 'Resultado',
+    next_label: 'Próximo',
+    no_clinical_records: 'No hay registros clínicos registrados',
+    create_first_clinical_record: 'Crear primer registro clínico',
+    clinical_record_created: '¡Registro clínico creado con éxito!',
+    failed_create_clinical_record: 'Error al crear registro clínico. Por favor, intente nuevamente.',
+    invalid_image_file: 'Por favor, seleccione un archivo de imagen válido (PNG o JPG).',
+    image_uploaded_successfully: '¡Imagen subida con éxito!',
+    failed_upload_image: 'Error al subir imagen. Por favor, intente nuevamente.',
+  },
+};
+
+/**
+ * Obtém a tradução para uma chave específica
+ * @param key - Chave da tradução
+ * @param language - Idioma (padrão: pt-BR)
+ * @returns Texto traduzido ou a chave se não encontrado
+ */
+export function t(key: TranslationKey, language: string = 'pt-BR'): string {
+  const lang = language || 'pt-BR';
+  const langTranslations = translations[lang] || translations['pt-BR'];
+  return langTranslations[key] || key;
+}
+
+/**
+ * Exporta todas as traduções (útil para debug)
+ */
+export { translations };
+
+/**
+ * Lista de idiomas suportados
+ */
+export const supportedLanguages = Object.keys(translations);
+

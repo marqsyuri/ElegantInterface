@@ -50,6 +50,14 @@ export default function Staff() {
     queryKey: ['/api/staff'],
   });
 
+  // Fetch procedures for selection
+  const { data: procedures = [] } = useQuery({
+    queryKey: ['/api/procedures'],
+  });
+
+  // State for selected procedures in forms
+  const [formProcedureIds, setFormProcedureIds] = useState<number[]>([]);
+
   // Forms
   const staffForm = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
@@ -84,11 +92,26 @@ export default function Staff() {
   // Mutations
   const createStaffMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
-      await apiRequest('POST', '/api/staff', data);
+      const newStaff = await apiRequest('POST', '/api/staff', data);
+      
+      // Associate procedures if any were selected
+      if (formProcedureIds.length > 0 && newStaff?.id) {
+        try {
+          await apiRequest('PUT', `/api/staff/${newStaff.id}/procedures`, {
+            procedureIds: formProcedureIds,
+          });
+        } catch (error) {
+          console.error('Error associating procedures:', error);
+          // Don't fail the entire operation if procedure association fails
+        }
+      }
+      
+      return newStaff;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
       setIsStaffDialogOpen(false);
+      setFormProcedureIds([]); // Reset procedure selection
       staffForm.reset({
         name: "",
         role: "",
@@ -117,10 +140,21 @@ export default function Staff() {
   const updateStaffMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: StaffFormData }) => {
       await apiRequest('PUT', `/api/staff/${id}`, data);
+      
+      // Update procedure associations
+      try {
+        await apiRequest('PUT', `/api/staff/${id}/procedures`, {
+          procedureIds: formProcedureIds,
+        });
+      } catch (error) {
+        console.error('Error updating procedure associations:', error);
+        // Don't fail the entire operation if procedure association fails
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
       setEditingStaff(null);
+      setFormProcedureIds([]); // Reset procedure selection
       toast({
         title: t('success'),
         description: t('staff_updated'),
@@ -511,11 +545,58 @@ export default function Staff() {
                   />
                 </div>
 
+                {/* Procedures Selection for Create */}
+                <div className="space-y-2 pt-2">
+                  <FormLabel>{t("procedures_label")} ({t("optional")})</FormLabel>
+                  <div className="border rounded-md p-3 max-h-48 overflow-y-auto">
+                    {procedures && (procedures as any[]).length > 0 ? (
+                      <div className="space-y-2">
+                        {(procedures as any[]).map((procedure: any) => {
+                          const isSelected = formProcedureIds.includes(procedure.id);
+                          return (
+                            <label
+                              key={procedure.id}
+                              className="flex items-center space-x-2 p-2 rounded-md hover:bg-slate-50 cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setFormProcedureIds([...formProcedureIds, procedure.id]);
+                                  } else {
+                                    setFormProcedureIds(formProcedureIds.filter(id => id !== procedure.id));
+                                  }
+                                }}
+                              />
+                              <span className="text-sm">{procedure.name}</span>
+                              {procedure.category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {procedure.category}
+                                </Badge>
+                              )}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">{t("no_procedures_available")}</p>
+                    )}
+                  </div>
+                  {formProcedureIds.length > 0 && (
+                    <p className="text-xs text-slate-500">
+                      {formProcedureIds.length} {formProcedureIds.length === 1 ? t("procedure_selected") : t("procedures_selected")}
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setIsStaffDialogOpen(false)}
+                    onClick={() => {
+                      setIsStaffDialogOpen(false);
+                      setFormProcedureIds([]);
+                    }}
                   >
                     {t("cancel")}
                   </Button>
@@ -671,6 +752,50 @@ export default function Staff() {
                         </FormItem>
                       )}
                     />
+                  </div>
+
+                  {/* Procedures Selection for Edit */}
+                  <div className="space-y-2 pt-2">
+                    <FormLabel>{t("procedures_label")} ({t("optional")})</FormLabel>
+                    <div className="border rounded-md p-3 max-h-48 overflow-y-auto">
+                      {procedures && (procedures as any[]).length > 0 ? (
+                        <div className="space-y-2">
+                          {(procedures as any[]).map((procedure: any) => {
+                            const isSelected = formProcedureIds.includes(procedure.id);
+                            return (
+                              <label
+                                key={procedure.id}
+                                className="flex items-center space-x-2 p-2 rounded-md hover:bg-slate-50 cursor-pointer"
+                              >
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setFormProcedureIds([...formProcedureIds, procedure.id]);
+                                    } else {
+                                      setFormProcedureIds(formProcedureIds.filter(id => id !== procedure.id));
+                                    }
+                                  }}
+                                />
+                                <span className="text-sm">{procedure.name}</span>
+                                {procedure.category && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {procedure.category}
+                                  </Badge>
+                                )}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-400">{t("no_procedures_available")}</p>
+                      )}
+                    </div>
+                    {formProcedureIds.length > 0 && (
+                      <p className="text-xs text-slate-500">
+                        {formProcedureIds.length} {formProcedureIds.length === 1 ? t("procedure_selected") : t("procedures_selected")}
+                      </p>
+                    )}
                   </div>
 
                   <FormField

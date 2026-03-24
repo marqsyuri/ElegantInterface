@@ -27,10 +27,7 @@ const procedureFormSchema = z.object({
     if (typeof val === "string" && val === "") return 0;
     return typeof val === "number" ? val : parseFloat(val) || 0;
   }),
-  materials: z.array(z.object({
-    materialId: z.number(),
-    quantity: z.number().min(1),
-  })).default([]),
+
 });
 
 type ProcedureFormData = z.infer<typeof procedureFormSchema>;
@@ -39,7 +36,9 @@ export default function Procedures() {
   const { t } = useLocale();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProcedure, setEditingProcedure] = useState<any>(null);
-  const [materialSelections, setMaterialSelections] = useState<{ materialId: number; quantity: number }[]>([]);
+  const [materialSelections, setMaterialSelections] = useState<{ materialId: number; quantity: number; unit?: string }[]>([]);
+  const [addingProductId, setAddingProductId] = useState<string>("");
+  const [addingQty, setAddingQty] = useState<string>("1");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const { toast } = useToast();
@@ -63,16 +62,23 @@ export default function Procedures() {
   });
 
   const { data: materials = [], isLoading: materialsLoading } = useQuery({
-    queryKey: ["/api/inventory"],
+    queryKey: ["/api/products"],
     retry: false,
   });
 
   const createProcedureMutation = useMutation({
     mutationFn: async (data: ProcedureFormData) => {
-      await apiRequest('POST', '/api/procedures', {
-        ...data,
-        materials: materialSelections,
-      });
+      const result: any = await apiRequest('POST', '/api/procedures', data);
+      // Salva insumos na nova tabela procedure_products
+      if (result?.id && materialSelections.length > 0) {
+        for (const sel of materialSelections) {
+          if (sel.materialId) {
+            await apiRequest('POST', `/api/procedures/${result.id}/products`, {
+              productId: sel.materialId, quantity: sel.quantity, unit: sel.unit || 'un'
+            }).catch(() => {});
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/procedures"] });
@@ -96,10 +102,19 @@ export default function Procedures() {
 
   const updateProcedureMutation = useMutation({
     mutationFn: async (data: ProcedureFormData) => {
-      await apiRequest('PUT', `/api/procedures/${editingProcedure.id}`, {
-        ...data,
-        materials: materialSelections,
-      });
+      await apiRequest('PUT', `/api/procedures/${editingProcedure.id}`, data);
+      // Sincroniza insumos: deleta todos e re-insere
+      const currentItems: any[] = await apiRequest('GET', `/api/procedures/${editingProcedure.id}/products`).catch(() => []);
+      for (const item of (Array.isArray(currentItems) ? currentItems : [])) {
+        await apiRequest('DELETE', `/api/procedures/${editingProcedure.id}/products/${item.product_id}`).catch(() => {});
+      }
+      for (const sel of materialSelections) {
+        if (sel.materialId) {
+          await apiRequest('POST', `/api/procedures/${editingProcedure.id}/products`, {
+            productId: sel.materialId, quantity: sel.quantity, unit: sel.unit || 'un'
+          }).catch(() => {});
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/procedures"] });
@@ -138,7 +153,11 @@ export default function Procedures() {
       duration: procedure.duration,
       price: parseFloat(procedure.price) || 0,
     });
-    setMaterialSelections(procedure.materials || []);
+    // Carrega insumos salvos do procedimento
+    apiRequest('GET', `/api/procedures/${procedure.id}/products`).then((res: any) => {
+      const items = Array.isArray(res) ? res : [];
+      setMaterialSelections(items.map((i: any) => ({ materialId: i.product_id, quantity: parseFloat(i.quantity), unit: i.unit })));
+    }).catch(() => setMaterialSelections([]));
     setIsDialogOpen(true);
   };
 
@@ -150,7 +169,13 @@ export default function Procedures() {
   };
 
   const addMaterial = () => {
-    setMaterialSelections([...materialSelections, { materialId: 0, quantity: 1 }]);
+    const pid = parseInt(addingProductId);
+    if (!pid) return;
+    if (materialSelections.find(m => m.materialId === pid)) return; // já existe
+    const prod = (materials as any[]).find((p: any) => p.id === pid);
+    setMaterialSelections([...materialSelections, { materialId: pid, quantity: parseFloat(addingQty) || 1, unit: prod?.unit || 'un' }]);
+    setAddingProductId("");
+    setAddingQty("1");
   };
 
   const updateMaterialSelection = (index: number, field: 'materialId' | 'quantity', value: number) => {
@@ -164,8 +189,8 @@ export default function Procedures() {
   };
 
   const getMaterialName = (materialId: number) => {
-    const material = materials.find((m: any) => m.id === materialId);
-    return material?.itemName || 'Unknown Material';
+    const material = (materials as any[]).find((m: any) => m.id === materialId);
+    return material?.name || 'Produto #' + materialId;
   };
 
   const categories = [
@@ -340,54 +365,79 @@ export default function Procedures() {
                       )}
                     />
 
-                    {/* Materials Section */}
+                    {/* Insumos Section */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">{t("required_materials")}</label>
-                        <Button type="button" variant="outline" size="sm" onClick={addMaterial}>
+                        <label className="text-sm font-medium">Insumos / Produtos consumidos</label>
+                      </div>
+
+                      {/* Linha de adição */}
+                      <div className="flex gap-2 items-end p-3 bg-muted/30 rounded-lg border border-dashed">
+                        <div className="flex-1">
+                          <Select value={addingProductId} onValueChange={setAddingProductId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecionar produto..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(materials as any[]).filter((p: any) => p.isActive !== false).map((p: any) => (
+                                <SelectItem key={p.id} value={p.id.toString()}>
+                                  {p.name} — {p.unit} {p.currentStock !== undefined ? `(estoque: ${p.currentStock})` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-20">
+                          <Input
+                            type="number"
+                            min="0.001"
+                            step="0.001"
+                            value={addingQty}
+                            onChange={(e) => setAddingQty(e.target.value)}
+                            placeholder="Qtd"
+                          />
+                        </div>
+                        <Button type="button" size="sm" onClick={addMaterial} disabled={!addingProductId}>
                           <Plus className="w-3 h-3 mr-1" />
-                          {t("add_material")}
+                          Adicionar
                         </Button>
                       </div>
 
-                      {materialSelections.map((selection, index) => (
-                        <div key={index} className="flex gap-2 items-end">
-                          <div className="flex-1">
-                            <Select
-                              value={selection.materialId.toString()}
-                              onValueChange={(value) => updateMaterialSelection(index, 'materialId', parseInt(value))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("select_material")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {materials.map((material: any) => (
-                                  <SelectItem key={material.id} value={material.id.toString()}>
-                                    {material.itemName} ({material.currentStock} {material.unit} {t("available")})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="w-20">
-                            <Input
-                              type="number"
-                              min="1"
-                              value={selection.quantity}
-                              onChange={(e) => updateMaterialSelection(index, 'quantity', parseInt(e.target.value) || 1)}
-                              placeholder={t("qty")}
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeMaterial(index)}
-                          >
-                            {t("remove")}
-                          </Button>
+                      {/* Lista de insumos adicionados */}
+                      {materialSelections.length > 0 && (
+                        <div className="space-y-2">
+                          {materialSelections.map((sel, index) => (
+                            <div key={index} className="flex items-center gap-3 p-2 rounded-md bg-background border">
+                              <Package2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              <span className="flex-1 text-sm font-medium">{getMaterialName(sel.materialId)}</span>
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  min="0.001"
+                                  step="0.001"
+                                  className="w-20 h-7 text-sm"
+                                  value={sel.quantity}
+                                  onChange={(e) => updateMaterialSelection(index, 'quantity', parseFloat(e.target.value) || 1)}
+                                />
+                                <span className="text-xs text-muted-foreground w-8">{sel.unit || 'un'}</span>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                onClick={() => removeMaterial(index)}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+
+                      {materialSelections.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic">Nenhum insumo adicionado.</p>
+                      )}
                     </div>
 
                     <div className="flex justify-end space-x-3 pt-4 border-t">
@@ -559,22 +609,7 @@ export default function Procedures() {
                               )}
                             </div>
 
-                            {procedure.materials && procedure.materials.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-medium mb-2 flex items-center">
-                                  <Package2 className="w-3 h-3 mr-1" />
-                                  {t("materials_required")}
-                                </h4>
-                                <div className="space-y-1">
-                                  {procedure.materials.map((material: any, index: number) => (
-                                    <div key={index} className="text-xs text-slate-600 flex justify-between">
-                                      <span>{getMaterialName(material.materialId)}</span>
-                                      <span className="font-medium">{material.quantity}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+
                           </CardContent>
                         </Card>
                       ))}

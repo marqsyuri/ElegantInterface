@@ -1,21 +1,36 @@
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, DollarSign, Users, Star, Clock, Phone, CheckCircle, TrendingUp, UserPlus, FileText, MessageSquare } from "lucide-react";
+import { Calendar, DollarSign, Users, Star, Clock, Phone, CheckCircle, TrendingUp, UserPlus, FileText, MessageSquare, AlertTriangle, Package, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/hooks/use-auth";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Banner } from "@shared/schema";
 import { useLocale } from "@/contexts/LocaleContext";
 import NotificationBell from "@/components/NotificationBell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, Legend, ReferenceLine, LineChart, Line
+} from 'recharts';
+import { format, subDays, isSameDay, parseISO } from 'date-fns';
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { formatCurrency, t } = useLocale();
+  const [isLowStockDialogOpen, setIsLowStockDialogOpen] = useState(false);
+
+  // Redirect staff users with limited access to appointments
+  useEffect(() => {
+    if (user && (user as any)?.userType === 'staff' && (user as any)?.accessLevel === 'staff') {
+      setLocation('/appointments');
+    }
+  }, [user, setLocation]);
 
   // This component should only render when user is authenticated
   // The App.tsx routing already handles redirection
@@ -46,7 +61,6 @@ export default function Dashboard() {
       try {
         // Use the same URL format as Appointments page
         const url = `/api/appointments/${today}`;
-        console.log('🔍 Dashboard: Fetching today appointments from:', url, 'Date:', today);
         
         const response = await fetch(url, {
           credentials: 'include',
@@ -59,18 +73,6 @@ export default function Dashboard() {
         }
         
         const data = await response.json();
-        console.log('✅ Dashboard: API response received:', {
-          date: today,
-          dataLength: Array.isArray(data) ? data.length : 'not array',
-          dataType: typeof data,
-          data: Array.isArray(data) ? data.slice(0, 3).map((a: any) => ({
-            id: a.id,
-            date: a.appointmentDate,
-            client: a.client?.name,
-            status: a.status,
-            staffId: a.staffId
-          })) : data
-        });
         
         return Array.isArray(data) ? data : [];
       } catch (error) {
@@ -83,26 +85,150 @@ export default function Dashboard() {
     staleTime: 30000, // Cache for 30 seconds
   });
 
+  // Fetch transactions for cash flow chart
+  const { data: transactions = [] } = useQuery<any[]>({
+    queryKey: ["/api/transactions"],
+    retry: false,
+  });
+
+  // Fetch all appointments for appointments chart
+  const { data: allAppointments = [] } = useQuery<any[]>({
+    queryKey: ["/api/appointments/all"],
+    retry: false,
+  });
+
+  // Fetch products for low stock KPI
+  const { data: productsList = [] } = useQuery<any[]>({
+    queryKey: ["/api/products"],
+    retry: false,
+  });
+
+  // Calculate financial data for cash flow chart (last 30 days)
+  const financialData = useMemo(() => {
+    const days = 30;
+    const endDate = new Date();
+    const data = [];
+
+    for (let i = 0; i <= days; i++) {
+      const currentDate = subDays(endDate, days - i);
+      
+      const dayExpenses = transactions
+        .filter((t: any) => 
+          t.type === 'expense' && 
+          isSameDay(parseISO(t.transactionDate.toString()), currentDate)
+        )
+        .reduce((sum, t: any) => sum + parseFloat(t.amount.toString()), 0);
+
+      const dayTransactionIncome = transactions
+        .filter((t: any) => 
+          t.type === 'income' && 
+          isSameDay(parseISO(t.transactionDate.toString()), currentDate)
+        )
+        .reduce((sum, t: any) => sum + parseFloat(t.amount.toString()), 0);
+
+      // Add income from appointments
+      const dayAppointmentIncome = allAppointments
+        .filter((apt: any) => {
+          if (!apt.paidAmount) return false;
+          // Use appointmentDate for payment date
+          return isSameDay(parseISO(apt.appointmentDate.toString()), currentDate);
+        })
+        .reduce((sum: number, apt: any) => sum + parseFloat(apt.paidAmount.toString()), 0);
+
+      const totalDayIncome = dayTransactionIncome + dayAppointmentIncome;
+
+      data.push({
+        date: format(currentDate, 'dd/MM'),
+        income: totalDayIncome,
+        expense: -dayExpenses,
+        profit: totalDayIncome - dayExpenses
+      });
+    }
+    return data;
+  }, [transactions, allAppointments]);
+
+  // Calculate appointments per day (last 30 days)
+  const appointmentsData = useMemo(() => {
+    const days = 30;
+    const endDate = new Date();
+    const data = [];
+
+    for (let i = 0; i <= days; i++) {
+      const currentDate = subDays(endDate, days - i);
+      
+      const dayAppointments = allAppointments.filter((apt: any) => {
+        const aptDate = parseISO(apt.appointmentDate.toString());
+        return isSameDay(aptDate, currentDate);
+      }).length;
+
+      data.push({
+        date: format(currentDate, 'dd/MM'),
+        appointments: dayAppointments
+      });
+    }
+    return data;
+  }, [allAppointments]);
+
+  // Calculate low stock products
+  const lowStockProducts = useMemo(() => {
+    const allProducts = Array.isArray(productsList) ? productsList : [];
+    return allProducts.filter((p: any) => 
+      (p.currentStock || 0) <= (p.minStock || 0)
+    ).sort((a: any, b: any) => {
+      const stockA = (a.currentStock || 0) / Math.max(a.minStock || 1, 1);
+      const stockB = (b.currentStock || 0) / Math.max(b.minStock || 1, 1);
+      return stockA - stockB;
+    });
+  }, [productsList]);
+
+  // Calculate confirmed appointments today (includes confirmed + completed)
+  const confirmedAppointmentsToday = useMemo(() => {
+    if (!Array.isArray(todayAppointments)) return 0;
+    return todayAppointments.filter((apt: any) => 
+      apt.status === 'confirmed' || apt.status === 'completed'
+    ).length;
+  }, [todayAppointments]);
+
+  // Calculate completed appointments today
+  const completedAppointmentsToday = useMemo(() => {
+    if (!Array.isArray(todayAppointments)) return 0;
+    return todayAppointments.filter((apt: any) => apt.status === 'completed').length;
+  }, [todayAppointments]);
+
+  // Calculate cancelled appointments today
+  const cancelledAppointmentsToday = useMemo(() => {
+    if (!Array.isArray(todayAppointments)) return 0;
+    return todayAppointments.filter((apt: any) => apt.status === 'cancelled').length;
+  }, [todayAppointments]);
+
+  // Custom tooltip for cash flow chart
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
+          <p className="font-medium text-slate-900 mb-2">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2 text-sm">
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-slate-600 capitalize">{entry.name}:</span>
+              <span className="font-medium ml-auto">
+                {formatCurrency(Math.abs(entry.value))}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   // Group appointments by staff member
   const staffAppointmentsCount = useMemo(() => {
-    console.log('🔍 Calculating staff appointments count:', {
-      todayAppointmentsLength: Array.isArray(todayAppointments) ? todayAppointments.length : 'not array',
-      staffLength: Array.isArray(staff) ? staff.length : 'not array',
-      appointmentsWithStaffId: Array.isArray(todayAppointments) ? todayAppointments.filter((a: any) => a.staffId).length : 0,
-      sampleAppointments: Array.isArray(todayAppointments) ? todayAppointments.slice(0, 3).map((a: any) => ({
-        id: a.id,
-        staffId: a.staffId,
-        date: a.appointmentDate
-      })) : [],
-      sampleStaff: Array.isArray(staff) ? staff.slice(0, 3).map((s: any) => ({
-        id: s.id,
-        name: s.name,
-        isActive: s.isActive
-      })) : []
-    });
 
     if (!Array.isArray(todayAppointments) || !Array.isArray(staff)) {
-      console.log('⚠️ Missing data - returning empty array');
       return [];
     }
 
@@ -116,14 +242,12 @@ export default function Dashboard() {
       }
     });
 
-    console.log('📊 Count map:', Array.from(countMap.entries()));
 
     // Create array with staff and their counts
     const result = staff
       .filter((s: any) => {
         const hasAppointments = countMap.has(s.id);
         const isActive = s.isActive !== false; // Consider undefined/null as active
-        console.log(`Staff ${s.id} (${s.name}): isActive=${isActive}, hasAppointments=${hasAppointments}`);
         return isActive && hasAppointments;
       })
       .map((s: any) => ({
@@ -132,21 +256,11 @@ export default function Dashboard() {
       }))
       .sort((a, b) => b.appointmentCount - a.appointmentCount); // Sort by most appointments
 
-    console.log('👥 Staff appointments count result:', result);
     return result;
   }, [todayAppointments, staff]);
 
   // Debug useEffect
   useEffect(() => {
-    console.log('📊 Dashboard appointments state:', {
-      isLoading: appointmentsLoading,
-      hasError: !!appointmentsError,
-      error: appointmentsError,
-      appointmentsCount: Array.isArray(todayAppointments) ? todayAppointments.length : 'not array',
-      today: today,
-      staffAppointmentsCount: staffAppointmentsCount.length,
-      appointments: todayAppointments
-    });
   }, [todayAppointments, appointmentsLoading, appointmentsError, today, staffAppointmentsCount]);
 
   if (isLoading) {
@@ -160,32 +274,103 @@ export default function Dashboard() {
     );
   }
 
+  // Calculate daily revenue (transactions + appointments)
+  const calculatedDailyRevenue = useMemo(() => {
+    // 1. Transactions income for today
+    const todayTransactionIncome = transactions
+      .filter((t: any) => 
+        t.type === 'income' && 
+        isSameDay(parseISO(t.transactionDate.toString()), parseISO(today))
+      )
+      .reduce((sum, t: any) => sum + parseFloat(t.amount.toString()), 0);
+
+    // 2. Appointments payments for today
+    // We can use todayAppointments which is already filtered for today
+    const todayAppointmentIncome = Array.isArray(todayAppointments) 
+      ? todayAppointments
+          .filter((apt: any) => apt.paidAmount)
+          .reduce((sum: number, apt: any) => sum + parseFloat(apt.paidAmount.toString()), 0)
+      : 0;
+
+    return todayTransactionIncome + todayAppointmentIncome;
+  }, [transactions, todayAppointments, today]);
+
   return (
     <PageLayout>
-        {/* Overview Header */}
-        <div className="bg-white border border-border p-4 md:p-6 lg:p-8 mb-6 md:mb-8 mx-2 sm:mx-4 lg:mx-0 rounded-xl lg:rounded-none shadow-sm space-y-4">
+        {/* Dashboard Banner - Full Width */}
+        {user?.dashboardBannerUrl && user.dashboardBannerUrl.trim() !== "" && (
+          <div className="relative w-full m-0 p-0 overflow-hidden min-h-[156px] md:min-h-[208px] lg:min-h-[286px]">
+            <img
+              src={user.dashboardBannerUrl}
+              alt="Dashboard banner"
+              className="absolute inset-0 w-full h-full object-cover object-left border-none m-0 p-0"
+            />
+          </div>
+        )}
+
+        {/* Header with Title and Notification Bell */}
+        <div className="bg-white border-b border-border p-4 md:p-6 lg:p-8 mb-6 md:mb-8 mx-2 sm:mx-4 lg:mx-0 rounded-xl lg:rounded-none shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Estética Pro</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Gestão de Clientes</h1>
               <p className="text-muted-foreground text-base md:text-lg">{t('client_management')}</p>
             </div>
-            <NotificationBell className="!w-12 !h-12 sm:!w-14 sm:!h-14 text-white !bg-gradient-to-br !from-pink-500 !to-rose-500 shadow-lg hover:shadow-rose-400/40 border-none" />
-          </div>
+            
+            <div className="flex items-center gap-4">
+              {/* Quick Actions - Desktop Only */}
+              <div className="hidden md:flex items-center gap-3">
+                <Button 
+                  onClick={() => setLocation("/appointments")}
+                  variant="outline"
+                  className="h-10 px-4 flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 transition-all duration-200"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-sm font-medium">{t('new_appointment')}</span>
+                </Button>
+                <Button 
+                  onClick={() => setLocation("/clients")}
+                  variant="outline"
+                  className="h-10 px-4 flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 transition-all duration-200"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span className="text-sm font-medium">{t('add_client')}</span>
+                </Button>
+                <Button 
+                  onClick={() => setLocation("/financial-dashboard")}
+                  variant="outline"
+                  className="h-10 px-4 flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 transition-all duration-200"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  <span className="text-sm font-medium">{t('record_payment')}</span>
+                </Button>
+              </div>
 
-          {user?.dashboardBannerUrl && user.dashboardBannerUrl.trim() !== "" && (
-            <div className="relative overflow-hidden rounded-2xl min-h-[120px] md:min-h-[160px] max-h-[220px]">
-              <img
-                src={user.dashboardBannerUrl}
-                alt="Dashboard banner"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+              <NotificationBell className="!w-12 !h-12 sm:!w-14 sm:!h-14 text-white !bg-gradient-to-br !from-pink-500 !to-rose-500 shadow-lg hover:shadow-rose-400/40 border-none" />
             </div>
-          )}
+          </div>
         </div>
         
         <div className="px-2 sm:px-4 md:px-6 lg:px-8 pb-8 space-y-4 md:space-y-6 lg:space-y-8">
           {/* Elegant Stats Cards */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+          <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+            {/* 1. Daily Revenue */}
+            <div className="beauty-card animate-fade-in">
+              <div className="p-4 sm:p-5 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">{t('daily_revenue')}</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                      {statsLoading ? "..." : formatCurrency(calculatedDailyRevenue)}
+                    </p>
+                  </div>
+                  <div className="p-3 md:p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                    <DollarSign className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-emerald-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Today's Appointments */}
             <div className="beauty-card animate-fade-in">
               <div className="p-4 sm:p-5 lg:p-6">
                 <div className="flex items-center justify-between">
@@ -195,230 +380,283 @@ export default function Dashboard() {
                       {statsLoading ? "..." : (stats as any)?.todayAppointments || 0}
                     </p>
                   </div>
-                  <div className="p-3 md:p-4 bg-green-50 rounded-2xl border border-green-100">
-                    <Calendar className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-green-700" />
+                  <div className="p-3 md:p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                    <Calendar className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-blue-600" />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="beauty-card animate-fade-in">
+            {/* 3. Confirmed Today */}
+            <div 
+              className="beauty-card animate-fade-in cursor-pointer hover:shadow-lg transition-all duration-200"
+              onClick={() => setLocation("/appointments")}
+            >
               <div className="p-4 sm:p-5 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">{t('daily_revenue')}</p>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Confirmados Hoje</p>
                     <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                      {statsLoading ? "..." : formatCurrency(parseFloat((stats as any)?.dailyRevenue || "0"))}
-                    </p>
-                  </div>
-                  <div className="p-3 md:p-4 bg-yellow-50 rounded-2xl border border-yellow-100">
-                    <DollarSign className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-yellow-600" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="beauty-card animate-fade-in">
-              <div className="p-4 sm:p-5 lg:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">{t('total_clients')}</p>
-                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                      {statsLoading ? "..." : (stats as any)?.totalClients || 0}
+                      {confirmedAppointmentsToday}
                     </p>
                   </div>
                   <div className="p-3 md:p-4 bg-green-50 rounded-2xl border border-green-100">
-                    <Users className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-green-700" />
+                    <CheckCircle className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-green-600" />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="beauty-card animate-fade-in">
+            {/* 4. Completed Today */}
+            <div 
+              className="beauty-card animate-fade-in cursor-pointer hover:shadow-lg transition-all duration-200"
+              onClick={() => setLocation("/appointments")}
+            >
               <div className="p-4 sm:p-5 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">{t('satisfaction_rate')}</p>
-                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">98%</p>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Concluídos Hoje</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                      {completedAppointmentsToday}
+                    </p>
                   </div>
-                  <div className="p-3 md:p-4 bg-yellow-50 rounded-2xl border border-yellow-100">
-                    <Star className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-yellow-600" />
+                  <div className="p-3 md:p-4 bg-teal-50 rounded-2xl border border-teal-100">
+                    <CheckCircle className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-teal-600" />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* 5. Cancelled Today */}
+            <div 
+              className="beauty-card animate-fade-in cursor-pointer hover:shadow-lg transition-all duration-200"
+              onClick={() => setLocation("/appointments")}
+            >
+              <div className="p-4 sm:p-5 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Cancelados Hoje</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                      {cancelledAppointmentsToday}
+                    </p>
+                  </div>
+                  <div className="p-3 md:p-4 bg-red-50 rounded-2xl border border-red-100">
+                    <X className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-red-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 6. Low Stock */}
+            <div 
+              className={`beauty-card animate-fade-in transition-all duration-200 ${
+                lowStockProducts.length > 0 ? 'cursor-pointer hover:shadow-lg' : ''
+              }`}
+              onClick={() => {
+                if (lowStockProducts.length > 0) {
+                  setIsLowStockDialogOpen(true);
+                }
+              }}
+            >
+              <div className="p-4 sm:p-5 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Baixo Estoque</p>
+                    <p className={`text-xl sm:text-2xl lg:text-3xl font-bold ${
+                      lowStockProducts.length > 0 ? 'text-orange-600' : 'text-foreground'
+                    }`}>
+                      {lowStockProducts.length}
+                    </p>
+                  </div>
+                  <div className={`p-3 md:p-4 rounded-2xl border ${
+                    lowStockProducts.length > 0 
+                      ? 'bg-orange-50 border-orange-100' 
+                      : 'bg-slate-50 border-slate-100'
+                  }`}>
+                    {lowStockProducts.length > 0 ? (
+                      <AlertTriangle className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-orange-600" />
+                    ) : (
+                      <Package className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-slate-400" />
+                    )}
+                  </div>
+                </div>
+                {lowStockProducts.length > 0 && (
+                  <p className="text-xs text-orange-600 mt-2 text-center">Clique para ver detalhes</p>
+                )}
               </div>
             </div>
           </section>
 
-          {/* Today's Schedule and Quick Actions */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="beauty-card border-t-2 border-b-2 border-green-100">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold text-foreground">{t('todays_schedule')}</h3>
+          {/* Quick Actions - Horizontal Centered on Top - Mobile Only */}
+          <section className="flex justify-center md:hidden">
+            <div className="beauty-card max-w-3xl w-full">
+              <div className="p-4">
+                <div className="grid grid-cols-3 gap-3">
                   <Button 
                     onClick={() => setLocation("/appointments")}
-                    className="bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 shadow-md hover:shadow-lg transition-all duration-200"
+                    variant="outline"
+                    className="h-[58px] p-3 flex flex-col items-center justify-center gap-1 border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 transition-all duration-200"
                   >
-                    {t('view_all')}
-                  </Button>
-                </div>
-                <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                  {appointmentsLoading ? (
-                    <div className="space-y-4">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="animate-pulse">
-                          <div className="flex items-center p-4 bg-accent/50 rounded-xl">
-                            <div className="w-16 h-16 bg-muted rounded-full"></div>
-                            <div className="ml-4 flex-1">
-                              <div className="h-4 bg-muted rounded w-1/3 mb-2"></div>
-                              <div className="h-3 bg-muted rounded w-1/4"></div>
-                            </div>
-                            <div className="w-12 h-12 bg-muted rounded-full"></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : staffAppointmentsCount.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {staffAppointmentsCount.map((staffMember: any) => {
-                        const getInitials = (name: string) => {
-                          return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                        };
-
-                        return (
-                          <div 
-                            key={staffMember.id} 
-                            className="flex items-center p-4 bg-gradient-to-br from-white to-accent/20 rounded-xl border border-accent/40 hover:border-primary/60 hover:shadow-md transition-all duration-200"
-                          >
-                            <Avatar className="w-16 h-16 border-2 border-primary/20">
-                              <AvatarImage src={staffMember.profileImageUrl || staffMember.user?.profileImageUrl} />
-                              <AvatarFallback className="bg-gradient-to-br from-pink-500 to-rose-500 text-white text-lg font-semibold">
-                                {getInitials(staffMember.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="ml-4 flex-1 min-w-0">
-                              <p className="font-semibold text-foreground text-base truncate" title={staffMember.name}>
-                                {staffMember.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground capitalize mt-0.5">
-                                {staffMember.role}
-                              </p>
-                            </div>
-                            <div className="ml-4 flex flex-col items-center justify-center">
-                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
-                                <span className="text-white font-bold text-lg">
-                                  {staffMember.appointmentCount}
-                                </span>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-1 text-center">
-                                {staffMember.appointmentCount === 1 ? 'agendamento' : 'agendamentos'}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">{t('no_appointments_today')}</p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Data consultada: {today}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="beauty-card">
-              <div className="p-4 sm:p-6">
-                <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-4 sm:mb-6">{t('quick_actions')}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                  <Button 
-                    onClick={() => setLocation("/appointments")}
-                    variant="secondary"
-                    className="h-auto min-h-[80px] sm:min-h-[100px] p-3 sm:p-4 flex flex-col items-center justify-center gap-2"
-                  >
-                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <span className="text-xs sm:text-sm font-medium text-center leading-tight">{t('new_appointment')}</span>
+                    <Calendar className="w-5 h-5" />
+                    <span className="text-[10px] font-medium text-center leading-tight">{t('new_appointment')}</span>
                   </Button>
                   <Button 
                     onClick={() => setLocation("/clients")}
-                    variant="secondary"
-                    className="h-auto min-h-[80px] sm:min-h-[100px] p-3 sm:p-4 flex flex-col items-center justify-center gap-2"
+                    variant="outline"
+                    className="h-[58px] p-3 flex flex-col items-center justify-center gap-1 border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 transition-all duration-200"
                   >
-                    <UserPlus className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <span className="text-xs sm:text-sm font-medium text-center leading-tight">{t('add_client')}</span>
+                    <UserPlus className="w-5 h-5" />
+                    <span className="text-[10px] font-medium text-center leading-tight">{t('add_client')}</span>
                   </Button>
                   <Button 
-                    onClick={() => setLocation("/financial")}
-                    variant="secondary"
-                    className="h-auto min-h-[80px] sm:min-h-[100px] p-3 sm:p-4 flex flex-col items-center justify-center gap-2"
+                    onClick={() => setLocation("/financial-dashboard")}
+                    variant="outline"
+                    className="h-[58px] p-3 flex flex-col items-center justify-center gap-1 border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 transition-all duration-200"
                   >
-                    <DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <span className="text-xs sm:text-sm font-medium text-center leading-tight">{t('record_payment')}</span>
-                  </Button>
-                  <Button 
-                    onClick={() => setLocation("/communication")}
-                    variant="secondary"
-                    className="h-auto min-h-[80px] sm:min-h-[100px] p-3 sm:p-4 flex flex-col items-center justify-center gap-2"
-                  >
-                    <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <span className="text-xs sm:text-sm font-medium text-center leading-tight">{t('send_message')}</span>
+                    <DollarSign className="w-5 h-5" />
+                    <span className="text-[10px] font-medium text-center leading-tight">{t('record_payment')}</span>
                   </Button>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Professional Services Overview */}
-          <section className="beauty-card">
-            <div className="p-4 sm:p-6">
-              <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-4 sm:mb-6">{t('service_categories')}</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-                <div className="text-center p-3 sm:p-4 bg-card border border-border rounded-xl hover:bg-accent/20 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                    <span className="text-lg sm:text-xl">✂️</span>
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-foreground">{t('hair_cut')}</p>
-                  <p className="text-xs text-muted-foreground hidden sm:block">{t('hair_cut_subtitle')}</p>
+          {/* Charts Side by Side */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Appointments Per Day Chart */}
+            <div className="beauty-card">
+              <div className="p-4 sm:p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Agendamentos por Dia (30 Dias)
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Evolução diária de agendamentos
+                </p>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={appointmentsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorAppointments" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis 
+                        dataKey="date" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#64748b', fontSize: 11 }}
+                        dy={10}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#64748b', fontSize: 11 }}
+                        allowDecimals={false}
+                        domain={[
+                          0,
+                          (dataMax: number) => {
+                            if (dataMax === 0) return 10;
+                            return Math.ceil(dataMax * 2);
+                          }
+                        ]}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'white', 
+                          border: '1px solid #e2e8f0', 
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                        }}
+                        labelStyle={{ fontWeight: 600, color: '#1e293b', fontSize: 12 }}
+                        itemStyle={{ color: '#8b5cf6', fontSize: 12 }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="appointments" 
+                        name="Agendamentos"
+                        stroke="#8b5cf6" 
+                        strokeWidth={3}
+                        dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6, fill: '#7c3aed' }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="text-center p-3 sm:p-4 bg-card border border-border rounded-xl hover:bg-accent/20 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-50 border border-yellow-100 rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                    <span className="text-lg sm:text-xl">🎨</span>
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-foreground">{t('hair_colour')}</p>
-                  <p className="text-xs text-muted-foreground hidden sm:block">{t('hair_colour_subtitle')}</p>
-                </div>
-                <div className="text-center p-3 sm:p-4 bg-card border border-border rounded-xl hover:bg-accent/20 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                    <span className="text-lg sm:text-xl">💆</span>
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-foreground">{t('hair_treatment')}</p>
-                  <p className="text-xs text-muted-foreground hidden sm:block">{t('hair_treatment_subtitle')}</p>
-                </div>
-                <div className="text-center p-3 sm:p-4 bg-card border border-border rounded-xl hover:bg-accent/20 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-50 border border-yellow-100 rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                    <span className="text-lg sm:text-xl">💨</span>
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-foreground">{t('blow_dry')}</p>
-                  <p className="text-xs text-muted-foreground hidden sm:block">{t('blow_dry_subtitle')}</p>
-                </div>
-                <div className="text-center p-3 sm:p-4 bg-card border border-border rounded-xl hover:bg-accent/20 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                    <span className="text-lg sm:text-xl">🔗</span>
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-foreground">{t('extensions')}</p>
-                  <p className="text-xs text-muted-foreground hidden sm:block">{t('extensions_subtitle')}</p>
-                </div>
-                <div className="text-center p-3 sm:p-4 bg-card border border-border rounded-xl hover:bg-accent/20 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-50 border border-yellow-100 rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                    <span className="text-lg sm:text-xl">💅</span>
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-foreground">{t('nail_care')}</p>
-                  <p className="text-xs text-muted-foreground hidden sm:block">{t('nail_care_subtitle')}</p>
+              </div>
+            </div>
+
+            {/* Cash Flow Chart */}
+            <div className="beauty-card">
+              <div className="p-4 sm:p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Fluxo de Caixa (30 Dias)
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Comparativo de entradas e saídas
+                </p>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={financialData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/>
+                          <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis 
+                        dataKey="date" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#64748b', fontSize: 11 }}
+                        dy={10}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#64748b', fontSize: 11 }}
+                        tickFormatter={(value) => formatCurrency(Math.abs(value))}
+                        domain={[
+                          (dataMin: number) => {
+                            const absMin = Math.abs(dataMin);
+                            if (absMin === 0) return -5000;
+                            return -absMin * 2;
+                          },
+                          (dataMax: number) => {
+                            if (dataMax === 0) return 5000;
+                            return dataMax * 2;
+                          }
+                        ]}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend />
+                      <ReferenceLine y={0} stroke="#94a3b8" />
+                      <Area 
+                        type="monotone" 
+                        dataKey="income" 
+                        name="Receita"
+                        stroke="#10b981" 
+                        strokeWidth={2}
+                        fillOpacity={1} 
+                        fill="url(#colorIncome)" 
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="expense" 
+                        name="Despesa"
+                        stroke="#f43f5e" 
+                        strokeWidth={2}
+                        fillOpacity={1} 
+                        fill="url(#colorExpense)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
@@ -454,6 +692,95 @@ export default function Dashboard() {
             </div>
           </section>
         </div>
+
+        {/* Low Stock Products Dialog */}
+        <Dialog open={isLowStockDialogOpen} onOpenChange={setIsLowStockDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-lg">
+                <AlertTriangle className="w-5 h-5 text-orange-600" />
+                Produtos com Baixo Estoque ({lowStockProducts.length})
+              </DialogTitle>
+            </DialogHeader>
+            
+            {lowStockProducts.length === 0 ? (
+              <div className="py-12 text-center">
+                <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">Todos os produtos bem estocados</h3>
+                <p className="text-slate-500">Nenhum produto abaixo do estoque mínimo</p>
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50">
+                      <TableHead className="w-[250px]">Produto</TableHead>
+                      <TableHead>Código</TableHead>
+                      <TableHead className="text-right">Estoque Atual</TableHead>
+                      <TableHead className="text-right">Estoque Mínimo</TableHead>
+                      <TableHead className="text-right">Diferença</TableHead>
+                      <TableHead className="text-right">Unidade</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lowStockProducts.map((product: any) => {
+                      const currentStock = product.currentStock || 0;
+                      const minStock = product.minStock || 0;
+                      const difference = currentStock - minStock;
+                      
+                      return (
+                        <TableRow key={product.id} className="hover:bg-orange-50/30">
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
+                                <AlertTriangle className="w-5 h-5 text-orange-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900">{product.name}</p>
+                                {product.description && (
+                                  <p className="text-xs text-slate-500 line-clamp-1">
+                                    {product.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm text-slate-600">
+                            {product.code}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className={`font-bold ${
+                              currentStock === 0 
+                                ? 'text-red-600' 
+                                : currentStock <= minStock / 2 
+                                ? 'text-orange-600' 
+                                : 'text-yellow-600'
+                            }`}>
+                              {currentStock}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right text-slate-600">
+                            {minStock}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className={`font-semibold ${
+                              difference < 0 ? 'text-red-600' : 'text-yellow-600'
+                            }`}>
+                              {difference}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right text-slate-600">
+                            {product.unit || 'un'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
     </PageLayout>
   );
 }

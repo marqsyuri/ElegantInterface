@@ -85,17 +85,14 @@ export default function AppointmentCalendar({
     
     const businessHour = getBusinessHoursForDay(date);
     const available = businessHour?.isOpen || false;
-    console.log('Date availability check:', date, 'available:', available, 'business hour:', businessHour);
     return available;
   };
 
   // Generate available time slots for a specific date
   const getAvailableTimeSlots = (date: Date) => {
     const businessHour = getBusinessHoursForDay(date);
-    console.log('Getting slots for date:', date, 'Business hour:', businessHour);
     
     if (!businessHour?.isOpen) {
-      console.log('No business hours or closed');
       return [];
     }
 
@@ -105,25 +102,21 @@ export default function AppointmentCalendar({
     const breakStart = businessHour.breakStartTime ? parseTime(businessHour.breakStartTime) : null;
     const breakEnd = businessHour.breakEndTime ? parseTime(businessHour.breakEndTime) : null;
 
-    console.log('Times - Open:', openTime, 'Close:', closeTime, 'Break:', breakStart, '-', breakEnd, 'Duration needed:', totalDuration);
 
     // Generate 30-minute slots
     for (let time = openTime; time < closeTime; time += 30) {
       // Skip lunch break times
       if (breakStart && breakEnd && time >= breakStart && time < breakEnd) {
-        console.log('Skipping lunch time:', time);
         continue;
       }
       
       // Check if there's enough time for the appointment before lunch break
       if (breakStart && time < breakStart && time + totalDuration > breakStart) {
-        console.log('Not enough time before lunch:', time, 'need', totalDuration);
         continue;
       }
       
       // Check if there's enough time before closing
       if (time + totalDuration > closeTime) {
-        console.log('Not enough time before closing:', time, 'need', totalDuration);
         continue;
       }
 
@@ -135,7 +128,6 @@ export default function AppointmentCalendar({
       });
     }
 
-    console.log('Generated', slots.length, 'slots for', date);
     return slots;
   };
 

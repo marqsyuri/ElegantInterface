@@ -11,43 +11,9 @@ function hashPassword(password: string): string {
   return crypto.createHash('md5').update(password).digest('hex');
 }
 
-// Serialize client for session
-passport.serializeUser((user: any, done) => {
-  // Use different namespace for client vs admin
-  if (user.isClient) {
-    done(null, { id: user.id, isClient: true, salonId: user.userId });
-  } else {
-    done(null, { id: user.id, isClient: false });
-  }
-});
-
-// Deserialize client from session
-passport.deserializeUser(async (sessionData: any, done) => {
-  try {
-    if (sessionData.isClient) {
-      // Deserialize client
-      const [client] = await db
-        .select()
-        .from(clients)
-        .where(and(
-          eq(clients.id, sessionData.id),
-          eq(clients.userId, sessionData.salonId)
-        ))
-        .limit(1);
-      
-      if (client) {
-        done(null, { ...client, isClient: true });
-      } else {
-        done(null, false);
-      }
-    } else {
-      // Let admin auth handle admin users
-      done(null, sessionData);
-    }
-  } catch (error) {
-    done(error);
-  }
-});
+// NOTE: serializeUser and deserializeUser are now handled in auth.ts
+// This file only registers the client login strategy
+// The unified serialize/deserialize in auth.ts handles both admin and client sessions
 
 // Client login strategy
 const clientStrategy = new LocalStrategy(
